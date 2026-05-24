@@ -1,0 +1,138 @@
+{
+  "entities": {
+    "Organization": {
+      "title": "Organization",
+      "description": "B2B Organization/Company",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "domain": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name"]
+    },
+    "User": {
+      "title": "User",
+      "description": "User profile and settings",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "role": { "type": "string", "enum": ["super_admin", "org_admin", "user"] },
+        "orgId": { "type": "string" },
+        "smtpConfig": {
+          "type": "object",
+          "properties": {
+            "host": { "type": "string" },
+            "port": { "type": "string" },
+            "secure": { "type": "boolean" },
+            "user": { "type": "string" },
+            "pass": { "type": "string" },
+            "from": { "type": "string" }
+          }
+        },
+        "linkedinAccount": {
+          "type": "object",
+          "properties": {
+            "connected": { "type": "boolean" },
+            "name": { "type": "string" },
+            "avatar": { "type": "string" },
+            "uid": { "type": "string" }
+          }
+        },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Campaign": {
+      "title": "Campaign",
+      "description": "Outreach campaign metadata",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "orgId": { "type": "string" },
+        "name": { "type": "string" },
+        "status": { "type": "string", "enum": ["draft", "active", "completed"] },
+        "leadsCount": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "orgId", "name", "status"]
+    },
+    "Lead": {
+      "title": "Lead",
+      "description": "Prospect information",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "campaignId": { "type": "string" },
+        "userId": { "type": "string" },
+        "orgId": { "type": "string" },
+        "name": { "type": "string" },
+        "role": { "type": "string" },
+        "company": { "type": "string" },
+        "status": { "type": "string", "enum": ["imported", "generated", "sent"] }
+      },
+      "required": ["campaignId", "userId", "orgId", "name"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "AI generated outreach message",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "leadId": { "type": "string" },
+        "campaignId": { "type": "string" },
+        "userId": { "type": "string" },
+        "orgId": { "type": "string" },
+        "wa": { "type": "string" },
+        "li": { "type": "string" },
+        "em": { "type": "string" }
+      },
+      "required": ["leadId", "campaignId", "userId", "orgId"]
+    },
+    "ProspectResearch": {
+      "title": "ProspectResearch",
+      "description": "Prospect research documents",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "companyName": { "type": "string" },
+        "userId": { "type": "string" },
+        "orgId": { "type": "string" },
+        "reportJSON": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["companyName", "userId", "orgId", "reportJSON"]
+    }
+  },
+  "firestore": {
+    "/organizations/{orgId}": {
+      "schema": "Organization",
+      "description": "Organization documents"
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile document"
+    },
+    "/campaigns/{campaignId}": {
+      "schema": "Campaign",
+      "description": "Campaign documents"
+    },
+    "/leads/{leadId}": {
+      "schema": "Lead",
+      "description": "Lead documents"
+    },
+    "/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Generated messages"
+    },
+    "/prospect_researches/{researchId}": {
+      "schema": "ProspectResearch",
+      "description": "Saved prospect research documents"
+    }
+  }
+}

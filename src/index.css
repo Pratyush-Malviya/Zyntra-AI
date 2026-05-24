@@ -1,0 +1,99 @@
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+:root {
+  /* Premium Design-System Default: Highly Accessible Slate-Zinc Creamy Light Theme */
+  --bg: #f8fafc;
+  --surface: #ffffff;
+  --surface2: #f1f5f9;
+  --border: #e2e8f0;
+  --border-subtle: #cbd5e1;
+  --accent: #2563eb;
+  --accent2: #059669;
+  --warn: #dc2626;
+  --wa: #128c7e;
+  --li: #0a66c2;
+  --em: #ea580c;
+  --text: #0f172a;
+  --muted: #475569;
+  --r: 16px;
+  --nav-h: 64px;
+  --top-h: 52px;
+}
+
+.dark {
+  /* Premium Designer Option: High-Contrast Obsidian Graphite Velvet Dark Theme */
+  --bg: #090a0f;
+  --surface: #12131a;
+  --surface2: #1a1b26;
+  --border: #282936;
+  --border-subtle: #34364a;
+  --accent: #3b82f6;
+  --accent2: #10b981;
+  --warn: #f43f5e;
+  --wa: #25d366;
+  --li: #3b82f6;
+  --em: #f97316;
+  --text: #f8fafc;
+  --muted: #94a3b8;
+}
+
+@theme {
+  --font-syne: "Inter", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+  --font-sans: "Inter", sans-serif;
+  
+  --color-brand: var(--accent);
+  --color-brand-alt: var(--accent2);
+  
+  --color-surface: var(--surface);
+  --color-surface-alt: var(--surface2);
+  --color-border: var(--border);
+  --color-border-subtle: var(--border-subtle);
+  --color-text-muted: var(--muted);
+  --color-bg: var(--bg);
+  --color-text: var(--text);
+  --color-whatsapp: var(--wa);
+  --color-linkedin: var(--li);
+  --color-email: var(--em);
+  --color-warn: var(--warn);
+
+  --spacing-nav: var(--nav-h);
+  --spacing-top: var(--top-h);
+}
+
+@layer base {
+  body {
+    @apply bg-bg text-text antialiased transition-colors duration-300 min-h-screen font-sans;
+  }
+}
+
+@layer utilities {
+  .glow-brand {
+    box-shadow: 0 4px 24px rgba(37, 99, 235, 0.08);
+  }
+  
+  .glow-brand-alt {
+    box-shadow: 0 4px 24px rgba(5, 150, 105, 0.08);
+  }
+
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-brand to-brand-alt;
+  }
+
+  .seq-strip::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Beautiful visible premium scrollbar for main viewport scroll */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-bg;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-border hover:bg-border-subtle rounded-full;
+  }
+}
