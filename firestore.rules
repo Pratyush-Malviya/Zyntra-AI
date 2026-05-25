@@ -111,6 +111,7 @@ service cloud.firestore {
          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.orgId == resource.data.orgId && 
          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'org_admin' && roleUnchanged())
       );
+      allow delete: if isSuperAdmin();
     }
 
     match /campaigns/{campaignId} {
@@ -199,6 +200,10 @@ service cloud.firestore {
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.orgId == resource.data.orgId)
       );
+    }
+
+    match /payments/{paymentId} {
+      allow read, write: if isAuthenticated() && isSuperAdmin();
     }
   }
 }

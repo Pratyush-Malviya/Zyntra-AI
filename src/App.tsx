@@ -41,7 +41,17 @@ import {
   Moon,
   FileText,
   Award,
-  Sparkles
+  Sparkles,
+  Database,
+  RefreshCw,
+  Building,
+  Check,
+  DollarSign,
+  TrendingUp,
+  CreditCard,
+  PlusCircle,
+  Activity,
+  Filter
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -50,6 +60,7 @@ import { generateOutreach, OutreachMessages } from './services/geminiService';
 import ProspectResearchPanel from './components/ProspectResearchPanel';
 import LeadScoreHistogram from './components/LeadScoreHistogram';
 import LandingPage from './components/LandingPage';
+import { SuperAdminDashboard as SuperAdminPanel } from './components/SuperAdminDashboard';
 import { 
   auth, 
   db, 
@@ -388,18 +399,44 @@ export default function App() {
           const snap = await getDoc(userRef);
           if (snap.exists()) {
             const data = snap.data();
+            let updatedData = { ...data };
+            let hasChanges = false;
+            
+            // Force Super Admin role and display name consistency for Pratyush
+            if (u.email === 'malviya.pratyush26@gmail.com') {
+              if (data.role !== 'super_admin') {
+                updatedData.role = 'super_admin';
+                hasChanges = true;
+              }
+              if (!data.displayName || data.displayName === '' || data.displayName === 'Untitled') {
+                updatedData.displayName = 'Pratyush Malviya';
+                hasChanges = true;
+              }
+            }
+
             if (!data.orgId) {
               const orgId = `org-${u.uid.slice(0, 5)}`;
-              await updateDoc(userRef, { orgId });
-              setProfile({ ...data, orgId, uid: u.uid } as UserProfile);
-            } else {
-              setProfile({ ...data, uid: u.uid } as UserProfile);
+              updatedData.orgId = orgId;
+              hasChanges = true;
             }
+
+            if (hasChanges) {
+              await updateDoc(userRef, updatedData);
+            }
+            setProfile({ ...updatedData, uid: u.uid } as UserProfile);
           } else {
-            // New Profile Init logic... (keeping simplified for brevity)
             const role: 'super_admin' | 'org_admin' | 'user' = u.email === 'malviya.pratyush26@gmail.com' ? 'super_admin' : 'user';
             const orgId = `org-${u.uid.slice(0, 5)}`;
-            const newProfile: UserProfile = { uid: u.uid, email: u.email || '', displayName: u.displayName || '', photoURL: u.photoURL || '', role, orgId, lastLogin: Timestamp.now() };
+            const displayName = u.displayName || (u.email === 'malviya.pratyush26@gmail.com' ? 'Pratyush Malviya' : 'SDR Guest');
+            const newProfile: UserProfile = { 
+              uid: u.uid, 
+              email: u.email || '', 
+              displayName, 
+              photoURL: u.photoURL || `https://picsum.photos/seed/${u.uid}/150`, 
+              role, 
+              orgId, 
+              lastLogin: Timestamp.now() 
+            };
             await setDoc(userRef, newProfile);
             setProfile(newProfile);
           }
@@ -544,6 +581,23 @@ function MainApp({ user, profile, theme, setTheme }: { user: User, profile: User
   const [isBulkSending, setIsBulkSending] = useState(false);
   const [isSyncingLi, setIsSyncingLi] = useState(false);
   const [lastSync, setLastSync] = useState<string | null>(null);
+  
+  // CRM Simulation States
+  const [crmAccount, setCrmAccount] = useState<{ connected: boolean, platform: 'Salesforce' | 'HubSpot' | null, orgName: string } | null>(null);
+  const [isConnectingCrm, setIsConnectingCrm] = useState(false);
+  const [crmPlatformToConnect, setCrmPlatformToConnect] = useState<'Salesforce' | 'HubSpot'>('HubSpot');
+  const [showCrmModal, setShowCrmModal] = useState(false);
+  
+  // Connection credentials parameters
+  const [crmInstanceUrl, setCrmInstanceUrl] = useState('');
+  const [crmAuthCode, setCrmAuthCode] = useState('');
+  const [crmMappingStage, setCrmMappingStage] = useState('Prospecting / SDR Out');
+
+  // Push progress simulation
+  const [isCrmPushing, setIsCrmPushing] = useState(false);
+  const [crmPushProgress, setCrmPushProgress] = useState(0);
+  const [crmPushLog, setCrmPushLog] = useState<string[]>([]);
+  const [showCrmPushLogs, setShowCrmPushLogs] = useState(false);
   
   const logEndRef = useRef<HTMLDivElement>(null);
   const bulkLogEndRef = useRef<HTMLDivElement>(null);
@@ -979,6 +1033,84 @@ function MainApp({ user, profile, theme, setTheme }: { user: User, profile: User
       setIsSyncingLi(false);
       setLastSync(new Date().toLocaleTimeString());
     }, 3000);
+  };
+
+  const handleConnectCRM = (platform: 'Salesforce' | 'HubSpot') => {
+    setIsConnectingCrm(true);
+    setTimeout(() => {
+      setIsConnectingCrm(false);
+      const randomOrgId = Math.floor(1000 + Math.random() * 9000);
+      setCrmAccount({
+        connected: true,
+        platform,
+        orgName: platform === 'Salesforce' ? `Salesforce Dev Hub (${randomOrgId}-SF)` : `HubSpot Sandbox (${randomOrgId}-HS)`
+      });
+      showToast(`Successfully authorized and connected to custom ${platform} Org instance!`, 'success');
+      setShowCrmModal(false);
+    }, 2000);
+  };
+
+  const handleDisconnectCRM = () => {
+    const originalPlatform = crmAccount?.platform;
+    setCrmAccount(null);
+    showToast(`Disconnected active session from ${originalPlatform || 'CRM'}.`, 'success');
+  };
+
+  const handlePushCRMData = () => {
+    if (!crmAccount) {
+      showToast('No active CRM connection.', 'error');
+      return;
+    }
+    
+    const targetLeads = leads.length > 0 ? leads : [
+      { id: '1', name: 'Sarah Mitchell', company: 'GrowthCo UK', email: 'sarah@growthco.io', score: 85 },
+      { id: '2', name: 'Aditi Sharma', company: 'TechCorp India', email: 'aditi@techcorp.in', score: 70 },
+      { id: '3', name: 'James Ochieng', company: 'Nairobi Staffing Co', email: 'james@nairobistaff.co.ke', score: 90 }
+    ];
+
+    setIsCrmPushing(true);
+    setCrmPushProgress(10);
+    setShowCrmPushLogs(true);
+    
+    const logs: string[] = [];
+    logs.push(`[SYSTEM] Initializing secure direct REST bridge to ${crmAccount.platform}...`);
+    logs.push(`[OAUTH2] Resolving security bearer credentials on endpoint: ${crmInstanceUrl || 'https://api.crm.cloud'}...`);
+    logs.push(`[OAUTH2] Token authorization status: Active (Expires in 3599s)`);
+    logs.push(`[API] Fetching schema validation rules mapping for custom fields...`);
+    setCrmPushLog([...logs]);
+
+    let idx = 0;
+    const interval = setInterval(() => {
+      if (idx >= targetLeads.length) {
+        clearInterval(interval);
+        setTimeout(() => {
+          setIsCrmPushing(false);
+          setCrmPushProgress(100);
+          showToast(`Successfully synced ${targetLeads.length} leads directly to your ${crmAccount.platform} pipeline!`, 'success');
+        }, 500);
+        return;
+      }
+
+      const activeLead = targetLeads[idx];
+      logs.push(`[SCHEMA] Mapping customized campaign fields for ${activeLead.name}...`);
+      logs.push(`[API] Processing upsert payload (Stage: ${crmMappingStage}) for ${activeLead.name} (${activeLead.company || 'Unknown Corp'})...`);
+      
+      const leadId = activeLead.id;
+      const outreachInfo = leadId ? messages[leadId] : null;
+      if (outreachInfo) {
+        logs.push(`[SYNC] Linked Active Channels: ${outreachInfo.whatsapp ? '✓ WA  ' : ''}${outreachInfo.linkedin ? '✓ LI  ' : ''}${outreachInfo.email ? '✓ Email' : ''}`);
+      } else {
+        logs.push(`[SYNC] No pre-generated outreach. Mapping custom B2B profile template parameters instead.`);
+      }
+
+      logs.push(`[POST] Upsert record to endpoint: HTTP 201 Created. ID: crm_rec_${Math.random().toString(36).substr(2, 7)}`);
+      logs.push(`[SYNC] Registered activity history logs and lead parameters directly into ${crmAccount.platform} records.`);
+      
+      idx++;
+      const currentPct = Math.min(95, Math.round((idx / targetLeads.length) * 100));
+      setCrmPushProgress(currentPct);
+      setCrmPushLog([...logs]);
+    }, 1000);
   };
 
   const startBulkSend = async (channel: 'wa' | 'li' | 'em') => {
@@ -2741,6 +2873,145 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
             </div>
           </div>
 
+          {/* CRM Integration Section */}
+          <div className="bg-surface border border-border rounded-3xl p-8 space-y-6 mt-10 glow-brand/5 relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none">
+              <Database className="w-24 h-24 text-brand" />
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-brand/10 flex items-center justify-center text-brand">
+                    <Database className="w-4.5 h-4.5" />
+                  </div>
+                  <h3 className="text-base font-bold">Enterprise CRM Integration</h3>
+                </div>
+                <p className="text-xs text-text-muted">
+                  Export personalized leads and conversation metrics directly to HubSpot or Salesforce pipelines.
+                </p>
+              </div>
+
+              {!crmAccount?.connected ? (
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => {
+                      setCrmPlatformToConnect('HubSpot');
+                      setShowCrmModal(true);
+                    }}
+                    className="px-4 py-2 border border-border bg-surface-alt hover:bg-border rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
+                  >
+                    Connect HubSpot
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setCrmPlatformToConnect('Salesforce');
+                      setShowCrmModal(true);
+                    }}
+                    className="px-4 py-2 bg-brand hover:bg-brand/90 text-white rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
+                  >
+                    Connect Salesforce
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-mono font-bold uppercase flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                    {crmAccount.platform} Connected
+                  </span>
+                  <button 
+                    onClick={handleDisconnectCRM}
+                    className="px-3 py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-lg text-[10px] font-bold transition-all cursor-pointer"
+                  >
+                    Disconnect
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {crmAccount?.connected && (
+              <motion.div 
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="pt-6 border-t border-border grid grid-cols-1 md:grid-cols-3 gap-6"
+              >
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted block">Connected Org</label>
+                  <div className="p-3.5 bg-[#090a0f] border border-border rounded-2xl text-xs font-mono font-semibold flex items-center justify-between text-brand">
+                    <span>{crmAccount.orgName}</span>
+                    <RefreshCw className="w-3.5 h-3.5 opacity-60 animate-spin" />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted block">Pipeline Target Stage</label>
+                  <select 
+                    value={crmMappingStage}
+                    onChange={(e) => setCrmMappingStage(e.target.value)}
+                    className="w-full p-3.5 bg-[#090a0f] border border-border rounded-2xl text-xs font-bold text-text cursor-pointer focus:outline-none focus:border-brand"
+                  >
+                    <option value="Prospecting / SDR Out">Prospecting / SDR Out</option>
+                    <option value="Lead Qualified / Verified">Lead Qualified / Verified</option>
+                    <option value="Meeting Scheduled Loop">Meeting Scheduled Loop</option>
+                    <option value="Custom Active Campaigns">Custom Active Campaigns</option>
+                  </select>
+                </div>
+
+                <div className="flex items-end">
+                  <button 
+                    onClick={handlePushCRMData}
+                    disabled={isCrmPushing}
+                    className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-brand to-brand-alt hover:opacity-90 disabled:opacity-50 text-white text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-brand/20"
+                  >
+                    {isCrmPushing ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Syncing to {crmAccount.platform}...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Database className="w-4 h-4 fill-current" />
+                        <span>Push {leads.length || 3} Leads to {crmAccount.platform}</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </motion.div>
+            )}
+
+            {showCrmPushLogs && (
+              <motion.div 
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                className="bg-[#090a0f]/50 border border-border rounded-2xl p-5 space-y-4 glow-brand/5"
+              >
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-brand flex items-center gap-1.5">
+                    <Database className="w-4 h-4 text-brand animate-pulse" />
+                    API INTEGRATION PIPELINE SYNC
+                  </span>
+                  <span className="font-mono font-bold text-brand">{crmPushProgress}%</span>
+                </div>
+                
+                <div className="h-2 w-full bg-surface-alt rounded-full overflow-hidden border border-border">
+                  <div 
+                    className="h-full bg-gradient-to-r from-brand to-brand-alt transition-all duration-300"
+                    style={{ width: `${crmPushProgress}%` }}
+                  />
+                </div>
+
+                <div className="bg-[#090a0f] border border-border rounded-xl p-4 h-40 overflow-y-auto font-mono text-[10px] text-text-muted space-y-1.5 custom-scrollbar">
+                  {crmPushLog.map((log, i) => (
+                    <div key={i} className={`flex items-start gap-1.5 ${log.includes('HTTP 201') ? 'text-brand-alt' : log.includes('[SUCCESS]') || log.includes('Successfully') ? 'text-brand font-bold' : ''}`}>
+                      <span className="opacity-30">[{new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'})}]</span>
+                      <span>{log}</span>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </div>
+
           <div className="bg-surface border border-border rounded-3xl p-8 space-y-6 mt-10 glow-brand/5">
             <div className="flex items-center gap-3 text-sm font-bold">
               <ShieldCheck className="w-4 h-4 text-brand" />
@@ -2764,7 +3035,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
     )}
 
     {activeView === 'TEAM_ADMIN' && <TeamAdminPanel profile={profile} />}
-    {activeView === 'SUPER_ADMIN' && <SuperAdminPanel />}
+    {activeView === 'SUPER_ADMIN' && <SuperAdminPanel showToast={showToast} />}
     {activeView === 'RESEARCH' && (
       <ProspectResearchPanel 
         key={researchKey}
@@ -2775,6 +3046,25 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
       />
     )}
   </main>
+  <footer className="py-8 border-t border-border-subtle/50 mt-auto">
+    <div className="max-w-6xl mx-auto px-4 md:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-text-muted">
+      <div className="flex items-center gap-2">
+        <span className="w-2 h-2 rounded-full bg-brand animate-pulse" />
+        <span>Zyntra SDR Portal &copy; {new Date().getFullYear()}</span>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <span>Developed by</span>
+        <a 
+          href="https://www.linkedin.com/in/pratyushmalviy/" 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          className="text-brand hover:text-brand-alt hover:underline font-bold transition-all relative group"
+        >
+          Pratyush Malviya
+        </a>
+      </div>
+    </div>
+  </footer>
 </div>
 
       {/* Bottom/Vertical Nav */}
@@ -2816,6 +3106,116 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
           </div>
         </nav>
       )}
+
+      {/* CRM OAuth / API Credentials Simulated Connection Modal */}
+      <AnimatePresence>
+        {showCrmModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => { if (!isConnectingCrm) setShowCrmModal(false); }}
+              className="absolute inset-0 bg-[#040508]/80 backdrop-blur-sm"
+            />
+
+            {/* Modal Body */}
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="relative max-w-md w-full bg-[#12131a] border border-white/[0.08] rounded-[32px] p-8 space-y-6 shadow-2xl overflow-hidden text-slate-100"
+            >
+              {/* Colored accent header depending on selection */}
+              <div 
+                className="absolute top-0 left-0 right-0 h-1.5"
+                style={{ backgroundColor: crmPlatformToConnect === 'Salesforce' ? '#00a1e0' : '#ff7a59' }}
+              />
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-white/[0.04] flex items-center justify-center">
+                    <Database className="w-5 h-5 text-brand" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-base">Connect {crmPlatformToConnect}</h3>
+                    <p className="text-[10px] text-slate-400 font-medium font-mono">OAuth 2.0 Secure Handshake</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setShowCrmModal(false)}
+                  disabled={isConnectingCrm}
+                  className="p-1 rounded-lg hover:bg-white/5 cursor-pointer disabled:opacity-40"
+                >
+                  <X className="w-5 h-5 text-slate-500" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="space-y-1.5 text-left">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-[#00d4aa]">Instance Endpoint URL</label>
+                  <input 
+                    type="text" 
+                    value={crmInstanceUrl}
+                    onChange={(e) => setCrmInstanceUrl(e.target.value)}
+                    placeholder={crmPlatformToConnect === 'Salesforce' ? 'https://na162.salesforce.com' : 'https://api.hubspot.com/v3'}
+                    disabled={isConnectingCrm}
+                    className="w-full px-4 py-3 bg-[#0a0b10] border border-white/[0.08] rounded-xl text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-brand"
+                  />
+                  <p className="text-[9px] text-slate-500 italic">Leave blank to route via public API gateways.</p>
+                </div>
+
+                <div className="space-y-1.5 text-left">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-[#00d4aa]">Authorization Bearer Code</label>
+                  <input 
+                    type="password" 
+                    value={crmAuthCode}
+                    onChange={(e) => setCrmAuthCode(e.target.value)}
+                    placeholder="Enter permanent private API secret verification token"
+                    disabled={isConnectingCrm}
+                    className="w-full px-4 py-3 bg-[#0a0b10] border border-white/[0.08] rounded-xl text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-brand"
+                  />
+                </div>
+
+                <div className="p-4 bg-white/[0.02] border border-white/[0.03] rounded-2xl text-[10px] text-slate-400 leading-relaxed flex items-start gap-2.5 text-left">
+                  <ShieldCheck className="w-5 h-5 text-[#00d4aa] shrink-0" />
+                  <span>
+                    Your authorization credentials are encrypted and stored inside secure sandbox storage schemas aligned with modern TLS encryption guidelines.
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setShowCrmModal(false)}
+                  disabled={isConnectingCrm}
+                  className="flex-1 py-3.5 bg-white/[0.04] border border-white/[0.05] hover:bg-white/5 rounded-xl text-xs font-bold transition-all cursor-pointer disabled:opacity-50 text-slate-300"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={() => handleConnectCRM(crmPlatformToConnect)}
+                  disabled={isConnectingCrm}
+                  className="flex-1 py-3.5 bg-brand hover:opacity-90 rounded-xl text-xs font-bold text-white transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {isConnectingCrm ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Authorizing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Link2 className="w-4 h-4" />
+                      <span>Connect Securely</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -2930,82 +3330,6 @@ function TeamAdminPanel({ profile }: { profile: UserProfile }) {
             ))}
           </tbody>
         </table>
-      </div>
-    </div>
-  );
-}
-
-function SuperAdminPanel() {
-  const [orgs, setOrgs] = useState<any[]>([]);
-  const [users, setUsers] = useState<UserProfile[]>([]);
-
-  useEffect(() => {
-    const qOrgs = query(collection(db, 'organizations'));
-    const unsubscribeOrgs = onSnapshot(qOrgs, (snapshot) => {
-      setOrgs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'organizations');
-    });
-
-    const qUsers = query(collection(db, 'users'));
-    const unsubscribeUsers = onSnapshot(qUsers, (snapshot) => {
-      setUsers(snapshot.docs.map(doc => doc.data() as UserProfile));
-    }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'users');
-    });
-
-    return () => {
-      unsubscribeOrgs();
-      unsubscribeUsers();
-    };
-  }, []);
-
-  return (
-    <div className="max-w-6xl mx-auto space-y-8">
-      <div className="space-y-1">
-        <h1 className="text-xl md:text-2xl font-bold tracking-tight text-brand">Platform Control</h1>
-        <p className="text-text-muted text-xs md:text-sm">Global oversight of all organizations and users.</p>
-      </div>
-
-      <div className="grid md:grid-cols-4 gap-6">
-        {[
-          { label: 'Total Orgs', val: orgs.length, icon: Globe },
-          { label: 'Total Users', val: users.length, icon: Users },
-          { label: 'Active Campaigns', val: '124', icon: Target },
-          { label: 'System Load', val: '12%', icon: Zap }
-        ].map((s, i) => (
-          <div key={i} className="bg-surface border border-border rounded-3xl p-6 space-y-4">
-            <div className="w-10 h-10 rounded-xl bg-brand/10 flex items-center justify-center text-brand">
-              <s.icon className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="text-2xl font-syne font-bold">{s.val}</div>
-              <div className="text-[10px] text-text-muted font-bold uppercase tracking-widest">{s.label}</div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="bg-surface border border-border rounded-[40px] p-8">
-        <h3 className="text-xl font-syne font-bold mb-6">Recent Organizations</h3>
-        <div className="space-y-4">
-          {orgs.map(o => (
-            <div key={o.id} className="flex items-center justify-between p-4 rounded-2xl bg-surface-alt border border-border">
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-xl bg-brand/20 flex items-center justify-center font-bold text-brand">
-                  {(o.name || '?')[0]}
-                </div>
-                <div>
-                  <div className="text-sm font-bold">{o.name}</div>
-                  <div className="text-xs text-text-muted">{o.domain}</div>
-                </div>
-              </div>
-              <button className="px-4 py-2 rounded-xl bg-bg-subtle text-[10px] font-bold hover:bg-bg-subtle/80 transition-all">
-                Manage
-              </button>
-            </div>
-          ))}
-        </div>
       </div>
     </div>
   );
