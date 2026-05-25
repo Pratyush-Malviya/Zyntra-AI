@@ -107,6 +107,81 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["companyName", "userId", "orgId", "reportJSON"]
+    },
+    "CrmSyncLog": {
+      "title": "CrmSyncLog",
+      "description": "CRM synchronization logs for a lead",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "lead_id": { "type": "string" },
+        "workspace_id": { "type": "string" },
+        "status": { "type": "string", "enum": ["Mapped", "Syncing", "Failed"] },
+        "error_message": { "type": "string" },
+        "last_synced_at": { "type": "string", "format": "date-time" },
+        "retry_count": { "type": "integer" }
+      },
+      "required": ["lead_id", "status", "workspace_id"]
+    },
+    "ImportMappingTemplate": {
+      "title": "ImportMappingTemplate",
+      "description": "Named CSV/Excel field mapping templates",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "orgId": { "type": "string" },
+        "name": { "type": "string" },
+        "mappingJSON": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "orgId", "mappingJSON"]
+    },
+    "WebhookConfig": {
+      "title": "WebhookConfig",
+      "description": "Outbound webhook endpoint setup",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "orgId": { "type": "string" },
+        "url": { "type": "string", "format": "uri" },
+        "events": { "type": "array" },
+        "active": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["orgId", "url", "events", "active"]
+    },
+    "WebhookDeliveryLog": {
+      "title": "WebhookDeliveryLog",
+      "description": "Dispatched webhook event delivery records",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "configId": { "type": "string" },
+        "eventId": { "type": "string" },
+        "event": { "type": "string" },
+        "payload": { "type": "string" },
+        "status": { "type": "string", "enum": ["success", "failed"] },
+        "attempts": { "type": "integer" },
+        "lastAttemptAt": { "type": "string", "format": "date-time" },
+        "responseStatus": { "type": "integer" },
+        "responseBody": { "type": "string" }
+      },
+      "required": ["configId", "event", "payload", "status"]
+    },
+    "ApiKey": {
+      "title": "ApiKey",
+      "description": "API credentials generated to use CRM endpoints via REST",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "orgId": { "type": "string" },
+        "userId": { "type": "string" },
+        "keyPrefix": { "type": "string" },
+        "secretHash": { "type": "string" },
+        "name": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["orgId", "userId", "keyPrefix", "secretHash", "name"]
     }
   },
   "firestore": {
@@ -133,6 +208,26 @@
     "/prospect_researches/{researchId}": {
       "schema": "ProspectResearch",
       "description": "Saved prospect research documents"
+    },
+    "/crm_sync_logs/{logId}": {
+      "schema": "CrmSyncLog",
+      "description": "CRM syncing activity trackers per workspace / lead"
+    },
+    "/import_mapping_templates/{templateId}": {
+      "schema": "ImportMappingTemplate",
+      "description": "CRM mapping import templates config"
+    },
+    "/webhook_configs/{configId}": {
+      "schema": "WebhookConfig",
+      "description": "Outbound webhook target endpoints configured per workspace"
+    },
+    "/webhook_delivery_logs/{logId}": {
+      "schema": "WebhookDeliveryLog",
+      "description": "History logs of webhook dispatch and exponential retry loops"
+    },
+    "/api_keys/{keyId}": {
+      "schema": "ApiKey",
+      "description": "Security tokens associated to workspaces"
     }
   }
 }

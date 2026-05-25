@@ -205,5 +205,25 @@ service cloud.firestore {
     match /payments/{paymentId} {
       allow read, write: if isAuthenticated() && isSuperAdmin();
     }
+
+    match /crm_sync_logs/{logId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /import_mapping_templates/{templateId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /webhook_configs/{configId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /webhook_delivery_logs/{logId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /api_keys/{keyId} {
+      allow read, write: if isAuthenticated();
+    }
   }
 }

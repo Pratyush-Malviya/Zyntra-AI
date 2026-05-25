@@ -61,6 +61,9 @@ import ProspectResearchPanel from './components/ProspectResearchPanel';
 import LeadScoreHistogram from './components/LeadScoreHistogram';
 import LandingPage from './components/LandingPage';
 import { SuperAdminDashboard as SuperAdminPanel } from './components/SuperAdminDashboard';
+import { CrmSyncLogsPanel } from './components/CrmSyncLogsPanel';
+import { SmartCsvImportModal } from './components/SmartCsvImportModal';
+import { SettingsApiKeysPanel } from './components/SettingsApiKeysPanel';
 import { 
   auth, 
   db, 
@@ -602,11 +605,13 @@ function MainApp({ user, profile, theme, setTheme }: { user: User, profile: User
   const logEndRef = useRef<HTMLDivElement>(null);
   const bulkLogEndRef = useRef<HTMLDivElement>(null);
 
-  const [toast, setToast] = useState<{ msg: string, type: 'success' | 'error' } | null>(null);
-  const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
+  const [toast, setToast] = useState<{ msg: string, type: 'success' | 'error' | 'info' } | null>(null);
+  const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'success') => {
     setToast({ msg, type });
-    setTimeout(() => setToast(null), 3000);
+    setTimeout(() => setToast(null), 3500);
   };
+  
+  const [showSmartImportModal, setShowSmartImportModal] = useState(false);
 
   useEffect(() => {
     if (profile.smtpConfig) {
@@ -1378,10 +1383,18 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
             className={`fixed bottom-8 left-1/2 z-[100] px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 font-bold text-sm border ${
               toast.type === 'success' 
                 ? 'bg-surface border-brand-alt/30 text-brand-alt' 
+                : toast.type === 'info'
+                ? 'bg-[#090a0f] border-cyan-400/30 text-cyan-400 shadow-cyan-950/25'
                 : 'bg-surface border-red-500/30 text-red-500'
             }`}
           >
-            {toast.type === 'success' ? <CheckCircle2 className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
+            {toast.type === 'success' ? (
+              <CheckCircle2 className="w-5 h-5 text-brand" />
+            ) : toast.type === 'info' ? (
+              <Loader2 className="w-5 h-5 text-cyan-400 animate-spin" />
+            ) : (
+              <AlertCircle className="w-5 h-5 text-rose-400" />
+            )}
             {toast.msg}
           </motion.div>
         )}
@@ -2321,32 +2334,35 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
               </div>
             </div>
 
-            <div className="bg-surface border border-border rounded-3xl p-8 space-y-6 glow-brand/5 flex flex-col">
-              <div className="flex items-center gap-3 text-sm font-bold">
-                <div className="w-8 h-8 rounded-xl bg-brand-alt/10 flex items-center justify-center text-brand-alt">
-                  <Download className="w-4 h-4" />
-                </div>
-                Upload Excel / CSV
-              </div>
-              <div className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-border rounded-2xl p-8 hover:border-brand-alt/50 transition-all group cursor-pointer relative">
-                <input 
-                  type="file" 
-                  accept=".csv, .xlsx, .xls"
-                  onChange={handleFileUpload}
-                  className="absolute inset-0 opacity-0 cursor-pointer z-10"
-                />
-                <div className="text-center space-y-4">
-                  <div className="w-16 h-16 rounded-2xl bg-brand-alt/10 flex items-center justify-center text-brand-alt mx-auto group-hover:scale-110 transition-transform">
-                    <Plus className="w-8 h-8" />
+            <div className="bg-surface border border-border rounded-3xl p-8 space-y-6 glow-brand/5 flex flex-col justify-between">
+              <div className="space-y-2">
+                <div className="flex items-center gap-3 text-sm font-bold">
+                  <div className="w-8 h-8 rounded-xl bg-brand-alt/10 flex items-center justify-center text-brand-alt">
+                    <Download className="w-4 h-4" />
                   </div>
-                  <div>
-                    <div className="text-sm font-bold">Click or Drag File</div>
-                    <div className="text-[10px] text-text-muted mt-1 uppercase tracking-widest">Supports .CSV, .XLSX, .XLS</div>
-                  </div>
+                  Smart field mapping Importer
                 </div>
+                <p className="text-text-muted text-[11px] leading-relaxed">
+                  Analyze CSV or Excel structure, discover Columns fuzzy matching suggest targets, resolve duplicates and save custom templates.
+                </p>
               </div>
-              <div className="bg-surface-alt/50 rounded-xl p-4 text-[10px] text-text-muted leading-relaxed">
-                <span className="font-bold text-brand">Pro Tip:</span> Excel files are automatically mapped. Just ensure columns like "Name", "Email", and "Company" exist.
+              
+              <button
+                onClick={() => {
+                  if (!currentCampaign) {
+                    showToast("Please select or create an active campaign first.", "error");
+                    return;
+                  }
+                  setShowSmartImportModal(true);
+                }}
+                className="w-full bg-brand-alt/10 hover:bg-brand-alt hover:text-[#090a0f] text-[#00d4aa] font-extrabold py-5 rounded-2xl border border-brand-alt/30 transition-all flex items-center justify-center gap-2 mt-4 cursor-pointer text-xs"
+              >
+                <Plus className="w-5 h-5" />
+                Launch Smart Importer Wizard
+              </button>
+              
+              <div className="bg-[#090a0f] rounded-xl p-3 text-[9px] text-brand-alt font-mono leading-relaxed mt-2 border border-border/40">
+                <span className="font-bold">FEATURES:</span> Excel sheet columns detection • Preset templates saving • Custom CRM property creation • Format validations checklist.
               </div>
             </div>
           </div>
