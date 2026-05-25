@@ -755,7 +755,12 @@ export default function LeadScoreHistogram({
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(9);
       doc.setTextColor(100, 116, 139);
-      doc.text(`Interactive Dynamic Chart: ${activeTab === 'distribution' ? 'Lead Intent Score Histogram View' : 'Campaign Velocity Line Graph'}`, 14, curY);
+      let activeChartTitle = 'Lead Intent Score Histogram View';
+      if (activeTab === 'trend') activeChartTitle = 'Campaign Velocity Line Graph';
+      else if (activeTab === 'segment') activeChartTitle = 'Segment Breakdown Allocation Chart';
+      else if (activeTab === 'forecast') activeChartTitle = '18-Month Predictive Funnel Model';
+
+      doc.text(`Interactive Dynamic Chart: ${activeChartTitle}`, 14, curY);
 
       curY += 4;
       // Beautiful dark premium frame for chart container
@@ -1071,6 +1076,22 @@ export default function LeadScoreHistogram({
                <Award className="w-3.5 h-3.5" />
                <span>Segment Breakdown</span>
                {activeTab === 'segment' && (
+                 <motion.div
+                   layoutId="activeTabIndicator"
+                   className="absolute inset-0 bg-brand rounded-lg -z-10"
+                   transition={{ type: "spring", stiffness: 350, damping: 26 }}
+                 />
+               )}
+             </button>
+             <button
+               onClick={() => setActiveTab('forecast')}
+               className={`relative z-15 px-3.5 py-1.5 rounded-lg text-[10px] md:text-xs font-extrabold tracking-tight transition-colors duration-200 flex items-center gap-1.5 cursor-pointer ${
+                 activeTab === 'forecast' ? 'text-white' : 'text-text-muted hover:text-foreground'
+               }`}
+             >
+               <TrendingUp className="w-3.5 h-3.5" />
+               <span>Predictive Forecast</span>
+               {activeTab === 'forecast' && (
                  <motion.div
                    layoutId="activeTabIndicator"
                    className="absolute inset-0 bg-brand rounded-lg -z-10"
@@ -1420,7 +1441,7 @@ export default function LeadScoreHistogram({
                   </ComposedChart>
                 </ResponsiveContainer>
               </motion.div>
-            ) : (
+            ) : activeTab === 'segment' ? (
               <motion.div 
                 key="segment"
                 initial={{ opacity: 0, scale: 0.96, filter: 'blur(4px)' }}
@@ -1529,6 +1550,124 @@ export default function LeadScoreHistogram({
                   </div>
                 </div>
               </motion.div>
+            ) : (
+              <motion.div
+                key="forecast"
+                initial={{ opacity: 0, scale: 0.96, filter: 'blur(4px)' }}
+                animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+                exit={{ opacity: 0, scale: 0.96, filter: 'blur(4px)' }}
+                transition={{ duration: 0.28, ease: "easeOut" }}
+                className="w-full h-full flex flex-col md:flex-row gap-4 justify-between overflow-y-auto scrollbar-thin text-white"
+              >
+                {/* Column 1: Config Sliders */}
+                <div className="w-full md:w-[45%] flex flex-col gap-3 justify-center pr-2 md:border-r border-border/40">
+                  <div className="space-y-0.5">
+                    <p className="text-[10px] uppercase font-bold tracking-widest text-brand">Simulation Knobs</p>
+                    <p className="text-[9px] text-text-muted leading-tight">Tune variables to model revenue outcomes over the pipeline.</p>
+                  </div>
+
+                  {/* Slider 1: Base Conversion Rate */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-[11px] font-bold">
+                      <span className="text-text-muted text-[10px]">Base Conv. Rate</span>
+                      <span className="text-emerald-400 font-mono text-[10px]">{baseConvRate.toFixed(1)}%</span>
+                    </div>
+                    <input 
+                      type="range"
+                      min="0.5" 
+                      max="15.0" 
+                      step="0.5"
+                      value={baseConvRate}
+                      onChange={(e) => setBaseConvRate(parseFloat(e.target.value))}
+                      className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-brand"
+                    />
+                  </div>
+
+                  {/* Slider 2: Average Deal Value */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-[11px] font-bold">
+                      <span className="text-text-muted text-[10px]">Avg Deal Value</span>
+                      <span className="text-brand font-mono text-[10px]">${avgDealValue.toLocaleString()}</span>
+                    </div>
+                    <input 
+                      type="range"
+                      min="1000" 
+                      max="100000" 
+                      step="1000"
+                      value={avgDealValue}
+                      onChange={(e) => setAvgDealValue(parseInt(e.target.value))}
+                      className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-brand"
+                    />
+                  </div>
+
+                  {/* Slider 3: Campaign Running Cost */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-[11px] font-bold">
+                      <span className="text-text-muted text-[10px]">Campaign Cost</span>
+                      <span className="text-rose-400 font-mono text-[10px]">${campaignCost.toLocaleString()}</span>
+                    </div>
+                    <input 
+                      type="range"
+                      min="500" 
+                      max="50000" 
+                      step="500"
+                      value={campaignCost}
+                      onChange={(e) => setCampaignCost(parseInt(e.target.value))}
+                      className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-brand"
+                    />
+                  </div>
+                </div>
+
+                {/* Column 2: KPI Metrics & Predictive Modeling */}
+                <div className="w-full md:w-[53%] flex flex-col justify-between pl-1 gap-2">
+                  <div className="space-y-0.5">
+                    <p className="text-[10px] uppercase font-bold tracking-widest text-emerald-400">18-Month Predictive Pipeline Model</p>
+                    <p className="text-[9px] text-text-muted leading-tight">Expected conversion curves weighted by individual Lead Intent Scores.</p>
+                  </div>
+
+                  {/* Bento Grid Metrics */}
+                  <div className="grid grid-cols-2 gap-2 my-1">
+                    {/* KPI 1: Estimated Closed Deals */}
+                    <div className="p-2 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                      <span className="text-[8px] font-bold text-text-muted uppercase tracking-wider block">Estimated Closures</span>
+                      <span className="text-xs font-extrabold text-white font-syne block">{estimatedDeals.toFixed(1)} Deals</span>
+                      <span className="text-[8px] text-text-muted font-mono leading-none">of {leads.length} active leads</span>
+                    </div>
+
+                    {/* KPI 2: Projected Revenue */}
+                    <div className="p-2 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                      <span className="text-[8px] font-bold text-text-muted uppercase tracking-wider block">Est. Revenue</span>
+                      <span className="text-xs font-extrabold text-emerald-400 font-syne block">${Math.round(estimatedDeals * avgDealValue).toLocaleString()}</span>
+                      <span className="text-[8px] text-text-muted font-mono leading-none">pipeline yield</span>
+                    </div>
+
+                    {/* KPI 3: Predicted ROI */}
+                    <div className="p-2 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                      <span className="text-[8px] font-bold text-text-muted uppercase tracking-wider block">Projected ROI</span>
+                      <span className={`text-xs font-extrabold font-syne block ${
+                        ((estimatedDeals * avgDealValue - campaignCost) / campaignCost * 100) >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                      }`}>
+                        {Math.round((estimatedDeals * avgDealValue - campaignCost) / campaignCost * 100)}%
+                      </span>
+                      <span className="text-[8px] text-text-muted font-mono leading-none">multiplier on cost</span>
+                    </div>
+
+                    {/* KPI 4: Target Cost per Acquisition */}
+                    <div className="p-2 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                      <span className="text-[8px] font-bold text-text-muted uppercase tracking-wider block">Est. CPA</span>
+                      <span className="text-xs font-extrabold text-white font-syne block">
+                        ${estimatedDeals > 0 ? Math.round(campaignCost / estimatedDeals).toLocaleString() : campaignCost.toLocaleString()}
+                      </span>
+                      <span className="text-[8px] text-text-muted font-mono leading-none">per acquired deal</span>
+                    </div>
+                  </div>
+
+                  <div className="p-1 px-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[8px] text-emerald-400/95 leading-tight flex items-center gap-1.5 shrink-0">
+                    <Sparkles className="w-3 h-3 animate-pulse shrink-0 text-emerald-400" />
+                    <span>Calculated based on custom seniority role and industrial credentials multipliers.</span>
+                  </div>
+                </div>
+              </motion.div>
             )}
           </AnimatePresence>
         </div>
@@ -1549,6 +1688,8 @@ export default function LeadScoreHistogram({
                 trendData.length > 1
                   ? `Your campaign average quality ratio is currently maintaining ${stats.averageScore}/90. Estimated sales cycle duration correlates to ${prediction.avgDays} days.`
                   : 'Enriching leads dynamically over multiple sequences will plot comprehensive growth metrics over time here.'
+              ) : activeTab === 'forecast' ? (
+                `Pipeline simulation projects ${estimatedDeals.toFixed(1)} conversions yielding a projected revenue of $${Math.round(estimatedDeals * avgDealValue).toLocaleString()} with a pipeline cost of $${campaignCost.toLocaleString()}.`
               ) : (
                 `Active segments display robust outreach diversification. Top seniority tiers map perfectly to specialized enterprise sales funnels.`
               )}

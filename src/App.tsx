@@ -49,6 +49,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { generateOutreach, OutreachMessages } from './services/geminiService';
 import ProspectResearchPanel from './components/ProspectResearchPanel';
 import LeadScoreHistogram from './components/LeadScoreHistogram';
+import LandingPage from './components/LandingPage';
 import { 
   auth, 
   db, 
@@ -376,6 +377,7 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showLanding, setShowLanding] = useState(true);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (u) => {
@@ -409,6 +411,7 @@ export default function App() {
       } else {
         setProfile(null);
         setLoading(false);
+        setShowLanding(true);
       }
     });
     return unsubscribe;
@@ -424,18 +427,60 @@ export default function App() {
   };
 
   if (loading) return <div className="min-h-screen bg-bg flex items-center justify-center"><Loader2 className="w-8 h-8 text-brand animate-spin" /></div>;
-  if (!user || !profile) return <LoginView />;
+  
+  if (!user || !profile) {
+    if (showLanding) {
+      return (
+        <LandingPage 
+          onLaunchApp={() => setShowLanding(false)} 
+          isAuthenticated={false} 
+          theme={theme} 
+          setTheme={toggleTheme} 
+        />
+      );
+    }
+    return <LoginView onBack={() => setShowLanding(true)} theme={theme} setTheme={toggleTheme} />;
+  }
 
   return <MainApp user={user} profile={profile} theme={theme} setTheme={toggleTheme} />;
 }
 
-function LoginView() {
+function LoginView({ onBack, theme, setTheme }: { onBack: () => void, theme: 'dark' | 'light', setTheme: (t: 'dark' | 'light') => void }) {
   const handleLogin = async () => { try { await signInWithPopup(auth, googleProvider); } catch (e) { console.error(e); } };
   return (
-    <div className="min-h-screen bg-bg flex items-center justify-center p-6 relative overflow-hidden">
+    <div className={`min-h-screen ${theme === 'dark' ? 'bg-[#090a0f] text-slate-100' : 'bg-slate-50 text-slate-900'} flex items-center justify-center p-6 relative overflow-hidden transition-colors duration-300`}>
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-brand rounded-full blur-[120px] opacity-20" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-brand-alt rounded-full blur-[120px] opacity-20" />
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-md w-full bg-surface p-10 rounded-[40px] border border-border text-center space-y-8 relative z-10">
+      <div className="absolute top-6 left-6 flex items-center gap-3">
+        <button 
+          onClick={onBack}
+          className={`px-4 py-2 text-xs font-semibold rounded-xl border flex items-center gap-1.5 transition-all cursor-pointer ${
+            theme === 'dark' 
+              ? 'bg-slate-900/60 border-white/[0.05] hover:bg-white/5 text-slate-300' 
+              : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700'
+          }`}
+        >
+          <ChevronLeft className="w-4 h-4" />
+          <span>Back to Home</span>
+        </button>
+      </div>
+
+      <div className="absolute top-6 right-6">
+        <button 
+          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          className={`px-3 py-2 text-xs font-mono rounded-lg border cursor-pointer transition-colors ${
+            theme === 'dark' 
+              ? 'bg-slate-900 border-white/[0.05] text-amber-400 hover:bg-slate-800' 
+              : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
+          }`}
+        >
+          {theme === 'dark' ? '☀️ Light' : '🌙 Dark'}
+        </button>
+      </div>
+
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className={`max-w-md w-full p-10 rounded-[40px] border text-center space-y-8 relative z-10 ${
+        theme === 'dark' ? 'bg-[#12131a] border-white/[0.05]' : 'bg-white border-slate-200'
+      }`}>
         <div className="space-y-4">
           <div className="w-20 h-20 bg-gradient-to-br from-brand to-brand-alt rounded-3xl mx-auto flex items-center justify-center shadow-2xl shadow-brand/20"><Zap className="w-10 h-10 text-white fill-current" /></div>
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Zyntra AI</h1>

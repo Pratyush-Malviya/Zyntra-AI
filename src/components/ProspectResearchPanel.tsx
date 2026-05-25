@@ -782,7 +782,7 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
                               name: 'Twitter / X', 
                               url: activeResearch?.companyInfo?.socialMediaLinks?.twitter || `https://twitter.com/${(activeResearch?.companyInfo?.name || 'company').toLowerCase().replace(/\s+/g, '')}`, 
                               icon: Twitter, 
-                              color: 'text-white bg-white/5 border-white/10 hover:bg-white/10' 
+                              color: 'text-[#0f1419] bg-[#0f1419]/10 border-[#0f1419]/25 hover:bg-[#0f1419]/20 dark:text-white dark:bg-white/10 dark:border-white/25 dark:hover:bg-white/20' 
                             },
                             { 
                               name: 'Facebook', 
