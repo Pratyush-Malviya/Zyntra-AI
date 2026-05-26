@@ -64,6 +64,8 @@ import { SuperAdminDashboard as SuperAdminPanel } from './components/SuperAdminD
 import { CrmSyncLogsPanel } from './components/CrmSyncLogsPanel';
 import { SmartCsvImportModal } from './components/SmartCsvImportModal';
 import { SettingsApiKeysPanel } from './components/SettingsApiKeysPanel';
+import { CrmPipelineBoard } from './components/CrmPipelineBoard';
+import { LeadJourneyAnalytics } from './components/LeadJourneyAnalytics';
 import { 
   auth, 
   db, 
@@ -547,7 +549,7 @@ function MainApp({ user, profile, theme, setTheme }: { user: User, profile: User
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activePanel, setActivePanel] = useState(-1); 
-  const [activeView, setActiveView] = useState<'OUTREACH' | 'SETTINGS' | 'TEAM_ADMIN' | 'SUPER_ADMIN' | 'RESEARCH'>('OUTREACH');
+  const [activeView, setActiveView] = useState<'OUTREACH' | 'SETTINGS' | 'TEAM_ADMIN' | 'SUPER_ADMIN' | 'RESEARCH' | 'JOURNEY' | 'ANALYTICS'>('OUTREACH');
   const [researchKey, setResearchKey] = useState(0);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [currentCampaign, setCurrentCampaign] = useState<Campaign | null>(null);
@@ -1227,6 +1229,29 @@ function MainApp({ user, profile, theme, setTheme }: { user: User, profile: User
     });
   };
 
+  const handleSmartImportComplete = async (importedRows: any[], summary: any) => {
+    if (!currentCampaign || !user || !profile) return;
+    
+    const mappedLeads = importedRows.map(row => ({
+      userId: user.uid,
+      orgId: profile.orgId,
+      campaignId: currentCampaign.id,
+      name: row.name || "",
+      role: row.role || "",
+      company: row.company || "",
+      industry: row.industry || "N/A",
+      country: row.country || "N/A",
+      phone: row.phone || "",
+      email: row.email || "",
+      linkedin_url: row.linkedin_url || "",
+      status: "imported",
+      score: Number(row.score) || Math.floor(65 + Math.random() * 25),
+    } as Lead));
+
+    await saveLeads(mappedLeads);
+    setShowSmartImportModal(false);
+  };
+
   const splitCSV = (line: string) => {
     const r = [];
     let cur = '', inQ = false;
@@ -1605,6 +1630,28 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                 </motion.div>
               )}
             </AnimatePresence>
+          </div>
+
+          <div>
+            <NavButton 
+              active={activeView === 'JOURNEY'} 
+              onClick={() => { setActiveView('JOURNEY'); setIsMobileMenuOpen(false); }}
+              icon={TrendingUp}
+              label="Journeys"
+              subLabel="CRM Deals & Boards"
+              isCollapsed={isMobileMenuOpen ? false : isMenuCollapsed}
+            />
+          </div>
+
+          <div>
+            <NavButton 
+              active={activeView === 'ANALYTICS'} 
+              onClick={() => { setActiveView('ANALYTICS'); setIsMobileMenuOpen(false); }}
+              icon={Activity}
+              label="Analytics"
+              subLabel="SLA & Funnel Reports"
+              isCollapsed={isMobileMenuOpen ? false : isMenuCollapsed}
+            />
           </div>
 
           <div>
@@ -2034,6 +2081,9 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                   Download Project Report (PDF)
                 </button>
               </div>
+
+              {/* REST API Credentials & Webhook Gateway Hub */}
+              <SettingsApiKeysPanel showToast={showToast} />
             </motion.div>
           )}
 
@@ -2566,6 +2616,9 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                   })}
               </div>
               
+              {/* Automated Realtime CRM Sync Status Pipelines */}
+              <CrmSyncLogsPanel leads={leads} showToast={showToast} />
+              
               <motion.button 
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
@@ -3052,6 +3105,18 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
 
     {activeView === 'TEAM_ADMIN' && <TeamAdminPanel profile={profile} />}
     {activeView === 'SUPER_ADMIN' && <SuperAdminPanel showToast={showToast} />}
+    {activeView === 'JOURNEY' && (
+      <CrmPipelineBoard 
+        leads={leads}
+        onLeadsUpdated={() => {
+          // trigger trigger refresh
+        }}
+        showToast={showToast}
+      />
+    )}
+    {activeView === 'ANALYTICS' && (
+      <LeadJourneyAnalytics showToast={showToast} />
+    )}
     {activeView === 'RESEARCH' && (
       <ProspectResearchPanel 
         key={researchKey}
@@ -3230,6 +3295,15 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
               </div>
             </motion.div>
           </div>
+        )}
+
+        {showSmartImportModal && (
+          <SmartCsvImportModal 
+            onClose={() => setShowSmartImportModal(false)}
+            onImportComplete={handleSmartImportComplete}
+            existingLeads={leads}
+            showToast={showToast}
+          />
         )}
       </AnimatePresence>
     </div>
