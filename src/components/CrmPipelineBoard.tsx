@@ -848,7 +848,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                         </div>
 
                         {/* Horizontal Stages Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 overflow-x-auto pb-4 scrollbar-thin">
+                        <div className="flex lg:grid lg:grid-cols-5 gap-4 overflow-x-auto pb-4 scrollbar-thin w-full">
                           {activePipeline?.stages.map((stage) => {
                             const stageLaneDeals = laneDeals.filter(d => d.stage === stage.id);
                             const cumulativeStageValue = stageLaneDeals.reduce((sum, d) => sum + d.value, 0);
@@ -858,7 +858,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                                 key={stage.id}
                                 onDragOver={handleDragOver}
                                 onDrop={(e) => handleDrop(e, stage.id)}
-                                className="flex flex-col bg-[#090a0f]/40 border border-border/40 p-3 rounded-xl min-w-[200px] min-h-[180px]"
+                                className="flex flex-col bg-[#090a0f]/40 border border-border/40 p-3 rounded-xl min-w-[245px] lg:min-w-0 lg:w-auto shrink-0 min-h-[180px]"
                               >
                                 {/* Stage name Inside Swimlane */}
                                 <div className="flex items-center justify-between border-b border-border/20 pb-1.5 mb-2.5">
@@ -954,7 +954,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
           </div>
         ) : (
           /* STANDARD COLUMN KANBAN BOARD */
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 overflow-x-auto pb-4 scrollbar-thin">
+          <div className="flex lg:grid lg:grid-cols-5 gap-4 overflow-x-auto pb-4 scrollbar-thin w-full">
             {activePipeline?.stages.map((stage) => {
               const stageDeals = filteredDeals.filter(d => d.stage === stage.id);
               const cumulativeValue = stageDeals.reduce((sum, d) => sum + d.value, 0);
@@ -964,7 +964,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                   key={stage.id}
                   onDragOver={handleDragOver}
                   onDrop={(e) => handleDrop(e, stage.id)}
-                  className="flex flex-col bg-[#090a0f]/40 border border-border/40 p-4 rounded-2xl min-w-[240px] h-[520px]"
+                  className="flex flex-col bg-[#090a0f]/40 border border-border/40 p-4 rounded-2xl min-w-[280px] lg:min-w-0 lg:w-auto shrink-0 h-[520px]"
                 >
                   {/* Stage Header */}
                   <div className="flex items-center justify-between border-b border-border/40 pb-2 mb-3">

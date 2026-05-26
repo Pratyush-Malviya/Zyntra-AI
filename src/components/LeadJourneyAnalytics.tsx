@@ -156,7 +156,7 @@ export const LeadJourneyAnalytics: React.FC<AnalyticsProps> = ({ showToast }) =>
             <p className="text-[10px] text-text-muted mt-1">High-contrast representation of lead volumes drop values across consecutive segments.</p>
           </div>
 
-          <div className="grid grid-cols-5 gap-2 pt-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 pt-2">
             {conversionFunnelData.map((f, i) => {
               const bgColors = [
                 "bg-brand/20 border-brand/45",
