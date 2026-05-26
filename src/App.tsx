@@ -1855,7 +1855,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
       <div className="flex-1 flex flex-col min-h-screen">
         {/* Top Bar (Simplified) */}
         <header className="h-20 border-b border-border-subtle flex items-center justify-between px-4 md:px-8 bg-bg/50 backdrop-blur-md sticky top-0 z-50">
-          <div className="flex items-center gap-3 md:gap-4">
+          <div className="flex items-center gap-3 md:gap-4 w-full min-w-0">
             {/* Hamburger Menu Toggle */}
             <button 
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -1865,13 +1865,24 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
               <Menu className="w-5 h-5" />
             </button>
 
-            <h2 className="text-xs md:text-sm font-bold uppercase tracking-[0.1em] md:tracking-[0.2em] text-text-muted truncate max-w-[150px] xs:max-w-[200px] md:max-w-none">
+            {/* Mobile Logo */}
+            <div className="flex items-center gap-2 md:hidden shrink-0">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-brand to-brand-alt flex items-center justify-center shadow-lg shadow-brand/20">
+                <Zap className="w-4.5 h-4.5 text-white fill-current" />
+              </div>
+              <span className="font-syne font-extrabold text-sm tracking-tight text-text truncate max-w-[85px] xs:max-w-none">Zyntra AI</span>
+            </div>
+
+            {/* Divider for mobile to separate logo from view title */}
+            <div className="hidden xs:block md:hidden w-px h-5 bg-border-subtle shrink-0" />
+
+            <h2 className="text-xs md:text-sm font-bold uppercase tracking-[0.1em] md:tracking-[0.2em] text-text-muted truncate">
               {activeView === 'OUTREACH' ? 'Outreach Engine' : activeView === 'RESEARCH' ? 'Prospect Intelligence' : activeView === 'TEAM_ADMIN' ? 'Team Administration' : activeView === 'SETTINGS' ? 'System Settings' : 'Platform Control Center'}
             </h2>
             {activeView === 'OUTREACH' && currentCampaign && (
               <>
                 <ChevronRight className="w-4 h-4 text-text-muted/40 shrink-0" />
-                <div className="px-2.5 py-1 rounded-full bg-brand/10 border border-brand/20 text-[9px] md:text-[10px] font-bold text-brand truncate max-w-[100px] md:max-w-none">
+                <div className="px-2.5 py-1 rounded-full bg-brand/10 border border-brand/20 text-[9px] md:text-[10px] font-bold text-brand truncate max-w-[80px] xs:max-w-[120px] md:max-w-none">
                   {currentCampaign.name.toUpperCase()}
                 </div>
               </>
