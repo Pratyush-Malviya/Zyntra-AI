@@ -5,6 +5,7 @@ import {
   CheckCircle, ChevronRight, Activity, FileText, Check, MoreVertical, 
   ArrowRight, ShieldAlert, BarChart3, Mail, Phone, Users, History, TrendingUp, X
 } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 interface Lead {
   id: string;
@@ -77,6 +78,15 @@ interface DealAiReport {
   modelVersion: string;
 }
 
+interface DealMovement {
+  id: string;
+  dealId: string;
+  fromStage: string;
+  toStage: string;
+  timestamp: string;
+  agentName: string;
+}
+
 interface CrmPipelineBoardProps {
   leads: Lead[];
   onLeadsUpdated?: () => void;
@@ -101,6 +111,12 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTagFilter, setSelectedTagFilter] = useState("all");
   const [selectedAgentFilter, setSelectedAgentFilter] = useState("all");
+  
+  // SLA, Movements, Swimlane & Stats Widget states
+  const [movements, setMovements] = useState<DealMovement[]>([]);
+  const [allActivities, setAllActivities] = useState<ActivityLog[]>([]);
+  const [swimlaneMode, setSwimlaneMode] = useState<boolean>(true);
+  const [showTeamActivityWidget, setShowTeamActivityWidget] = useState<boolean>(true);
   
   // UI Panels
   const [showAddDealModal, setShowAddDealModal] = useState(false);
@@ -154,6 +170,20 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
         const d = await dealsRes.json();
         setDeals(d);
       }
+
+      // 4. Fetch movements history
+      const movementRes = await fetch("/api/deals/audit-movement");
+      if (movementRes.ok) {
+        const mv = await movementRes.json();
+        setMovements(mv);
+      }
+
+      // 5. Fetch all activity logs
+      const actRes = await fetch("/api/activities");
+      if (actRes.ok) {
+        const acts = await actRes.json();
+        setAllActivities(acts);
+      }
     } catch (err) {
       console.error("Error fetching CRM pipeline data state", err);
     }
@@ -162,6 +192,72 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
   useEffect(() => {
     refreshDbState();
   }, [initialLeads]);
+
+  const getDaysInStage = (deal: Deal, stage: PipelineStage) => {
+    const relevantMovements = movements.filter(
+      m => m.dealId === deal.id && m.toStage === deal.stage
+    );
+
+    let entryDate = deal.createdAt && !isNaN(Date.parse(deal.createdAt)) ? new Date(deal.createdAt) : new Date();
+    
+    if (relevantMovements.length > 0) {
+      relevantMovements.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      entryDate = new Date(relevantMovements[0].timestamp);
+    }
+
+    const currentDate = new Date();
+    const diffTime = currentDate.getTime() - entryDate.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    return {
+      days: diffDays >= 0 ? diffDays : 0,
+      entryDate
+    };
+  };
+
+  // SLA Breach Watchdog
+  useEffect(() => {
+    if (deals.length === 0 || !activePipeline) return;
+
+    deals.forEach(async (deal) => {
+      const stage = activePipeline.stages.find(s => s.id === deal.stage);
+      if (!stage || stage.slaDays <= 0) return;
+
+      const { days } = getDaysInStage(deal, stage);
+      if (days > stage.slaDays) {
+        // Yes, SLA breached! Check if we already logged an SLA breach for this deal in this stage
+        const breachLogged = allActivities.some(
+          act => act.dealId === deal.id && 
+                 act.type === "sla_breach" && 
+                 act.description.includes(stage.name)
+        );
+
+        if (!breachLogged) {
+          try {
+            const res = await fetch("/api/activities", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                dealId: deal.id,
+                type: "sla_breach",
+                title: "🚨 SLA Breach Warning",
+                description: `Deal "${deal.title}" has stayed in stage "${stage.name}" for ${days} days (defined SLA: ${stage.slaDays} days).`,
+                agentName: deal.assignedAgent || "System Watchdog"
+              })
+            });
+            if (res.ok) {
+              const actsRes = await fetch("/api/activities");
+              if (actsRes.ok) {
+                const updatedActs = await actsRes.json();
+                setAllActivities(updatedActs);
+              }
+            }
+          } catch (err) {
+            console.error("Failed to log SLA breach activity", err);
+          }
+        }
+      }
+    });
+  }, [deals, movements, activePipeline, allActivities]);
 
   // Handle Drag Over
   const handleDragOver = (e: React.DragEvent) => {
@@ -513,6 +609,31 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
     }
   };
 
+  // Process Team Activity Chart Data (moves per assigned agent in last 30 days)
+  const getChartData = () => {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const last30DaysMovements = movements.filter(m => {
+      const mDate = new Date(m.timestamp);
+      return mDate >= thirtyDaysAgo;
+    });
+
+    const counts: Record<string, number> = {};
+    last30DaysMovements.forEach(m => {
+      const deal = deals.find(d => d.id === m.dealId);
+      const agent = deal?.assignedAgent || m.agentName || "Workspace Agent";
+      counts[agent] = (counts[agent] || 0) + 1;
+    });
+
+    return Object.entries(counts).map(([name, value]) => ({
+      name,
+      moves: value
+    }));
+  };
+
+  const chartData = getChartData();
+
   return (
     <div id="crm-field-mapping-panel" className="bg-surface/80 border border-border rounded-3xl p-6 glow-brand/5 space-y-6">
       {/* Upper header section */}
@@ -546,6 +667,34 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
             <Plus className="w-4 h-4" />
             Create Deal
           </button>
+
+          {/* Team Activity Widget Toggle */}
+          <button 
+            onClick={() => setShowTeamActivityWidget(!showTeamActivityWidget)}
+            className={`px-3.5 py-1.5 rounded-xl border text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              showTeamActivityWidget 
+                ? "border-[#00d4aa]/40 bg-[#00d4aa]/10 text-[#00d4aa]" 
+                : "border-border bg-transparent text-text-muted hover:text-text hover:border-border-muted"
+            }`}
+          >
+            <BarChart3 className="w-4 h-4 text-[#00d4aa]" />
+            Team Activity
+          </button>
+
+          {/* Swimlane mode Toggle */}
+          {viewType === "kanban" && (
+            <button 
+              onClick={() => setSwimlaneMode(!swimlaneMode)}
+              className={`px-3.5 py-1.5 rounded-xl border text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                swimlaneMode 
+                  ? "border-brand/40 bg-brand/10 text-brand" 
+                  : "border-border bg-transparent text-text-muted hover:text-text hover:border-border-muted"
+              }`}
+            >
+              <Kanban className="w-4 h-4" />
+              {swimlaneMode ? "Swimlanes ON" : "Swimlanes OFF"}
+            </button>
+          )}
 
           {/* Toggle switcher layout state */}
           <div className="flex items-center bg-[#090a0f] p-1 rounded-xl border border-border">
@@ -620,122 +769,316 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
         </div>
       </div>
 
+      {/* Team Activity Widget */}
+      {showTeamActivityWidget && (
+        <div className="bg-[#0b0c13] border border-border/80 rounded-2xl p-4.5 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <BarChart3 className="w-4.5 h-4.5 text-brand" />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-white">Team Activity Metrics (Deals Moved in Last 30 Days)</h3>
+            </div>
+            <span className="text-[10px] text-text-muted bg-[#12141c] border border-border/40 px-2.5 py-0.5 rounded-full font-mono font-bold">
+              Total movements: {chartData.reduce((sum, d) => sum + d.moves, 0)}
+            </span>
+          </div>
+
+          {chartData.length === 0 ? (
+            <div className="py-8 text-center text-[10px] text-zinc-500 italic bg-[#090a10]/40 rounded-xl border border-dashed border-border/30">
+              No deal movements logged by team agents over the last 30 days. Promote a deal between stages to record activity!
+            </div>
+          ) : (
+            <div className="h-44 w-full pr-4 text-xs">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1d2030" vertical={false} />
+                  <XAxis dataKey="name" stroke="#868fa9" fontSize={10} tickLine={false} />
+                  <YAxis stroke="#868fa9" fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: "#0e1017", borderColor: "#2a2e3f", borderRadius: "10px" }}
+                    itemStyle={{ color: "#3b82f6", fontSize: "11px" }}
+                    labelStyle={{ color: "#fff", fontSize: "11px", fontWeight: "bold" }}
+                  />
+                  <Bar dataKey="moves" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Main Board View vs List View layout splitter */}
       {viewType === "kanban" ? (
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 overflow-x-auto pb-4 scrollbar-thin">
-          {activePipeline?.stages.map((stage) => {
-            const stageDeals = filteredDeals.filter(d => d.stage === stage.id);
-            const cumulativeValue = stageDeals.reduce((sum, d) => sum + d.value, 0);
+        swimlaneMode ? (
+          /* SWIMLANE KANBAN BOARD */
+          <div className="space-y-6 w-full text-left">
+            {(() => {
+              const swimlanes = [
+                { key: "hot", label: "🔥 Hot Priority", colorClass: "text-rose-400 border-rose-500/20", bgClass: "bg-rose-500/5", icon: "🔥" },
+                { key: "warm", label: "⚡ Warm Priority", colorClass: "text-amber-400 border-amber-500/20", bgClass: "bg-amber-500/5", icon: "⚡" },
+                { key: "cold", label: "❄️ Cold & Others Priority", colorClass: "text-zinc-400 border-zinc-500/20", bgClass: "bg-zinc-500/5", icon: "❄️" }
+              ];
 
-            return (
-              <div 
-                key={stage.id}
-                onDragOver={handleDragOver}
-                onDrop={(e) => handleDrop(e, stage.id)}
-                className="flex flex-col bg-[#090a0f]/40 border border-border/40 p-4 rounded-2xl min-w-[240px] h-[520px]"
-              >
-                {/* Stage Header */}
-                <div className="flex items-center justify-between border-b border-border/40 pb-2 mb-3">
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: stage.color }} />
-                    <h4 className="text-xs font-bold text-text truncate uppercase tracking-wide" title={stage.name}>{stage.name}</h4>
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <span className="px-1.5 py-0.5 rounded-md bg-border text-[9px] font-bold text-text-muted">{stageDeals.length}</span>
-                  </div>
-                </div>
+              return (
+                <div className="space-y-6 w-full">
+                  {swimlanes.map((lane) => {
+                    const laneDeals = filteredDeals.filter(d => {
+                      if (lane.key === "hot") return d.status === "hot";
+                      if (lane.key === "warm") return d.status === "warm";
+                      return d.status === "cold" || d.status === "lost" || !d.status;
+                    });
 
-                <div className="text-[10px] text-text-muted font-mono mb-3 flex items-center justify-between px-1 bg-surface-alt/50 py-1 rounded-lg">
-                  <span>Prob: {stage.probability}%</span>
-                  <span className="text-amber-400 font-bold">${cumulativeValue.toLocaleString()} val</span>
-                </div>
+                    const totalValue = laneDeals.reduce((sum, d) => sum + d.value, 0);
 
-                {/* Cards rendering */}
-                <div className="flex-1 space-y-3 overflow-y-auto pr-1 scrollbar-thin">
-                  {stageDeals.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center text-center p-4 border border-dashed border-border/30 rounded-xl bg-surface-alt/10">
-                      <Briefcase className="w-5 h-5 text-text-muted/20 mb-1" />
-                      <span className="text-[9px] text-text-muted/60">Stage Empty</span>
-                      <span className="text-[7px] text-text-muted/40 uppercase mt-0.5">SLA limit: {stage.slaDays} days</span>
-                    </div>
-                  ) : (
-                    stageDeals.map((deal) => {
-                      const associatedLead = initialLeads.find(l => l.id === deal.leadId);
-                      const isHovered = hoveredCardId === deal.id;
-
-                      return (
-                        <div
-                          key={deal.id}
-                          draggable
-                          onDragStart={(e) => handleDragStart(e, deal.id)}
-                          onMouseEnter={() => setHoveredCardId(deal.id)}
-                          onMouseLeave={() => setHoveredCardId(null)}
-                          onClick={() => selectActiveDeal(deal)}
-                          className={`group relative bg-surface border transition-all duration-300 rounded-xl p-3.5 cursor-grab active:cursor-grabbing text-left space-y-2 select-none ${
-                            selectedDeal?.id === deal.id 
-                              ? "border-brand shadow-lg shadow-brand/10 bg-[#0c0d16]" 
-                              : "border-border/80 hover:border-border-muted"
-                          }`}
-                        >
-                          {/* Deal title & Health Color Bar */}
-                          <div className="flex items-start justify-between gap-1.5">
-                            <h5 className="text-[11px] font-bold text-text tracking-tight group-hover:text-brand transition-colors truncate" title={deal.title}>
-                              {deal.title}
-                            </h5>
-                            <button 
-                              onClick={(e) => handleDeleteDeal(deal.id, e)}
-                              className="opacity-0 group-hover:opacity-100 p-0.5 hover:text-rose-400 text-text-muted/40 transition-all rounded-md"
-                              title="Revoke Deal segment"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                    return (
+                      <div key={lane.key} className="space-y-3 bg-[#0d0f16]/30 border border-border/30 rounded-2xl p-4">
+                        {/* Swimlane Header */}
+                        <div className="flex items-center justify-between border-b border-border/20 pb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm">{lane.icon}</span>
+                            <h3 className={`text-xs font-bold font-syne uppercase tracking-wider ${lane.colorClass}`}>
+                              {lane.label}
+                            </h3>
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-normal font-mono">
+                              {laneDeals.length} Deals
+                            </span>
                           </div>
-
-                          {/* Contact Info */}
-                          <div className="text-[10px] text-text-muted font-medium line-clamp-1">
-                            {associatedLead?.name || "Unassigned Lead"}
-                            <span className="text-[8px] opacity-60 ml-1">@{associatedLead?.company || "N/A"}</span>
-                          </div>
-
-                          {/* Cost value & AI close score tags block */}
-                          <div className="flex items-center justify-between border-t border-border/20 pt-2 text-[10px]">
-                            <span className="font-bold text-[#00d4aa]">${deal.value.toLocaleString()}</span>
-                            
-                            <div className="flex items-center gap-1">
-                              {/* AI score rating */}
-                              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[9px] font-mono font-bold text-brand bg-brand/10 border border-brand/20 rounded-md">
-                                <Sparkles className="w-2.5 h-2.5 text-brand" />
-                                {associatedLead?.score || 80}%
-                              </span>
-                              {getHealthBadge(deal.status)}
-                            </div>
-                          </div>
-
-                          {/* Tags indicator */}
-                          {deal.tags && deal.tags.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-1">
-                              {deal.tags.slice(0, 2).map((t, idx) => (
-                                <span key={idx} className="text-[8px] bg-surface-alt font-bold text-text-muted px-1.5 py-0.5 rounded border border-border/30">
-                                  {t}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-
-                          {/* Assgined Agent visual element */}
-                          <div className="flex items-center justify-between text-[8px] text-text-muted uppercase tracking-wider font-mono pt-1">
-                            <span>SLA Target: {stage.slaDays}d</span>
-                            <span className="text-text-muted/60">{deal.assignedAgent || "No Operator"}</span>
-                          </div>
+                          <span className="text-[11px] text-[#00d4aa] font-mono font-bold">
+                            Cumulative Value: ${totalValue.toLocaleString()}
+                          </span>
                         </div>
-                      );
-                    })
-                  )}
+
+                        {/* Horizontal Stages Grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 overflow-x-auto pb-4 scrollbar-thin">
+                          {activePipeline?.stages.map((stage) => {
+                            const stageLaneDeals = laneDeals.filter(d => d.stage === stage.id);
+                            const cumulativeStageValue = stageLaneDeals.reduce((sum, d) => sum + d.value, 0);
+
+                            return (
+                              <div 
+                                key={stage.id}
+                                onDragOver={handleDragOver}
+                                onDrop={(e) => handleDrop(e, stage.id)}
+                                className="flex flex-col bg-[#090a0f]/40 border border-border/40 p-3 rounded-xl min-w-[200px] min-h-[180px]"
+                              >
+                                {/* Stage name Inside Swimlane */}
+                                <div className="flex items-center justify-between border-b border-border/20 pb-1.5 mb-2.5">
+                                  <div className="flex items-center gap-1 min-w-0">
+                                    <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: stage.color }} />
+                                    <span className="text-[10px] font-bold text-text truncate uppercase" title={stage.name}>
+                                      {stage.name}
+                                    </span>
+                                  </div>
+                                  <span className="text-[9px] font-bold font-mono text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded">
+                                    ${cumulativeStageValue.toLocaleString()}
+                                  </span>
+                                </div>
+
+                                {/* Render stage lane deals */}
+                                <div className="flex-1 space-y-2 overflow-y-auto pr-1 scrollbar-thin max-h-[250px]">
+                                  {stageLaneDeals.length === 0 ? (
+                                    <div className="h-full flex flex-col items-center justify-center text-center p-3 border border-dashed border-border/20 rounded-lg bg-surface-alt/5">
+                                      <span className="text-[8px] text-text-muted/40 uppercase">No Matches</span>
+                                    </div>
+                                  ) : (
+                                    stageLaneDeals.map((deal) => {
+                                      const associatedLead = initialLeads.find(l => l.id === deal.leadId);
+                                      const daysInfo = getDaysInStage(deal, stage);
+                                      const isSlaBreached = stage.slaDays > 0 && daysInfo.days > stage.slaDays;
+
+                                      return (
+                                        <div
+                                          key={deal.id}
+                                          draggable
+                                          onDragStart={(e) => handleDragStart(e, deal.id)}
+                                          onClick={() => selectActiveDeal(deal)}
+                                          className={`group relative bg-surface border transition-all duration-300 rounded-lg p-2.5 cursor-grab active:cursor-grabbing text-left space-y-2 select-none ${
+                                            selectedDeal?.id === deal.id 
+                                              ? "border-brand shadow-lg bg-[#0c0d16]" 
+                                              : "border-border/80 hover:border-border-muted"
+                                          }`}
+                                        >
+                                          {/* SLA Breach visual warning alert */}
+                                          {isSlaBreached && (
+                                            <div className="bg-rose-500/10 border border-rose-500/30 text-rose-400 rounded-lg p-1.5 flex items-start gap-1 animate-pulse text-[9px] leading-tight font-bold">
+                                              <AlertCircle className="w-3 h-3 mt-0.5 shrink-0 text-rose-400" />
+                                              <span>SLA Overdue ({daysInfo.days}d / max {stage.slaDays}d)</span>
+                                            </div>
+                                          )}
+
+                                          <div className="flex items-start justify-between gap-1.5">
+                                            <h5 className="text-[10px] font-bold text-text truncate group-hover:text-brand transition-colors" title={deal.title}>
+                                              {deal.title}
+                                            </h5>
+                                            <button 
+                                              onClick={(e) => handleDeleteDeal(deal.id, e)}
+                                              className="opacity-0 group-hover:opacity-100 p-0.5 hover:text-rose-400 text-text-muted/40 transition-all rounded-md"
+                                            >
+                                              <Trash2 className="w-3.5 h-3.5" />
+                                            </button>
+                                          </div>
+
+                                          <div className="text-[9px] text-text-muted line-clamp-1">
+                                            {associatedLead?.name || "Unassigned Lead"}
+                                            <span className="text-[8px] opacity-60 ml-1">@{associatedLead?.company || "N/A"}</span>
+                                          </div>
+
+                                          <div className="flex items-center justify-between border-t border-border/10 pt-1.5 text-[9px]">
+                                            <span className="font-bold text-[#00d4aa]">${deal.value.toLocaleString()}</span>
+                                            <div className="flex items-center gap-1">
+                                              <span className="inline-flex items-center gap-0.5 px-1 py-0.2 text-[8px] font-mono font-bold text-brand bg-brand/10 border border-brand/20 rounded">
+                                                {associatedLead?.score || 80}%
+                                              </span>
+                                              {getHealthBadge(deal.status)}
+                                            </div>
+                                          </div>
+
+                                          <div className="flex items-center justify-between text-[8px] text-text-muted uppercase tracking-wider font-mono pt-1">
+                                            <span>Duration: {daysInfo.days}d / max {stage.slaDays}d</span>
+                                            <span className="text-text-muted/65 truncate max-w-[70px]">{deal.assignedAgent || "No Operator"}</span>
+                                          </div>
+                                        </div>
+                                      );
+                                    })
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })()}
+          </div>
+        ) : (
+          /* STANDARD COLUMN KANBAN BOARD */
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 overflow-x-auto pb-4 scrollbar-thin">
+            {activePipeline?.stages.map((stage) => {
+              const stageDeals = filteredDeals.filter(d => d.stage === stage.id);
+              const cumulativeValue = stageDeals.reduce((sum, d) => sum + d.value, 0);
+
+              return (
+                <div 
+                  key={stage.id}
+                  onDragOver={handleDragOver}
+                  onDrop={(e) => handleDrop(e, stage.id)}
+                  className="flex flex-col bg-[#090a0f]/40 border border-border/40 p-4 rounded-2xl min-w-[240px] h-[520px]"
+                >
+                  {/* Stage Header */}
+                  <div className="flex items-center justify-between border-b border-border/40 pb-2 mb-3">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: stage.color }} />
+                      <h4 className="text-xs font-bold text-text truncate uppercase tracking-wide" title={stage.name}>{stage.name}</h4>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <span className="px-1.5 py-0.5 rounded-md bg-border text-[9px] font-bold text-text-muted">{stageDeals.length}</span>
+                    </div>
+                  </div>
+
+                  <div className="text-[10px] text-text-muted font-mono mb-3 flex items-center justify-between px-1 bg-surface-alt/50 py-1 rounded-lg">
+                    <span>Prob: {stage.probability}%</span>
+                    <span className="text-amber-400 font-bold">${cumulativeValue.toLocaleString()} val</span>
+                  </div>
+
+                  {/* Cards rendering */}
+                  <div className="flex-1 space-y-3 overflow-y-auto pr-1 scrollbar-thin text-left">
+                    {stageDeals.length === 0 ? (
+                      <div className="h-full flex flex-col items-center justify-center text-center p-4 border border-dashed border-border/30 rounded-xl bg-surface-alt/10">
+                        <Briefcase className="w-5 h-5 text-text-muted/20 mb-1" />
+                        <span className="text-[9px] text-text-muted/60">Stage Empty</span>
+                        <span className="text-[7px] text-text-muted/40 uppercase mt-0.5">SLA limit: {stage.slaDays} days</span>
+                      </div>
+                    ) : (
+                      stageDeals.map((deal) => {
+                        const associatedLead = initialLeads.find(l => l.id === deal.leadId);
+                        const isHovered = hoveredCardId === deal.id;
+                        const daysInfo = getDaysInStage(deal, stage);
+                        const isSlaBreached = stage.slaDays > 0 && daysInfo.days > stage.slaDays;
+
+                        return (
+                          <div
+                            key={deal.id}
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, deal.id)}
+                            onMouseEnter={() => setHoveredCardId(deal.id)}
+                            onMouseLeave={() => setHoveredCardId(null)}
+                            onClick={() => selectActiveDeal(deal)}
+                            className={`group relative bg-surface border transition-all duration-300 rounded-xl p-3.5 cursor-grab active:cursor-grabbing text-left space-y-2 select-none ${
+                              selectedDeal?.id === deal.id 
+                                ? "border-brand shadow-lg shadow-brand/10 bg-[#0c0d16]" 
+                                : "border-border/80 hover:border-border-muted"
+                            }`}
+                          >
+                            {/* SLA Breach visual warning alert */}
+                            {isSlaBreached && (
+                              <div className="bg-rose-500/10 border border-rose-500/30 text-rose-400 rounded-lg p-2.5 flex items-start gap-1.5 animate-pulse text-[10px] leading-tight font-bold">
+                                <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0 text-rose-400" />
+                                <span>SLA Overdue ({daysInfo.days}d in stage / Limit {stage.slaDays}d)</span>
+                              </div>
+                            )}
+
+                            {/* Deal title & Health Color Bar */}
+                            <div className="flex items-start justify-between gap-1.5">
+                              <h5 className="text-[11px] font-bold text-text tracking-tight group-hover:text-brand transition-colors truncate" title={deal.title}>
+                                {deal.title}
+                              </h5>
+                              <button 
+                                onClick={(e) => handleDeleteDeal(deal.id, e)}
+                                className="opacity-0 group-hover:opacity-100 p-0.5 hover:text-rose-400 text-text-muted/40 transition-all rounded-md"
+                                title="Revoke Deal segment"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+
+                            {/* Contact Info */}
+                            <div className="text-[10px] text-text-muted font-medium line-clamp-1">
+                              {associatedLead?.name || "Unassigned Lead"}
+                              <span className="text-[8px] opacity-60 ml-1">@{associatedLead?.company || "N/A"}</span>
+                            </div>
+
+                            {/* Cost value & AI close score tags block */}
+                            <div className="flex items-center justify-between border-t border-[#12141c] pt-2 text-[10px]">
+                              <span className="font-bold text-[#00d4aa]">${deal.value.toLocaleString()}</span>
+                              
+                              <div className="flex items-center gap-1">
+                                {/* AI score rating */}
+                                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[9px] font-mono font-bold text-brand bg-brand/10 border border-brand/20 rounded-md">
+                                  <Sparkles className="w-2.5 h-2.5 text-brand" />
+                                  {associatedLead?.score || 80}%
+                                </span>
+                                {getHealthBadge(deal.status)}
+                              </div>
+                            </div>
+
+                            {/* Tags indicator */}
+                            {deal.tags && deal.tags.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {deal.tags.slice(0, 2).map((t, idx) => (
+                                  <span key={idx} className="text-[8px] bg-surface-alt font-bold text-text-muted px-1.5 py-0.5 rounded border border-border/30">
+                                    {t}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Assgined Agent visual element */}
+                            <div className="flex items-center justify-between text-[8px] text-text-muted uppercase tracking-wider font-mono pt-1">
+                              <span>Stage Duration: {daysInfo.days}d / max {stage.slaDays}d</span>
+                              <span className="text-text-muted/60">{deal.assignedAgent || "No Operator"}</span>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )
       ) : (
         /* List view fallback with clean bulk support, pagination grids */
         <div className="overflow-x-auto bg-[#090a0f]/20 border border-border/40 rounded-2xl text-left">
