@@ -1453,7 +1453,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
       )}
 
       {/* Sidebar Navigation */}
-      <aside className={`fixed md:sticky top-0 left-0 h-screen z-[60] border-r border-border-subtle bg-[#111216]/95 md:bg-surface/50 backdrop-blur-xl flex flex-col transition-all duration-300 md:translate-x-0 ${
+      <aside className={`fixed md:sticky top-0 left-0 h-screen z-[60] border-r border-border-subtle ${isMobileDevice ? 'bg-surface' : 'bg-[#111216]/95 md:bg-surface/50'} backdrop-blur-xl flex flex-col transition-all duration-300 md:translate-x-0 ${
         isMobileMenuOpen 
           ? 'w-64 translate-x-0' 
           : `-translate-x-full md:translate-x-0 ${isMenuCollapsed ? 'w-20' : 'w-64'}`
@@ -1866,23 +1866,23 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
             </button>
 
             {/* Mobile Logo */}
-            <div className="flex items-center gap-2 md:hidden shrink-0">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-brand to-brand-alt flex items-center justify-center shadow-lg shadow-brand/20">
-                <Zap className="w-4.5 h-4.5 text-white fill-current" />
+            <div className="flex items-center gap-2 md:hidden shrink-0 flex-nowrap">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-brand to-brand-alt flex items-center justify-center shadow-lg shadow-brand/20 shrink-0">
+                <Zap className="w-4.5 h-4.5 text-white fill-current shrink-0" />
               </div>
-              <span className="font-syne font-extrabold text-sm tracking-tight text-text truncate max-w-[85px] xs:max-w-none">Zyntra AI</span>
+              <span className="font-syne font-extrabold text-sm tracking-tight text-text shrink-0">Zyntra AI</span>
             </div>
 
             {/* Divider for mobile to separate logo from view title */}
             <div className="hidden xs:block md:hidden w-px h-5 bg-border-subtle shrink-0" />
 
-            <h2 className="text-xs md:text-sm font-bold uppercase tracking-[0.1em] md:tracking-[0.2em] text-text-muted truncate">
+            <h2 className="text-xs md:text-sm font-bold uppercase tracking-[0.1em] md:tracking-[0.2em] text-text-muted truncate min-w-0 flex-1 md:flex-none">
               {activeView === 'OUTREACH' ? 'Outreach Engine' : activeView === 'RESEARCH' ? 'Prospect Intelligence' : activeView === 'TEAM_ADMIN' ? 'Team Administration' : activeView === 'SETTINGS' ? 'System Settings' : 'Platform Control Center'}
             </h2>
             {activeView === 'OUTREACH' && currentCampaign && (
               <>
                 <ChevronRight className="w-4 h-4 text-text-muted/40 shrink-0" />
-                <div className="px-2.5 py-1 rounded-full bg-brand/10 border border-brand/20 text-[9px] md:text-[10px] font-bold text-brand truncate max-w-[80px] xs:max-w-[120px] md:max-w-none">
+                <div className="px-2.5 py-1 rounded-full bg-brand/10 border border-brand/20 text-[9px] md:text-[10px] font-bold text-brand truncate max-w-[80px] xs:max-w-[120px] md:max-w-none shrink-0">
                   {currentCampaign.name.toUpperCase()}
                 </div>
               </>
