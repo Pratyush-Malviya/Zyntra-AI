@@ -28,9 +28,10 @@ interface LandingPageProps {
   isAuthenticated: boolean;
   theme: 'dark' | 'light';
   setTheme: (t: 'dark' | 'light') => void;
+  isMobileDevice?: boolean;
 }
 
-export default function LandingPage({ onLaunchApp, isAuthenticated, theme, setTheme }: LandingPageProps) {
+export default function LandingPage({ onLaunchApp, isAuthenticated, theme, setTheme, isMobileDevice }: LandingPageProps) {
   // Calculator state
   const [leadVolume, setLeadVolume] = useState<number>(500);
   const [conversionRate, setConversionRate] = useState<number>(2.5);
@@ -90,20 +91,22 @@ export default function LandingPage({ onLaunchApp, isAuthenticated, theme, setTh
 
           <div className="flex items-center gap-4">
             {/* Theme Toggle */}
-            <button 
-              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className={`p-2 rounded-lg cursor-pointer transition-colors border ${
-                theme === 'dark' 
-                  ? 'bg-slate-900 border-white/[0.05] text-amber-400 hover:bg-slate-800' 
-                  : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
-              }`}
-            >
-              {theme === 'dark' ? (
-                <span className="text-xs font-mono">☀️ Light</span>
-              ) : (
-                <span className="text-xs font-mono">🌙 Dark</span>
-              )}
-            </button>
+            {!isMobileDevice && (
+              <button 
+                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                className={`p-2 rounded-lg cursor-pointer transition-colors border ${
+                  theme === 'dark' 
+                    ? 'bg-slate-900 border-white/[0.05] text-amber-400 hover:bg-slate-800' 
+                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                {theme === 'dark' ? (
+                  <span className="text-xs font-mono">☀️ Light</span>
+                ) : (
+                  <span className="text-xs font-mono">🌙 Dark</span>
+                )}
+              </button>
+            )}
 
             <button 
               onClick={onLaunchApp}

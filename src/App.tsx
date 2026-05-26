@@ -459,6 +459,19 @@ export default function App() {
     return unsubscribe;
   }, []);
 
+  const [isMobileDevice, setIsMobileDevice] = useState<boolean>(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      const isMobileSize = window.innerWidth < 1024;
+      const isMobileAgent = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      setIsMobileDevice(isMobileSize || isMobileAgent);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
     return (localStorage.getItem('zyntra-theme') as 'dark' | 'light') || 'light';
   });
@@ -468,6 +481,8 @@ export default function App() {
     localStorage.setItem('zyntra-theme', newTheme);
   };
 
+  const effectiveTheme = isMobileDevice ? 'light' : theme;
+
   if (loading) return <div className="min-h-screen bg-bg flex items-center justify-center"><Loader2 className="w-8 h-8 text-brand animate-spin" /></div>;
   
   if (!user || !profile) {
@@ -476,18 +491,19 @@ export default function App() {
         <LandingPage 
           onLaunchApp={() => setShowLanding(false)} 
           isAuthenticated={false} 
-          theme={theme} 
+          theme={effectiveTheme} 
           setTheme={toggleTheme} 
+          isMobileDevice={isMobileDevice}
         />
       );
     }
-    return <LoginView onBack={() => setShowLanding(true)} theme={theme} setTheme={toggleTheme} />;
+    return <LoginView onBack={() => setShowLanding(true)} theme={effectiveTheme} setTheme={toggleTheme} isMobileDevice={isMobileDevice} />;
   }
 
-  return <MainApp user={user} profile={profile} theme={theme} setTheme={toggleTheme} />;
+  return <MainApp user={user} profile={profile} theme={effectiveTheme} setTheme={toggleTheme} isMobileDevice={isMobileDevice} />;
 }
 
-function LoginView({ onBack, theme, setTheme }: { onBack: () => void, theme: 'dark' | 'light', setTheme: (t: 'dark' | 'light') => void }) {
+function LoginView({ onBack, theme, setTheme, isMobileDevice }: { onBack: () => void, theme: 'dark' | 'light', setTheme: (t: 'dark' | 'light') => void, isMobileDevice: boolean }) {
   const handleLogin = async () => { try { await signInWithPopup(auth, googleProvider); } catch (e) { console.error(e); } };
   return (
     <div className={`min-h-screen ${theme === 'dark' ? 'bg-[#090a0f] text-slate-100' : 'bg-slate-50 text-slate-900'} flex items-center justify-center p-6 relative overflow-hidden transition-colors duration-300`}>
@@ -507,18 +523,20 @@ function LoginView({ onBack, theme, setTheme }: { onBack: () => void, theme: 'da
         </button>
       </div>
 
-      <div className="absolute top-6 right-6">
-        <button 
-          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-          className={`px-3 py-2 text-xs font-mono rounded-lg border cursor-pointer transition-colors ${
-            theme === 'dark' 
-              ? 'bg-slate-900 border-white/[0.05] text-amber-400 hover:bg-slate-800' 
-              : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
-          }`}
-        >
-          {theme === 'dark' ? '☀️ Light' : '🌙 Dark'}
-        </button>
-      </div>
+      {!isMobileDevice && (
+        <div className="absolute top-6 right-6">
+          <button 
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            className={`px-3 py-2 text-xs font-mono rounded-lg border cursor-pointer transition-colors ${
+              theme === 'dark' 
+                ? 'bg-slate-900 border-white/[0.05] text-amber-400 hover:bg-slate-800' 
+                : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
+            }`}
+          >
+            {theme === 'dark' ? '☀️ Light' : '🌙 Dark'}
+          </button>
+        </div>
+      )}
 
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className={`max-w-md w-full p-10 rounded-[40px] border text-center space-y-8 relative z-10 ${
         theme === 'dark' ? 'bg-[#12131a] border-white/[0.05]' : 'bg-white border-slate-200'
@@ -536,7 +554,7 @@ function LoginView({ onBack, theme, setTheme }: { onBack: () => void, theme: 'da
 
 
 
-function MainApp({ user, profile, theme, setTheme }: { user: User, profile: UserProfile, theme: 'dark' | 'light', setTheme: (t: 'dark' | 'light') => void }) {
+function MainApp({ user, profile, theme, setTheme, isMobileDevice }: { user: User, profile: UserProfile, theme: 'dark' | 'light', setTheme: (t: 'dark' | 'light') => void, isMobileDevice: boolean }) {
   const [isMenuCollapsed, setIsMenuCollapsed] = useState<boolean>(() => {
     return localStorage.getItem('zyntra-menu-collapsed') === 'true';
   });
@@ -1794,24 +1812,26 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
             </div>
           )}
 
-          <div className="pt-4 mt-4 border-t border-border-subtle">
-            <button 
-              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-bg-subtle transition-all group text-left cursor-pointer"
-            >
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all shrink-0 ${
-                theme === 'dark' ? 'bg-brand/10 text-brand' : 'bg-brand-alt/10 text-brand-alt'
-              } ${isMenuCollapsed && !isMobileMenuOpen ? 'mx-auto' : ''}`}>
-                {theme === 'dark' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
-              </div>
-              {(!isMenuCollapsed || isMobileMenuOpen) && (
-                <div className="overflow-hidden transition-all duration-300 block">
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-text">Appearance</div>
-                  <div className="text-[8px] text-text-muted uppercase tracking-widest">{theme === 'dark' ? 'Dark Mode' : 'Light Mode'}</div>
+          {!isMobileDevice && (
+            <div className="pt-4 mt-4 border-t border-border-subtle">
+              <button 
+                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-bg-subtle transition-all group text-left cursor-pointer"
+              >
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all shrink-0 ${
+                  theme === 'dark' ? 'bg-brand/10 text-brand' : 'bg-brand-alt/10 text-brand-alt'
+                } ${isMenuCollapsed && !isMobileMenuOpen ? 'mx-auto' : ''}`}>
+                  {theme === 'dark' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
                 </div>
-              )}
-            </button>
-          </div>
+                {(!isMenuCollapsed || isMobileMenuOpen) && (
+                  <div className="overflow-hidden transition-all duration-300 block">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-text">Appearance</div>
+                    <div className="text-[8px] text-text-muted uppercase tracking-widest">{theme === 'dark' ? 'Dark Mode' : 'Light Mode'}</div>
+                  </div>
+                )}
+              </button>
+            </div>
+          )}
         </nav>
 
         <div className="p-4 border-t border-border-subtle">
