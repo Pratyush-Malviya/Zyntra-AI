@@ -300,7 +300,8 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
   };
 
   const downloadPDFReport = (reportToDownload?: ProspectResearchReport | null) => {
-    const report = reportToDownload || activeResearch;
+    const isReportObj = reportToDownload && typeof reportToDownload === 'object' && ('companyInfo' in reportToDownload);
+    const report = isReportObj ? reportToDownload : activeResearch;
     if (!report) return;
     const doc = new jsPDF();
     const info = report.companyInfo || {} as any;
@@ -748,7 +749,7 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
                     </div>
 
                     <button
-                      onClick={downloadPDFReport}
+                      onClick={() => downloadPDFReport()}
                       className="w-full bg-surface border border-border hover:border-brand/40 text-text text-xs font-bold p-3.5 rounded-xl transition-all flex items-center justify-center gap-2"
                     >
                       <Download className="w-4 h-4 text-brand-alt" />
