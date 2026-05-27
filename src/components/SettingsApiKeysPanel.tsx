@@ -251,7 +251,7 @@ export const SettingsApiKeysPanel: React.FC<SettingsApiKeysPanelProps> = ({ show
         </div>
 
         {/* Create Form */}
-        <form onSubmit={handleGenerateApiKey} className="flex gap-4 p-5 bg-[#090a0f]/40 border border-border/70 rounded-2xl">
+        <form onSubmit={handleGenerateApiKey} className="flex flex-col sm:flex-row gap-4 p-5 bg-[#090a0f]/40 border border-border/70 rounded-2xl">
           <div className="flex-1 space-y-1.5">
             <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted">API Client Label Name</label>
             <input 
@@ -266,7 +266,7 @@ export const SettingsApiKeysPanel: React.FC<SettingsApiKeysPanelProps> = ({ show
             <button
               type="submit"
               disabled={isGenerating || !newKeyName.trim()}
-              className="px-5 py-3.5 bg-brand hover:bg-brand/90 text-[#090a0f] font-extrabold rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+              className="w-full sm:w-auto px-5 py-3.5 bg-brand hover:bg-brand/90 text-[#090a0f] font-extrabold rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
             >
               <Plus className="w-4 h-4 text-[#090a0f] stroke-[3]" />
               Generate API Key

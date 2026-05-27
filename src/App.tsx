@@ -481,7 +481,11 @@ export default function App() {
     localStorage.setItem('zyntra-theme', newTheme);
   };
 
-  const effectiveTheme = isMobileDevice ? 'light' : theme;
+  const effectiveTheme = theme;
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', effectiveTheme === 'dark');
+  }, [effectiveTheme]);
 
   if (loading) return <div className="min-h-screen bg-bg flex items-center justify-center"><Loader2 className="w-8 h-8 text-brand animate-spin" /></div>;
   
@@ -523,7 +527,7 @@ function LoginView({ onBack, theme, setTheme, isMobileDevice }: { onBack: () => 
         </button>
       </div>
 
-      {!isMobileDevice && (
+      {true && (
         <div className="absolute top-6 right-6">
           <button 
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
@@ -1812,7 +1816,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
             </div>
           )}
 
-          {!isMobileDevice && (
+          {true && (
             <div className="pt-4 mt-4 border-t border-border-subtle">
               <button 
                 onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
@@ -3182,7 +3186,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
       {/* Bottom/Vertical Nav */}
       {activeView === 'OUTREACH' && activePanel !== -1 && (
         <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 md:-translate-x-0 md:left-auto md:right-8 md:top-1/2 md:bottom-auto md:-translate-y-1/2 z-50 transition-all duration-300 w-[95%] sm:w-auto md:w-auto">
-          <div className="glass px-3 py-3 md:px-3 md:py-6 rounded-full md:rounded-3xl flex md:flex-col items-center justify-between md:justify-center gap-1.5 sm:gap-2 md:gap-4 shadow-2xl shadow-black/20 border border-border-subtle">
+          <div className="glass px-2 py-2 md:px-3 md:py-6 rounded-full md:rounded-3xl flex md:flex-col items-center justify-between md:justify-center gap-1 sm:gap-2 md:gap-4 shadow-2xl shadow-black/20 border border-border-subtle">
             {[
               { id: 0, label: 'Configure', icon: Settings },
               { id: 1, label: 'Import', icon: Users, badge: leads.length },
@@ -3193,11 +3197,11 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
               <button
                 key={p.id}
                 onClick={() => setActivePanel(p.id)}
-                className={`relative flex items-center justify-center md:justify-start gap-3 px-3.5 sm:px-6 md:px-5 py-3 rounded-full md:rounded-2xl transition-all duration-500 group md:w-full min-w-[40px] md:min-w-[48px] ${
+                className={`relative flex items-center justify-center md:justify-start gap-1.5 xs:gap-3 px-2.5 xs:px-3.5 sm:px-6 md:px-5 py-2 sm:py-3 rounded-full md:rounded-2xl transition-all duration-500 group md:w-full min-w-[36px] sm:min-w-[40px] md:min-w-[48px] ${
                   activePanel === p.id ? 'bg-brand text-white shadow-lg shadow-brand/30' : 'text-text-muted hover:text-text hover:bg-bg-subtle'
                 }`}
               >
-                <p.icon className={`w-5 h-5 transition-transform duration-500 ${activePanel === p.id ? 'scale-110' : 'group-hover:scale-110'}`} />
+                <p.icon className={`w-4 h-4 xs:w-5 h-5 transition-transform duration-500 ${activePanel === p.id ? 'scale-110' : 'group-hover:scale-110'}`} />
                 {activePanel === p.id && (
                   <motion.span 
                     layoutId="nav-text"
