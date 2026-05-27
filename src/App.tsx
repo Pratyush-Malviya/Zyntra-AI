@@ -596,6 +596,20 @@ function MainApp({ user, profile, theme, setTheme, isMobileDevice }: { user: Use
   const [highlightElite, setHighlightElite] = useState(false);
   const [expandedLeadId, setExpandedLeadId] = useState<string | null>(null);
   
+  const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
+  const [showBulkEditModal, setShowBulkEditModal] = useState(false);
+  const [bulkEditFields, setBulkEditFields] = useState({
+    role: '',
+    company: '',
+    industry: '',
+    country: '',
+    status: '',
+  });
+  const [editingLeadId, setEditingLeadId] = useState<string | null>(null);
+  const [editedLeadData, setEditedLeadData] = useState<Partial<Lead> | null>(null);
+  const [showBulkAddModal, setShowBulkAddModal] = useState(false);
+  const [bulkAddRowsText, setBulkAddRowsText] = useState('');
+  
   const [liAccount, setLiAccount] = useState<{ connected: boolean, name: string, avatar: string, uid: string } | null>(null);
   const [isConnectingLi, setIsConnectingLi] = useState(false);
   const [emAccount, setEmAccount] = useState<{ connected: boolean, email: string, provider: string } | null>(null);
@@ -629,8 +643,8 @@ function MainApp({ user, profile, theme, setTheme, isMobileDevice }: { user: Use
   const logEndRef = useRef<HTMLDivElement>(null);
   const bulkLogEndRef = useRef<HTMLDivElement>(null);
 
-  const [toast, setToast] = useState<{ msg: string, type: 'success' | 'error' | 'info' } | null>(null);
-  const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'success') => {
+  const [toast, setToast] = useState<{ msg: string, type: 'success' | 'error' | 'info' | 'warning' } | null>(null);
+  const showToast = (msg: string, type: 'success' | 'error' | 'info' | 'warning' = 'success') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3500);
   };
@@ -1251,6 +1265,71 @@ function MainApp({ user, profile, theme, setTheme, isMobileDevice }: { user: Use
     });
   };
 
+  const handleDeleteLead = async (leadId: string) => {
+    if (!leadId) return;
+    try {
+      await deleteDoc(doc(db, 'leads', leadId));
+      if (currentCampaign) {
+        await updateDoc(doc(db, 'campaigns', currentCampaign.id), {
+          leadsCount: Math.max(0, leads.length - 1)
+        });
+      }
+      setSelectedLeadIds(prev => prev.filter(id => id !== leadId));
+      showToast("Lead successfully deleted.", "success");
+    } catch (error: any) {
+      handleFirestoreError(error, OperationType.DELETE, 'leads');
+    }
+  };
+
+  const handleUpdateLead = async (leadId: string, updatedFields: Partial<Lead>) => {
+    if (!leadId) return;
+    try {
+      await updateDoc(doc(db, 'leads', leadId), updatedFields);
+      showToast("Lead successfully updated.", "success");
+    } catch (error: any) {
+      handleFirestoreError(error, OperationType.UPDATE, 'leads');
+    }
+  };
+
+  const handleBulkUpdateLeads = async (leadIds: string[], fields: Partial<Lead>) => {
+    if (leadIds.length === 0) return;
+    try {
+      const cleanFields = Object.fromEntries(
+        Object.entries(fields).filter(([_, v]) => v !== undefined && v !== '')
+      );
+      if (Object.keys(cleanFields).length === 0) {
+        showToast("No update values specified.", "warning");
+        return;
+      }
+      for (const id of leadIds) {
+        await updateDoc(doc(db, 'leads', id), cleanFields);
+      }
+      setSelectedLeadIds([]);
+      showToast(`Successfully updated ${leadIds.length} leads in bulk!`, "success");
+    } catch (error: any) {
+      handleFirestoreError(error, OperationType.UPDATE, 'leads');
+    }
+  };
+
+  const handleBulkDeleteLeads = async (leadIds: string[]) => {
+    if (leadIds.length === 0) return;
+    if (!confirm(`Are you sure you want to delete ${leadIds.length} leads?`)) return;
+    try {
+      for (const id of leadIds) {
+        await deleteDoc(doc(db, 'leads', id));
+      }
+      if (currentCampaign) {
+        await updateDoc(doc(db, 'campaigns', currentCampaign.id), {
+          leadsCount: Math.max(0, leads.length - leadIds.length)
+        });
+      }
+      setSelectedLeadIds([]);
+      showToast(`Successfully deleted ${leadIds.length} leads in bulk!`, "success");
+    } catch (error: any) {
+      handleFirestoreError(error, OperationType.DELETE, 'leads');
+    }
+  };
+
   const handleSmartImportComplete = async (importedRows: any[], summary: any) => {
     if (!currentCampaign || !user || !profile) return;
     
@@ -1495,6 +1574,58 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
         <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto max-h-[calc(100vh-180px)] scrollbar-thin">
           <div>
             <NavButton 
+              active={activeView === 'RESEARCH'} 
+              onClick={() => { setActiveView('RESEARCH'); setIsMobileMenuOpen(false); }}
+              icon={Globe}
+              label="Intelligence"
+              subLabel="Prospect Research"
+              isCollapsed={isMobileMenuOpen ? false : isMenuCollapsed}
+            />
+            <AnimatePresence initial={false}>
+              {activeView === 'RESEARCH' && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.25, ease: 'easeInOut' }}
+                  className={`overflow-hidden ml-5 pl-3 border-l border-brand/20 my-1 space-y-1 ${
+                    isMenuCollapsed && !isMobileMenuOpen ? 'pl-0 ml-0 border-l-0' : ''
+                  }`}
+                >
+                  <button
+                    onClick={() => {
+                      setResearchKey(prev => prev + 1);
+                      setActiveView('RESEARCH');
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-xs text-text-muted hover:bg-bg-subtle hover:text-text transition-all cursor-pointer ${
+                      isMenuCollapsed && !isMobileMenuOpen ? 'justify-center p-2' : ''
+                    }`}
+                    title="Launch New Intel Synthesis"
+                  >
+                    <Plus className="w-3.5 h-3.5 shrink-0 text-brand-alt" />
+                    {(!isMenuCollapsed || isMobileMenuOpen) && <span className="truncate font-semibold">New Deep-Dive</span>}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActiveView('RESEARCH');
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-xs text-brand bg-brand/10 font-bold hover:bg-brand/20 transition-all cursor-pointer ${
+                      isMenuCollapsed && !isMobileMenuOpen ? 'justify-center p-2' : ''
+                    }`}
+                    title="Browse Saved Dossiers"
+                  >
+                    <History className="w-3.5 h-3.5 shrink-0" />
+                    {(!isMenuCollapsed || isMobileMenuOpen) && <span className="truncate">Saved Dossiers</span>}
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          <div>
+            <NavButton 
               active={activeView === 'OUTREACH'} 
               onClick={() => { setActiveView('OUTREACH'); setActivePanel(-1); setIsMobileMenuOpen(false); }}
               icon={Target}
@@ -1597,58 +1728,6 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                       </>
                     )
                   )}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          <div>
-            <NavButton 
-              active={activeView === 'RESEARCH'} 
-              onClick={() => { setActiveView('RESEARCH'); setIsMobileMenuOpen(false); }}
-              icon={Globe}
-              label="Intelligence"
-              subLabel="Prospect Research"
-              isCollapsed={isMobileMenuOpen ? false : isMenuCollapsed}
-            />
-            <AnimatePresence initial={false}>
-              {activeView === 'RESEARCH' && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.25, ease: 'easeInOut' }}
-                  className={`overflow-hidden ml-5 pl-3 border-l border-brand/20 my-1 space-y-1 ${
-                    isMenuCollapsed && !isMobileMenuOpen ? 'pl-0 ml-0 border-l-0' : ''
-                  }`}
-                >
-                  <button
-                    onClick={() => {
-                      setResearchKey(prev => prev + 1);
-                      setActiveView('RESEARCH');
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-xs text-text-muted hover:bg-bg-subtle hover:text-text transition-all cursor-pointer ${
-                      isMenuCollapsed && !isMobileMenuOpen ? 'justify-center p-2' : ''
-                    }`}
-                    title="Launch New Intel Synthesis"
-                  >
-                    <Plus className="w-3.5 h-3.5 shrink-0 text-brand-alt" />
-                    {(!isMenuCollapsed || isMobileMenuOpen) && <span className="truncate font-semibold">New Deep-Dive</span>}
-                  </button>
-                  <button
-                    onClick={() => {
-                      setActiveView('RESEARCH');
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-xs text-brand bg-brand/10 font-bold hover:bg-brand/20 transition-all cursor-pointer ${
-                      isMenuCollapsed && !isMobileMenuOpen ? 'justify-center p-2' : ''
-                    }`}
-                    title="Browse Saved Dossiers"
-                  >
-                    <History className="w-3.5 h-3.5 shrink-0" />
-                    {(!isMenuCollapsed || isMobileMenuOpen) && <span className="truncate">Saved Dossiers</span>}
-                  </button>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -2322,7 +2401,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
         <PanelWrapper index={1} activePanel={activePanel}>
           <div className="space-y-1 mb-8">
             <h1 className="text-xl md:text-2xl font-bold tracking-tight">Import Leads</h1>
-            <p className="text-text-muted text-xs md:text-sm">Paste your target list or load our high-converting sample.</p>
+            <p className="text-text-muted text-xs md:text-sm">Paste your target list or import manually.</p>
           </div>
 
           <div className="bg-brand/10 border border-brand/20 rounded-3xl p-6 text-sm text-brand-muted leading-relaxed flex items-start gap-4 mb-8">
@@ -2399,23 +2478,12 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                   value={rawLeads}
                   onChange={e => setRawLeads(e.target.value)}
                 />
-                <div className="grid grid-cols-2 gap-4">
-                  <button 
-                    onClick={() => parseLeads(rawLeads)}
-                    className="bg-brand hover:bg-brand/90 text-white text-sm font-bold py-4 rounded-2xl transition-all shadow-lg shadow-brand/20"
-                  >
-                    Parse Paste
-                  </button>
-                  <button 
-                    onClick={() => {
-                      setRawLeads(SAMPLE_CSV);
-                      parseLeads(SAMPLE_CSV);
-                    }}
-                    className="bg-surface-alt border border-border hover:bg-border text-text text-sm font-bold py-4 rounded-2xl transition-all"
-                  >
-                    Load Sample
-                  </button>
-                </div>
+                <button 
+                  onClick={() => parseLeads(rawLeads)}
+                  className="w-full bg-brand hover:bg-brand/90 text-white text-sm font-bold py-4 rounded-2xl transition-all shadow-lg shadow-brand/20"
+                >
+                  Parse Paste
+                </button>
               </div>
             </div>
 
@@ -2503,153 +2571,463 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                   {sortByScore ? 'Sorted by Score' : 'Sort by Score'}
                 </button>
               </div>
-              <div className="grid gap-3">
-                {[...leads]
+
+              {/* Bulk actions and Select All controls */}
+              {(() => {
+                const displayedLeads = [...leads]
                   .filter(l => {
                     if (!scoreFilter) return true;
                     const s = calculateLeadScore(l);
                     return s >= scoreFilter.min && s <= scoreFilter.max;
                   })
-                  .sort((a, b) => sortByScore ? calculateLeadScore(b) - calculateLeadScore(a) : 0)
-                  .map((l, i) => {
-                    const lScore = calculateLeadScore(l);
-                    const isElite = lScore >= 60;
-                    const shouldHighlight = highlightElite && isElite;
+                  .sort((a, b) => sortByScore ? calculateLeadScore(b) - calculateLeadScore(a) : 0);
 
-                    return (
-                      <motion.div 
-                        key={l.id || i} 
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: i * 0.05 }}
-                        className={`border rounded-2xl p-4 flex flex-col group transition-all duration-300 ${
-                          shouldHighlight
-                            ? 'bg-emerald-500/5 border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.12)] scale-[1.01]'
-                            : 'bg-surface border-border hover:border-brand/30'
-                        }`}
-                      >
-                        <div 
-                          onClick={() => {
-                            const cid = l.id || `lead-${i}`;
-                            setExpandedLeadId(expandedLeadId === cid ? null : cid);
-                          }}
-                          className="flex items-center gap-4 cursor-pointer select-none"
+                const allDisplayedSelected = displayedLeads.length > 0 && displayedLeads.every(l => l.id && selectedLeadIds.includes(l.id));
+
+                const toggleSelectAll = () => {
+                  if (allDisplayedSelected) {
+                    const displayedIds = displayedLeads.map(l => l.id).filter(Boolean) as string[];
+                    setSelectedLeadIds(prev => prev.filter(id => !displayedIds.includes(id)));
+                  } else {
+                    const displayedIds = displayedLeads.map(l => l.id).filter(Boolean) as string[];
+                    setSelectedLeadIds(prev => Array.from(new Set([...prev, ...displayedIds])));
+                  }
+                };
+
+                return (
+                  <>
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-5 bg-surface border border-border rounded-3xl shadow-sm glow-brand/5">
+                      <div className="flex items-center gap-3">
+                        <input 
+                          type="checkbox"
+                          id="bulk-select-all"
+                          checked={allDisplayedSelected}
+                          onChange={toggleSelectAll}
+                          className="w-4 h-4 rounded border-border text-brand focus:ring-brand cursor-pointer bg-surface"
+                        />
+                        <label htmlFor="bulk-select-all" className="text-xs font-bold text-text cursor-pointer select-none">
+                          {selectedLeadIds.length > 0 ? (
+                            <span className="text-brand-alt">{selectedLeadIds.length} Selected</span>
+                          ) : (
+                            <span className="text-text-muted">No Selection</span>
+                          )}
+                          <span className="text-text-muted font-normal ml-1.5">
+                            • Showing {displayedLeads.length} lead{displayedLeads.length !== 1 ? 's' : ''} on feed
+                          </span>
+                        </label>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          onClick={() => setShowBulkAddModal(true)}
+                          className="px-3.5 py-2 bg-brand-alt/10 hover:bg-brand-alt hover:text-[#090a0f] text-brand-alt border border-brand-alt/20 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+                          title="Bulk load additional leads manually or from list"
                         >
-                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-white shadow-sm shrink-0 ${
-                            shouldHighlight
-                              ? 'bg-gradient-to-br from-emerald-400 via-brand-alt to-emerald-600 animate-pulse'
-                              : 'bg-gradient-to-br from-brand to-brand-alt'
-                          }`}>
-                            {(l?.name || '?')[0]}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <div className="text-sm font-bold group-hover:text-brand transition-colors truncate">
-                                {l?.name || 'Anonymous Lead'}
+                          <PlusCircle className="w-3.5 h-3.5" />
+                          Bulk Add Leads
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            if (selectedLeadIds.length === 0) {
+                              showToast("Please select at least one lead first.", "warning");
+                              return;
+                            }
+                            setBulkEditFields({ role: '', company: '', industry: '', country: '', status: '' });
+                            setShowBulkEditModal(true);
+                          }}
+                          className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm border ${
+                            selectedLeadIds.length > 0 
+                              ? 'bg-brand text-white border-brand/20 hover:bg-brand/90' 
+                              : 'bg-surface-alt border-border text-text-muted cursor-not-allowed opacity-50'
+                          }`}
+                        >
+                          <Settings className="w-3.5 h-3.5" />
+                          Bulk Edit ({selectedLeadIds.length})
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            if (selectedLeadIds.length === 0) {
+                              showToast("Please select at least one lead to delete.", "warning");
+                              return;
+                            }
+                            handleBulkDeleteLeads(selectedLeadIds);
+                          }}
+                          className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm border ${
+                            selectedLeadIds.length > 0 
+                              ? 'bg-red-500/10 hover:bg-red-500 hover:text-white text-red-500 border-red-500/20' 
+                              : 'bg-surface-alt border-border text-text-muted cursor-not-allowed opacity-50'
+                          }`}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          Bulk Delete ({selectedLeadIds.length})
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid gap-3">
+                      {displayedLeads.map((l, i) => {
+                        const lScore = calculateLeadScore(l);
+                        const isElite = lScore >= 60;
+                        const shouldHighlight = highlightElite && isElite;
+
+                        return (
+                          <motion.div 
+                            key={l.id || i} 
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: i * 0.01 }}
+                            className={`border rounded-2xl p-4 flex flex-col group transition-all duration-300 ${
+                              shouldHighlight
+                                ? 'bg-emerald-500/5 border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.12)] scale-[1.01]'
+                                : 'bg-surface border-border hover:border-brand/35'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              {/* Selection checkbox */}
+                              <div className="shrink-0 flex items-center pr-1">
+                                <input 
+                                  type="checkbox"
+                                  checked={l.id ? selectedLeadIds.includes(l.id) : false}
+                                  onChange={(e) => {
+                                    if (!l.id) return;
+                                    if (e.target.checked) {
+                                      setSelectedLeadIds(prev => [...prev, l.id!]);
+                                    } else {
+                                      setSelectedLeadIds(prev => prev.filter(id => id !== l.id));
+                                    }
+                                  }}
+                                  className="w-4 h-4 rounded border-border text-brand focus:ring-brand cursor-pointer bg-surface"
+                                />
                               </div>
-                              {shouldHighlight && (
-                                <motion.span 
-                                  animate={{ scale: [1, 1.1, 1] }}
-                                  transition={{ repeat: Infinity, duration: 2.2 }}
-                                  className="px-1.5 py-0.5 rounded-md bg-amber-500/20 text-amber-500 border border-amber-500/30 text-[8px] font-extrabold tracking-widest uppercase flex items-center gap-0.5 shadow-sm"
-                                >
-                                  <Award className="w-2.5 h-2.5" />
-                                  <span>Elite</span>
-                                </motion.span>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <div className="text-[10px] text-text-muted font-medium uppercase tracking-wider truncate">
-                                {l.role} @ {l.company}
+
+                              <div 
+                                onClick={() => {
+                                  const cid = l.id || `lead-${i}`;
+                                  setExpandedLeadId(expandedLeadId === cid ? null : cid);
+                                }}
+                                className="flex-1 flex items-center gap-4 cursor-pointer select-none min-w-0"
+                              >
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-white shadow-sm shrink-0 ${
+                                  shouldHighlight
+                                    ? 'bg-gradient-to-br from-emerald-400 via-brand-alt to-emerald-600 animate-pulse'
+                                    : 'bg-gradient-to-br from-brand to-brand-alt'
+                                }`}>
+                                  {(l?.name || '?')[0]}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <div className="text-sm font-bold group-hover:text-brand transition-colors truncate">
+                                      {l?.name || 'Anonymous Lead'}
+                                    </div>
+                                    {shouldHighlight && (
+                                      <motion.span 
+                                        animate={{ scale: [1, 1.1, 1] }}
+                                        transition={{ repeat: Infinity, duration: 2.2 }}
+                                        className="px-1.5 py-0.5 rounded-md bg-amber-500/20 text-amber-500 border border-amber-500/30 text-[8px] font-extrabold tracking-widest uppercase flex items-center gap-0.5 shadow-sm"
+                                      >
+                                        <Award className="w-2.5 h-2.5" />
+                                        <span>Elite</span>
+                                      </motion.span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <div className="text-[10px] text-text-muted font-medium uppercase tracking-wider truncate">
+                                      {l.role} @ {l.company}
+                                    </div>
+                                    <div className={`px-1.5 py-0.5 rounded text-[8px] font-extrabold ${
+                                      isElite ? 'bg-emerald-500/25 text-emerald-400 border border-emerald-500/20' : 'bg-brand/10 text-brand'
+                                    }`}>
+                                      SCORE: {lScore}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  {l.status === 'sent' && (
+                                    <div className="px-2 py-1 rounded-lg bg-brand-alt/10 border border-brand-alt/20 text-[9px] font-bold text-brand-alt flex items-center gap-1">
+                                      <CheckCircle2 className="w-3 h-3" />
+                                      SENT
+                                    </div>
+                                  )}
+                                  <div className="px-2 py-1 rounded-lg bg-surface-alt border border-border text-[9px] font-bold text-text-muted uppercase">
+                                    {COUNTRY_FLAGS[l.country] || '🌍'} {l.country || 'Global'}
+                                  </div>
+
+                                  {l.id && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (confirm(`Are you sure you want to delete lead ${l.name}?`)) {
+                                          handleDeleteLead(l.id!);
+                                        }
+                                      }}
+                                      className="p-1.5 rounded-xl border border-border text-text-muted hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/30 transition-all ml-1"
+                                      title="Delete target lead"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
+
+                                  <div className="text-text-muted group-hover:text-brand p-1 transition-colors">
+                                    <ChevronDown className={`w-4 h-4 transform transition-transform duration-200 ${expandedLeadId === (l.id || `lead-${i}`) ? 'rotate-180' : ''}`} />
+                                  </div>
+                                </div>
                               </div>
-                              <div className={`px-1.5 py-0.5 rounded text-[8px] font-extrabold ${
-                                isElite ? 'bg-emerald-500/25 text-emerald-400 border border-emerald-500/20' : 'bg-brand/10 text-brand'
-                              }`}>
-                                SCORE: {lScore}
-                              </div>
                             </div>
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            {l.status === 'sent' && (
-                              <div className="px-2 py-1 rounded-lg bg-brand-alt/10 border border-brand-alt/20 text-[9px] font-bold text-brand-alt flex items-center gap-1">
-                                <CheckCircle2 className="w-3 h-3" />
-                                SENT
-                              </div>
-                            )}
-                            <div className="px-2 py-1 rounded-lg bg-surface-alt border border-border text-[9px] font-bold text-text-muted">
-                              {COUNTRY_FLAGS[l.country] || '🌍'} {l.country}
-                            </div>
-                            <div className="text-text-muted group-hover:text-brand p-1 transition-colors">
-                              <ChevronDown className={`w-4 h-4 transform transition-transform duration-200 ${expandedLeadId === (l.id || `lead-${i}`) ? 'rotate-180' : ''}`} />
-                            </div>
-                          </div>
-                        </div>
 
                         {/* Expandable lead details */}
                         {expandedLeadId === (l.id || `lead-${i}`) && (
-                          <div className="w-full mt-4 pt-4 border-t border-border/80 grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs animate-fadeIn">
-                            <div>
-                              <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block mb-0.5">Company Name</span>
-                              <span className="text-white font-medium block truncate">{l.company || 'N/A'}</span>
+                          editingLeadId === l.id ? (
+                            <div className="w-full mt-4 pt-4 border-t border-border/80 grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs animate-fadeIn select-text">
+                              <div>
+                                <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block mb-0.5">Decision Maker Name</span>
+                                <input 
+                                  type="text" 
+                                  value={editedLeadData?.name || ''} 
+                                  onChange={e => setEditedLeadData(prev => prev ? ({ ...prev, name: e.target.value }) : null)}
+                                  className="w-full bg-surface-alt border border-border rounded-xl p-2.5 text-xs text-white" 
+                                />
+                              </div>
+                              <div>
+                                <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block mb-0.5">Designation (Role)</span>
+                                <input 
+                                  type="text" 
+                                  value={editedLeadData?.role || ''} 
+                                  onChange={e => setEditedLeadData(prev => prev ? ({ ...prev, role: e.target.value }) : null)}
+                                  className="w-full bg-surface-alt border border-border rounded-xl p-2.5 text-xs text-white" 
+                                />
+                              </div>
+                              <div>
+                                <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block mb-0.5">Company Name</span>
+                                <input 
+                                  type="text" 
+                                  value={editedLeadData?.company || ''} 
+                                  onChange={e => setEditedLeadData(prev => prev ? ({ ...prev, company: e.target.value }) : null)}
+                                  className="w-full bg-surface-alt border border-border rounded-xl p-2.5 text-xs text-white" 
+                                />
+                              </div>
+                              <div>
+                                <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block mb-0.5">Verified Email</span>
+                                <input 
+                                  type="email" 
+                                  value={editedLeadData?.email || ''} 
+                                  onChange={e => setEditedLeadData(prev => prev ? ({ ...prev, email: e.target.value }) : null)}
+                                  className="w-full bg-surface-alt border border-border rounded-xl p-2.5 text-xs text-white" 
+                                />
+                              </div>
+                              <div>
+                                <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block mb-0.5">Verified Phone</span>
+                                <input 
+                                  type="text" 
+                                  value={editedLeadData?.phone || ''} 
+                                  onChange={e => setEditedLeadData(prev => prev ? ({ ...prev, phone: e.target.value }) : null)}
+                                  className="w-full bg-surface-alt border border-border rounded-xl p-2.5 text-xs text-white" 
+                                />
+                              </div>
+                              <div>
+                                <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block mb-0.5">LinkedIn Profile Link</span>
+                                <input 
+                                  type="text" 
+                                  value={editedLeadData?.linkedin_url || ''} 
+                                  onChange={e => setEditedLeadData(prev => prev ? ({ ...prev, linkedin_url: e.target.value }) : null)}
+                                  className="w-full bg-surface-alt border border-border rounded-xl p-2.5 text-xs text-white" 
+                                />
+                              </div>
+                              <div>
+                                <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block mb-0.5">Country Code (e.g. US, IN)</span>
+                                <input 
+                                  type="text" 
+                                  value={editedLeadData?.country || ''} 
+                                  onChange={e => setEditedLeadData(prev => prev ? ({ ...prev, country: e.target.value }) : null)}
+                                  className="w-full bg-surface-alt border border-border rounded-xl p-2.5 text-xs text-white" 
+                                />
+                              </div>
+                              <div>
+                                <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block mb-0.5">Industry Segment</span>
+                                <input 
+                                  type="text" 
+                                  value={editedLeadData?.industry || ''} 
+                                  onChange={e => setEditedLeadData(prev => prev ? ({ ...prev, industry: e.target.value }) : null)}
+                                  className="w-full bg-surface-alt border border-border rounded-xl p-2.5 text-xs text-white" 
+                                />
+                              </div>
+                              <div>
+                                <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block mb-0.5">Official Website URL</span>
+                                <input 
+                                  type="text" 
+                                  value={editedLeadData?.website || ''} 
+                                  onChange={e => setEditedLeadData(prev => prev ? ({ ...prev, website: e.target.value }) : null)}
+                                  className="w-full bg-surface-alt border border-border rounded-xl p-2.5 text-xs text-white" 
+                                />
+                              </div>
+                              <div className="col-span-full flex items-center justify-end gap-2 pt-2.5 border-t border-border/40">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingLeadId(null);
+                                    setEditedLeadData(null);
+                                  }}
+                                  className="px-3.5 py-1.5 rounded-xl border border-border hover:bg-surface-alt text-xs font-semibold text-text-muted cursor-pointer"
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    if (!editedLeadData || !l.id) return;
+                                    await handleUpdateLead(l.id, editedLeadData);
+                                    setEditingLeadId(null);
+                                    setEditedLeadData(null);
+                                  }}
+                                  className="px-4 py-1.5 bg-brand text-white hover:opacity-90 rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer"
+                                >
+                                  <Save className="w-3.5 h-3.5" />
+                                  Save Details
+                                </button>
+                              </div>
                             </div>
-                            <div>
-                              <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block mb-0.5">Official Website</span>
-                              {l.website && l.website !== 'N/A' ? (
-                                <a href={l.website.startsWith('http') ? l.website : `https://${l.website}`} target="_blank" rel="noreferrer" className="text-brand hover:underline font-medium block truncate flex items-center gap-1">
-                                  {l.website} <ExternalLink className="w-3 h-3 text-brand" />
-                                </a>
-                              ) : (
-                                <span className="text-text-muted">N/A</span>
-                              )}
+                          ) : (
+                            <div className="w-full mt-4 pt-4 border-t border-border/80 grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs animate-fadeIn">
+                              <div>
+                                <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block mb-0.5">Company Name</span>
+                                <span className="text-white font-medium block truncate">{l.company || 'N/A'}</span>
+                              </div>
+                              <div>
+                                <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block mb-0.5">Official Website</span>
+                                {l.website && l.website !== 'N/A' ? (
+                                  <a href={l.website.startsWith('http') ? l.website : `https://${l.website}`} target="_blank" rel="noreferrer" className="text-brand hover:underline font-medium block truncate flex items-center gap-1">
+                                    {l.website} <ExternalLink className="w-3 h-3 text-brand" />
+                                  </a>
+                                ) : (
+                                  <span className="text-text-muted">N/A</span>
+                                )}
+                              </div>
+                              <div>
+                                <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block mb-0.5">Decision Maker</span>
+                                <span className="text-white font-medium block truncate">{l.name || 'N/A'}</span>
+                              </div>
+                              <div>
+                                <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block mb-0.5">Designation</span>
+                                <span className="text-brand font-medium block truncate">{l.role || 'N/A'}</span>
+                              </div>
+                              <div>
+                                <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block mb-0.5">Verified Phone</span>
+                                <span className="text-white font-mono font-medium block truncate">{l.phone || 'N/A'}</span>
+                              </div>
+                              <div>
+                                <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block mb-0.5">Verified Email</span>
+                                {l.email ? (
+                                  <a href={`mailto:${l.email}`} className="text-brand hover:underline font-mono font-medium block truncate">{l.email}</a>
+                                ) : (
+                                  <span className="text-text-muted">N/A</span>
+                                )}
+                              </div>
+                              <div>
+                                <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block mb-0.5">LinkedIn Profile</span>
+                                {l.linkedin_url ? (
+                                  <a href={l.linkedin_url.startsWith('http') ? l.linkedin_url : `https://${l.linkedin_url}`} target="_blank" rel="noreferrer" className="text-brand hover:underline font-medium block truncate flex items-center gap-1">
+                                    LinkedIn <ExternalLink className="w-3 h-3 text-brand" />
+                                  </a>
+                                ) : (
+                                  <span className="text-text-muted font-medium block truncate">N/A</span>
+                                )}
+                              </div>
+                              <div>
+                                <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block mb-0.5">Employee Size</span>
+                                <span className="text-white font-medium block truncate">{l.employees || 'N/A'}</span>
+                              </div>
+                              <div>
+                                <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block mb-0.5">Location / Country</span>
+                                <span className="text-white font-medium block truncate">{l.country || 'N/A'}</span>
+                              </div>
+                              <div className="col-span-full">
+                                <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block mb-0.5">Industry Segment</span>
+                                <span className="text-white font-medium block truncate">{l.industry || 'N/A'}</span>
+                              </div>
+                              <div className="col-span-full flex items-center justify-end gap-2 pt-2.5 border-t border-border/40">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingLeadId(l.id || `lead-${i}`);
+                                    setEditedLeadData(l);
+                                  }}
+                                  className="px-4 py-1.5 bg-brand/10 hover:bg-brand text-brand hover:text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                                >
+                                  <Settings className="w-3.5 h-3.5" />
+                                  Edit Details
+                                </button>
+                              </div>
                             </div>
-                            <div>
-                              <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block mb-0.5">Decision Maker</span>
-                              <span className="text-white font-medium block truncate">{l.name || 'N/A'}</span>
-                            </div>
-                            <div>
-                              <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block mb-0.5">Designation</span>
-                              <span className="text-brand font-medium block truncate">{l.role || 'N/A'}</span>
-                            </div>
-                            <div>
-                              <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block mb-0.5">Verified Phone</span>
-                              <span className="text-white font-mono font-medium block truncate">{l.phone || 'N/A'}</span>
-                            </div>
-                            <div>
-                              <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block mb-0.5">Verified Email</span>
-                              {l.email ? (
-                                <a href={`mailto:${l.email}`} className="text-brand hover:underline font-mono font-medium block truncate">{l.email}</a>
-                              ) : (
-                                <span className="text-text-muted">N/A</span>
-                              )}
-                            </div>
-                            <div>
-                              <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block mb-0.5">LinkedIn Profile</span>
-                              {l.linkedin_url ? (
-                                <a href={l.linkedin_url.startsWith('http') ? l.linkedin_url : `https://${l.linkedin_url}`} target="_blank" rel="noreferrer" className="text-brand hover:underline font-medium block truncate flex items-center gap-1">
-                                  LinkedIn <ExternalLink className="w-3 h-3 text-brand" />
-                                </a>
-                              ) : (
-                                <span className="text-text-muted font-medium block truncate">N/A</span>
-                              )}
-                            </div>
-                            <div>
-                              <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block mb-0.5">Employee Size</span>
-                              <span className="text-white font-medium block truncate">{l.employees || 'N/A'}</span>
-                            </div>
-                            <div>
-                              <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block mb-0.5">Location / Country</span>
-                              <span className="text-white font-medium block truncate">{l.country || 'N/A'}</span>
-                            </div>
-                            <div className="col-span-full">
-                              <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block mb-0.5">Industry Segment</span>
-                              <span className="text-white font-medium block truncate">{l.industry || 'N/A'}</span>
-                            </div>
-                          </div>
+                          )
                         )}
                       </motion.div>
                     );
                   })}
-              </div>
+                </div>
+
+                {/* Floating Bulk Action Toolbar (Task 1 Requirement) */}
+                <AnimatePresence>
+                  {selectedLeadIds.length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 30, scale: 0.98 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 30, scale: 0.98 }}
+                      transition={{ type: "spring", duration: 0.4 }}
+                      className="sticky bottom-6 z-50 flex flex-col sm:flex-row items-center justify-between gap-4 p-4 mt-6 bg-[#0f172a]/95 backdrop-blur-md border border-[#00d4aa]/40 rounded-3xl shadow-[0_12px_40px_rgba(0,212,170,0.18)]"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[#00d4aa]/20 border border-[#00d4aa]/40 text-[#00d4aa] text-xs font-black animate-pulse">
+                          {selectedLeadIds.length}
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-white flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#00d4aa]" />
+                            Outreach Leads Selected
+                          </p>
+                          <p className="text-[10px] text-text-muted">Batch edit parameters or delete synced client profiles</p>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          onClick={() => {
+                            setEditingLeadId(null);
+                            setEditedLeadData(null);
+                            setBulkEditFields({ role: '', company: '', industry: '', country: '', status: '' });
+                            setShowBulkEditModal(true);
+                          }}
+                          className="px-4 py-2 bg-brand hover:bg-brand/90 hover:scale-[1.02] text-white text-xs font-bold font-sans rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-md"
+                        >
+                          <Settings className="w-3.5 h-3.5" />
+                          Bulk Edit / Update
+                        </button>
+                        
+                        <button
+                          onClick={() => {
+                            handleBulkDeleteLeads(selectedLeadIds);
+                          }}
+                          className="px-4 py-2 bg-rose-500/10 hover:bg-rose-500 hover:text-white text-rose-400 border border-rose-500/20 hover:scale-[1.02] text-xs font-bold font-sans rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          Bulk Delete
+                        </button>
+
+                        <div className="w-[1px] h-6 bg-border mx-1 hidden sm:block" />
+
+                        <button
+                          onClick={() => setSelectedLeadIds([])}
+                          className="px-3 py-2 bg-surface-alt hover:bg-border text-text hover:text-white rounded-xl text-xs font-bold transition-all cursor-pointer border border-border"
+                        >
+                          Clear Selection
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </>
+            );
+          })()}
               
               {/* Automated Realtime CRM Sync Status Pipelines */}
               <CrmSyncLogsPanel leads={leads} showToast={showToast} />
@@ -3183,45 +3561,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
   </footer>
 </div>
 
-      {/* Bottom/Vertical Nav */}
-      {activeView === 'OUTREACH' && activePanel !== -1 && (
-        <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 md:-translate-x-0 md:left-auto md:right-8 md:top-1/2 md:bottom-auto md:-translate-y-1/2 z-50 transition-all duration-300 w-[95%] sm:w-auto md:w-auto">
-          <div className="glass px-2 py-2 md:px-3 md:py-6 rounded-full md:rounded-3xl flex md:flex-col items-center justify-between md:justify-center gap-1 sm:gap-2 md:gap-4 shadow-2xl shadow-black/20 border border-border-subtle">
-            {[
-              { id: 0, label: 'Configure', icon: Settings },
-              { id: 1, label: 'Import', icon: Users, badge: leads.length },
-              { id: 2, label: 'Generate', icon: Zap },
-              { id: 3, label: 'Review', icon: Eye, badge: Object.keys(messages).length },
-              { id: 4, label: 'Export', icon: Download }
-            ].map(p => (
-              <button
-                key={p.id}
-                onClick={() => setActivePanel(p.id)}
-                className={`relative flex items-center justify-center md:justify-start gap-1.5 xs:gap-3 px-2.5 xs:px-3.5 sm:px-6 md:px-5 py-2 sm:py-3 rounded-full md:rounded-2xl transition-all duration-500 group md:w-full min-w-[36px] sm:min-w-[40px] md:min-w-[48px] ${
-                  activePanel === p.id ? 'bg-brand text-white shadow-lg shadow-brand/30' : 'text-text-muted hover:text-text hover:bg-bg-subtle'
-                }`}
-              >
-                <p.icon className={`w-4 h-4 xs:w-5 h-5 transition-transform duration-500 ${activePanel === p.id ? 'scale-110' : 'group-hover:scale-110'}`} />
-                {activePanel === p.id && (
-                  <motion.span 
-                    layoutId="nav-text"
-                    initial={{ opacity: 0, width: 0 }}
-                    animate={{ opacity: 1, width: 'auto' }}
-                    className="text-xs sm:text-sm font-syne font-bold overflow-hidden whitespace-nowrap"
-                  >
-                    {p.label}
-                  </motion.span>
-                )}
-                {p.badge ? (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-brand-alt text-black text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-bg shadow-lg">
-                    {p.badge}
-                  </span>
-                ) : null}
-              </button>
-            ))}
-          </div>
-        </nav>
-      )}
+
 
       {/* CRM OAuth / API Credentials Simulated Connection Modal */}
       <AnimatePresence>
@@ -3339,6 +3679,166 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
             existingLeads={leads}
             showToast={showToast}
           />
+        )}
+
+        {showBulkEditModal && (
+          <div className="fixed inset-0 bg-[#090a10]/85 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fadeIn">
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-surface border border-border rounded-3xl p-8 max-w-lg w-full space-y-6 shadow-2xl relative select-text"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-syne font-bold text-white flex items-center gap-2">
+                    <Settings className="w-5 h-5 text-brand" />
+                    Bulk Edit {selectedLeadIds.length} Selected Leads
+                  </h2>
+                  <p className="text-xs text-text-muted mt-0.5">Specify non-empty values for attributes you wish to change.</p>
+                </div>
+                <button 
+                  onClick={() => setShowBulkEditModal(false)}
+                  className="p-1 px-1.5 rounded-lg hover:bg-surface-alt text-text-muted transition-all cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="text-[10px] text-text-muted font-bold uppercase tracking-wider block mb-1">Role / Designation</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. CTO, Director of Eng" 
+                    className="w-full bg-surface-alt border border-border rounded-xl p-3 text-xs text-white outline-none focus:border-brand"
+                    value={bulkEditFields.role}
+                    onChange={e => setBulkEditFields(prev => ({ ...prev, role: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] text-text-muted font-bold uppercase tracking-wider block mb-1">Company Name</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. Acme Corp" 
+                    className="w-full bg-surface-alt border border-border rounded-xl p-3 text-xs text-white outline-none focus:border-brand"
+                    value={bulkEditFields.company}
+                    onChange={e => setBulkEditFields(prev => ({ ...prev, company: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] text-text-muted font-bold uppercase tracking-wider block mb-1">Industry Segment</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. SaaS, Fintech" 
+                    className="w-full bg-surface-alt border border-border rounded-xl p-3 text-xs text-white outline-none focus:border-brand"
+                    value={bulkEditFields.industry}
+                    onChange={e => setBulkEditFields(prev => ({ ...prev, industry: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] text-text-muted font-bold uppercase tracking-wider block mb-1">Country ISO Code</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. US, GB, IN" 
+                    className="w-full bg-surface-alt border border-border rounded-xl p-3 text-xs text-white outline-none focus:border-brand"
+                    value={bulkEditFields.country}
+                    onChange={e => setBulkEditFields(prev => ({ ...prev, country: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] text-text-muted font-bold uppercase tracking-wider block mb-1">Status Code</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. pending, sent, contact" 
+                    className="w-full bg-surface-alt border border-border rounded-xl p-3 text-xs text-white outline-none focus:border-brand"
+                    value={bulkEditFields.status}
+                    onChange={e => setBulkEditFields(prev => ({ ...prev, status: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
+                <button
+                  onClick={() => setShowBulkEditModal(false)}
+                  className="px-4.5 py-2 rounded-xl text-xs font-semibold text-text-muted border border-border hover:bg-surface-alt cursor-pointer transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    await handleBulkUpdateLeads(selectedLeadIds, bulkEditFields);
+                    setShowBulkEditModal(false);
+                  }}
+                  className="px-6 py-2 bg-brand text-white hover:opacity-90 rounded-xl text-xs font-bold shadow-lg shadow-brand/20 cursor-pointer transition-all"
+                >
+                  Apply Updates
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {showBulkAddModal && (
+          <div className="fixed inset-0 bg-[#090a10]/85 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fadeIn">
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-surface border border-border rounded-3xl p-8 max-w-2xl w-full space-y-6 shadow-2xl relative select-text"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-syne font-bold text-white flex items-center gap-2">
+                    <PlusCircle className="w-5 h-5 text-brand-alt" />
+                    Bulk Add Leads
+                  </h2>
+                  <p className="text-xs text-text-muted mt-0.5">Paste CSV or TSV format data below. First row as values directly.</p>
+                </div>
+                <button 
+                  onClick={() => setShowBulkAddModal(false)}
+                  className="p-1 px-1.5 rounded-lg hover:bg-surface-alt text-text-muted transition-all cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="p-3 bg-brand/5 border border-brand/10 rounded-xl text-[11px] text-brand shrink-0">
+                  <span className="font-bold">Format: </span> <code className="bg-[#090a0f] p-1 rounded">name,role,company,industry,country,phone,email,linkedin_url</code>. Paste one lead per line.
+                </div>
+                <textarea 
+                  className="w-full bg-surface-alt border border-border rounded-2xl p-6 text-xs font-mono focus:border-brand outline-none transition-all min-h-[220px] resize-none"
+                  placeholder="Alice Smith,CEO,Acme Corp,Software,US,12345,alice@acme.com,linkedin.com/in/alice"
+                  value={bulkAddRowsText}
+                  onChange={e => setBulkAddRowsText(e.target.value)}
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
+                <button
+                  onClick={() => setShowBulkAddModal(false)}
+                  className="px-4.5 py-2 rounded-xl text-xs font-semibold text-text-muted border border-border hover:bg-surface-alt cursor-pointer transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!bulkAddRowsText.trim()) {
+                      showToast("Please enter lead records to parse.", "warning");
+                      return;
+                    }
+                    await parseLeads(bulkAddRowsText);
+                    setBulkAddRowsText('');
+                    setShowBulkAddModal(false);
+                  }}
+                  className="px-6 py-2 bg-brand text-white hover:opacity-90 rounded-xl text-xs font-bold shadow-lg shadow-brand/20 cursor-pointer transition-all"
+                >
+                  Parse & Insert Leads
+                </button>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>

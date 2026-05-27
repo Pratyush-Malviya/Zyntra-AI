@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { Database, RefreshCw, AlertCircle, CheckCircle, Clock } from "lucide-react";
+import { ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 
 interface Lead {
   id: string;
@@ -183,6 +184,175 @@ export const CrmSyncLogsPanel: React.FC<CrmSyncLogsPanelProps> = ({
           </button>
         )}
       </div>
+
+      {/* CRM Sync Summary Cards Section */}
+      {leads.length > 0 && (() => {
+        const total = leads.length;
+        const mapped = leads.filter(lead => logs[lead.id]?.status === "Mapped").length;
+        const failed = leads.filter(lead => {
+          const status = logs[lead.id]?.status;
+          return status === "Failed" || !status;
+        }).length;
+        const syncing = leads.filter(lead => logs[lead.id]?.status === "Syncing").length;
+
+        const totalAttempts = mapped + failed;
+        const successAttemptRate = totalAttempts > 0 ? Math.round((mapped / totalAttempts) * 100) : 0;
+        const failAttemptRate = totalAttempts > 0 ? 100 - successAttemptRate : 0;
+
+        return (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+            {/* Success KPI Card */}
+            <div className="bg-surface-alt/40 border border-border/60 rounded-2xl p-4 flex flex-col justify-between relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-3 opacity-10 pointer-events-none">
+                <CheckCircle className="w-12 h-12 text-emerald-400" />
+              </div>
+              <div>
+                <span className="text-[10px] text-text-muted font-bold uppercase tracking-widest block font-mono">Success Rate (Mapped)</span>
+                <span className="text-2xl md:text-3xl font-syne font-extrabold text-emerald-400 mt-1.5 block animate-fade-in">
+                  {Math.round((mapped / (total || 1)) * 100)}%
+                </span>
+                <p className="text-[10px] text-text-muted mt-1 leading-relaxed">
+                  Proportion of pipeline leads synced to target organizations securely.
+                </p>
+              </div>
+              <div className="mt-4">
+                <div className="w-full h-1.5 bg-rose-500/10 rounded-full overflow-hidden flex">
+                  <div className="h-full bg-emerald-500 transition-all duration-700" style={{ width: `${Math.round((mapped / (total || 1)) * 100)}%` }}></div>
+                </div>
+                <div className="flex justify-between items-center text-[9px] text-text-muted font-mono mt-1.5">
+                  <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" /> {mapped} Successful</span>
+                  <span>Total: {total}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Failure KPI Card */}
+            <div className="bg-surface-alt/40 border border-border/60 rounded-2xl p-4 flex flex-col justify-between relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-3 opacity-10 pointer-events-none">
+                <AlertCircle className="w-12 h-12 text-rose-400" />
+              </div>
+              <div>
+                <span className="text-[10px] text-text-muted font-bold uppercase tracking-widest block font-mono">Failure Rate (Failed)</span>
+                <span className="text-2xl md:text-3xl font-syne font-extrabold text-rose-400 mt-1.5 block animate-fade-in">
+                  {Math.round((failed / (total || 1)) * 100)}%
+                </span>
+                <p className="text-[10px] text-text-muted mt-1 leading-relaxed">
+                  Percentage of targets currently failing validation rules or awaiting sync.
+                </p>
+              </div>
+              <div className="mt-4">
+                <div className="w-full h-1.5 bg-emerald-500/10 rounded-full overflow-hidden">
+                  <div className="h-full bg-rose-500 transition-all duration-700" style={{ width: `${Math.round((failed / (total || 1)) * 100)}%` }}></div>
+                </div>
+                <div className="flex justify-between items-center text-[9px] text-text-muted font-mono mt-1.5">
+                  <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-rose-500 inline-block" /> {failed} Retriable</span>
+                  <span>Requires Manual Retry</span>
+                </div>
+              </div>
+            </div>
+
+            {/* NEW Summary Card: Mapping Efficiency (Successful Mappings vs Failed Attempts) */}
+            <div className="bg-surface-alt/40 border border-border/60 rounded-2xl p-4 flex flex-col justify-between relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-3 opacity-10 pointer-events-none">
+                <RefreshCw className="w-12 h-12 text-amber-400" />
+              </div>
+              <div>
+                <span className="text-[10px] text-text-muted font-bold uppercase tracking-widest block font-mono">Mapping Efficiency</span>
+                <span className="text-2xl md:text-3xl font-syne font-extrabold text-brand-alt mt-1.5 block">
+                  {successAttemptRate}% / {failAttemptRate}%
+                </span>
+                <p className="text-[10px] text-text-muted mt-1 leading-relaxed">
+                  Direct ratio of successfully mapped versus failed mapping pipeline attempts.
+                </p>
+              </div>
+              <div className="mt-4">
+                {/* Horizontal split gauge bar */}
+                <div className="w-full h-1.5 bg-border rounded-full overflow-hidden flex">
+                  <div className="h-full bg-emerald-500 transition-all duration-700" style={{ width: `${successAttemptRate}%` }} title={`Success attempt rate: ${successAttemptRate}%`}></div>
+                  <div className="h-full bg-rose-500 transition-all duration-700" style={{ width: `${failAttemptRate}%` }} title={`Failed attempt rate: ${failAttemptRate}%`}></div>
+                </div>
+                <div className="flex justify-between items-center text-[9px] text-text-muted font-mono mt-1.5">
+                  <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" /> {mapped} Succeeded</span>
+                  <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-rose-400 inline-block" /> {failed} Failed</span>
+                </div>
+              </div>
+            </div>
+
+            {/* RECHARTS GAUGE CHART CARD: Visualizing matching mapping ratio percentage (Task 2 Requirement) */}
+            <div className="bg-surface-alt/40 border border-border/60 rounded-2xl p-4 flex flex-col justify-between relative overflow-hidden group">
+              <div>
+                <span className="text-[10px] text-text-muted font-bold uppercase tracking-widest block font-mono text-brand">CRM Mapping Gauge</span>
+                <span className="text-xl md:text-2xl font-syne font-extrabold text-[#00d4aa] mt-1 block">
+                  {successAttemptRate}% Success
+                </span>
+                <p className="text-[10px] text-text-muted mt-1 leading-relaxed">
+                  Gauge arc matching successful matches compared to failed attempts.
+                </p>
+              </div>
+
+              {/* Semi-circular Recharts Gauge */}
+              <div className="w-full h-24 flex items-center justify-center relative mt-2 select-none">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                    <Pie
+                      data={[
+                        { name: "Successful Mapped", value: successAttemptRate || 0.0001 },
+                        { name: "Failed/Unmapped Attempts", value: failAttemptRate || 0.0001 }
+                      ]}
+                      cx="50%"
+                      cy="100%"
+                      startAngle={180}
+                      endAngle={0}
+                      innerRadius="65%"
+                      outerRadius="85%"
+                      paddingAngle={2}
+                      dataKey="value"
+                    >
+                      <Cell fill="#10b981" />
+                      <Cell fill="#f43f5e" />
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+                {/* Centered label inside the semi-circular gauge */}
+                <div className="absolute bottom-1 text-center">
+                  <span className="text-xs font-bold text-white block">{successAttemptRate}%</span>
+                  <span className="text-[7px] text-text-muted font-bold uppercase tracking-wider font-mono">Sync Ratio</span>
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center text-[8px] text-text-muted font-mono mt-1 border-t border-border/20 pt-2">
+                <span className="flex items-center gap-1"><span className="w-1 h-1 rounded-full bg-emerald-500 inline-block" /> Mapped: {successAttemptRate}%</span>
+                <span className="flex items-center gap-1"><span className="w-1 h-1 rounded-full bg-rose-500 inline-block" /> Failed: {failAttemptRate}%</span>
+              </div>
+            </div>
+
+            {/* Active Sync Pipeline Status */}
+            <div className="bg-surface-alt/40 border border-border/60 rounded-2xl p-4 flex flex-col justify-between relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-3 opacity-10 pointer-events-none animate-pulse">
+                <Database className="w-12 h-12 text-cyan-400" />
+              </div>
+              <div>
+                <span className="text-[10px] text-text-muted font-bold uppercase tracking-widest block">Active Webhook Queue</span>
+                <span className="text-2xl md:text-3xl font-syne font-extrabold text-cyan-400 mt-1.5 block">
+                  {syncing} Syncing
+                </span>
+                <p className="text-[10px] text-text-muted mt-1 leading-relaxed">
+                  Real-time parallel socket communication streams processing updates.
+                </p>
+              </div>
+              <div className="mt-4 flex items-center justify-between border-t border-border/20 pt-2.5">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-[#00d4aa] animate-ping" />
+                  <span className="text-[10px] text-[#00d4aa] font-bold">Pipeline Online</span>
+                </div>
+                <div className="text-[10px] text-text-muted font-mono">
+                  Volume: <b className="text-text">{total} Hits</b>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       <div className="overflow-x-auto min-h-32">
         {leads.length === 0 ? (

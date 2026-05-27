@@ -9,6 +9,46 @@ const ai = new GoogleGenAI({
   }
 });
 
+const nvidiaApiKey = process.env.NVIDIA_API_KEY || "";
+
+async function callNvidiaFallback(prompt: string, systemPrompt?: string, isJson: boolean = false): Promise<string> {
+  if (!nvidiaApiKey) {
+    throw new Error("NVIDIA_API_KEY is not configured.");
+  }
+  
+  console.log("[NVIDIA NIM Fallback] Invoking Llama-3.3-70b-instruct via NVIDIA API...");
+  
+  const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${nvidiaApiKey}`
+    },
+    body: JSON.stringify({
+      model: "meta/llama-3.3-70b-instruct",
+      messages: [
+        ...(systemPrompt ? [{ role: "system", content: systemPrompt }] : []),
+        { role: "user", content: prompt }
+      ],
+      temperature: 0.2,
+      max_tokens: 2048,
+      ...(isJson ? { response_format: { type: "json_object" } } : {})
+    })
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`NVIDIA API response error (${response.status}): ${errorBody}`);
+  }
+
+  const data = await response.json();
+  if (!data?.choices?.[0]?.message?.content) {
+    throw new Error("Invalid response format received from NVIDIA API.");
+  }
+
+  return data.choices[0].message.content;
+}
+
 export interface OutreachMessages {
   whatsapp: string;
   linkedin_connect: string;
@@ -98,6 +138,14 @@ export async function generateOutreach(lead: any, config: any): Promise<Outreach
   } catch (error) {
     console.error("Gemini Generation Error:", error);
     if (isQuotaOrApiKeyError(error) || !process.env.GEMINI_API_KEY) {
+      if (nvidiaApiKey) {
+        try {
+          const nvidiaResponse = await callNvidiaFallback(prompt, "You are a B2B sales expert writing omnichannel cold outreach. Return a structured JSON object matching the requested schema exactly.", true);
+          return cleanAndParseJSON(nvidiaResponse) as OutreachMessages;
+        } catch (nvError) {
+          console.error("NVIDIA Fallback failed for outreach:", nvError);
+        }
+      }
       console.warn("Activating high-fidelity fallback for outreach generation");
       return getMockOutreach(lead, config);
     }
@@ -426,6 +474,14 @@ export async function generateProspectResearch(companyInput: string): Promise<Pr
   } catch (error) {
     console.error("Prospect Research Generation Error:", error);
     if (isQuotaOrApiKeyError(error) || !process.env.GEMINI_API_KEY) {
+      if (nvidiaApiKey) {
+        try {
+          const nvidiaResponse = await callNvidiaFallback(prompt, "You are an elite enterprise B2B management consultant and AI solutions architect. Return a structured consulting report JSON.", true);
+          return { ...cleanAndParseJSON(nvidiaResponse) } as ProspectResearchReport;
+        } catch (nvError) {
+          console.error("NVIDIA Fallback failed for prospect research:", nvError);
+        }
+      }
       console.warn("Activating high-fidelity fallback for prospect research");
       return getMockProspectResearch(companyInput);
     }
@@ -518,6 +574,14 @@ export async function analyzeBenchmarkDrift(leads: any[]): Promise<BenchmarkDrif
   } catch (error) {
     console.error("Benchmark Drift Analysis Error:", error);
     if (isQuotaOrApiKeyError(error) || !process.env.GEMINI_API_KEY) {
+      if (nvidiaApiKey) {
+        try {
+          const nvidiaResponse = await callNvidiaFallback(prompt, "You are an elite enterprise B2B sales strategist and CRO consultant. Return a structured JSON report matching the requested schema exactly.", true);
+          return { ...cleanAndParseJSON(nvidiaResponse) } as BenchmarkDriftAnalysis;
+        } catch (nvError) {
+          console.error("NVIDIA Fallback failed for benchmark drift:", nvError);
+        }
+      }
       console.warn("Activating high-fidelity fallback for benchmark drift analysis");
       return getMockBenchmarkDrift(leads);
     }

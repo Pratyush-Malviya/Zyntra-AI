@@ -32,7 +32,8 @@ import {
   Facebook,
   Youtube,
   Phone,
-  Mail
+  Mail,
+  RefreshCw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { generateProspectResearch, ProspectResearchReport } from '../services/geminiService';
@@ -42,12 +43,27 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 // Pre-defined enterprise examples matching customer success playbooks
-const PRESETS: { name: string; url: string }[] = [
+const ALL_PRESETS_POOL: { name: string; url: string }[] = [
   { name: 'Tesla', url: 'tesla.com' },
   { name: 'Salesforce', url: 'salesforce.com' },
   { name: 'Stripe', url: 'stripe.com' },
   { name: 'Shopify', url: 'shopify.com' },
-  { name: 'Himadri Speciality', url: 'Himadri Speciality Chemical' }
+  { name: 'Himadri Speciality', url: 'Himadri Speciality Chemical' },
+  { name: 'SpaceX', url: 'spacex.com' },
+  { name: 'Nvidia', url: 'nvidia.com' },
+  { name: 'Spotify', url: 'spotify.com' },
+  { name: 'Airbnb', url: 'airbnb.com' },
+  { name: 'Uber', url: 'uber.com' },
+  { name: 'Netflix', url: 'netflix.com' },
+  { name: 'Nike', url: 'nike.com' },
+  { name: 'Apple', url: 'apple.com' },
+  { name: 'Microsoft', url: 'microsoft.com' },
+  { name: 'Tata Motors', url: 'tatamotors.com' },
+  { name: 'Sony', url: 'sony.com' },
+  { name: 'Adobe', url: 'adobe.com' },
+  { name: 'Slack', url: 'slack.com' },
+  { name: 'Zoom', url: 'zoom.us' },
+  { name: 'Figma', url: 'figma.com' }
 ];
 
 interface ProspectResearchPanelProps {
@@ -60,6 +76,26 @@ interface ProspectResearchPanelProps {
 
 export default function ProspectResearchPanel({ user, profile, campaigns, showToast }: ProspectResearchPanelProps) {
   const [inputVal, setInputVal] = useState('');
+  const [currentPresets, setCurrentPresets] = useState<{ name: string; url: string }[]>([]);
+
+  const randomizePresets = () => {
+    const shuffled = [...ALL_PRESETS_POOL].sort(() => 0.5 - Math.random());
+    setCurrentPresets(shuffled.slice(0, 5));
+  };
+
+  useEffect(() => {
+    const initial = [...ALL_PRESETS_POOL].sort(() => 0.5 - Math.random()).slice(0, 5);
+    setCurrentPresets(initial);
+
+    // Randomize all 5 Demo Presets every 60 seconds using a useEffect timer to keep research examples fresh
+    const timer = setInterval(() => {
+      const shuffled = [...ALL_PRESETS_POOL].sort(() => 0.5 - Math.random());
+      setCurrentPresets(shuffled.slice(0, 5));
+    }, 60000);
+
+    return () => clearInterval(timer);
+  }, []);
+
   const [researches, setResearches] = useState<any[]>([]);
   const [activeResearch, setActiveResearch] = useState<ProspectResearchReport | null>(null);
   const [activeResearchId, setActiveResearchId] = useState<string | null>(null);
@@ -434,22 +470,37 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
         
         {/* Presets shortcut bar */}
         <div className="flex items-center gap-2 flex-wrap">
-          {PRESETS.length > 0 && (
-            <>
+          {currentPresets.length > 0 && (
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="text-[10px] text-text-muted font-bold uppercase tracking-widest mr-1">Demo Presets:</span>
-              {PRESETS.map((p, i) => (
-                <button
-                  key={i}
-                  onClick={() => {
-                    setInputVal(p.url);
-                    showToast(`Loaded ${p.name} URL`, 'success');
-                  }}
-                  className="px-3 py-1.5 rounded-xl bg-surface-alt hover:bg-brand/10 hover:text-brand border border-border text-xs transition-all font-medium"
-                >
-                  {p.name}
-                </button>
-              ))}
-            </>
+              <button
+                onClick={randomizePresets}
+                className="p-1.5 rounded-xl bg-surface-alt hover:bg-brand/10 hover:text-brand border border-border text-xs transition-colors cursor-pointer mr-1 relative group"
+                title="Shuffle Presets Now"
+              >
+                <RefreshCw className="w-3.5 h-3.5 transition-transform duration-500 group-hover:rotate-180" />
+              </button>
+              
+              <AnimatePresence mode="popLayout">
+                {currentPresets.map((p) => (
+                  <motion.button
+                    key={p.name}
+                    layout
+                    initial={{ opacity: 0, scale: 0.8, y: 5 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.8, y: -5 }}
+                    transition={{ type: "spring", stiffness: 350, damping: 25 }}
+                    onClick={() => {
+                      setInputVal(p.url);
+                      showToast(`Loaded ${p.name} URL`, 'success');
+                    }}
+                    className="px-3 py-1.5 rounded-xl bg-surface-alt hover:bg-brand/10 hover:text-brand border border-border text-xs transition-colors font-medium cursor-pointer"
+                  >
+                    {p.name}
+                  </motion.button>
+                ))}
+              </AnimatePresence>
+            </div>
           )}
           {activeResearch && (
             <button

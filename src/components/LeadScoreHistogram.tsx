@@ -580,7 +580,16 @@ export default function LeadScoreHistogram({
         backgroundColor: '#0f172a', // Ensures the export card retains high-contrast slate-900 background styling
         scale: 2, // Double rendering scale for 4K / High-DPI screen clarity
         useCORS: true,
-        logging: false
+        logging: false,
+        onclone: (clonedDoc) => {
+          const styles = clonedDoc.getElementsByTagName('style');
+          for (let i = 0; i < styles.length; i++) {
+            const style = styles[i];
+            if (style.innerHTML) {
+              style.innerHTML = style.innerHTML.replace(/(oklch|oklab)\([^)]+\)/g, 'rgba(0,0,0,0)');
+            }
+          }
+        }
       });
 
       const dataURL = canvas.toDataURL('image/png');
@@ -619,7 +628,16 @@ export default function LeadScoreHistogram({
         backgroundColor: '#0f172a',
         scale: 2,
         useCORS: true,
-        logging: false
+        logging: false,
+        onclone: (clonedDoc) => {
+          const styles = clonedDoc.getElementsByTagName('style');
+          for (let i = 0; i < styles.length; i++) {
+            const style = styles[i];
+            if (style.innerHTML) {
+              style.innerHTML = style.innerHTML.replace(/(oklch|oklab)\([^)]+\)/g, 'rgba(0,0,0,0)');
+            }
+          }
+        }
       });
       const chartImgB64 = canvas.toDataURL('image/png');
 

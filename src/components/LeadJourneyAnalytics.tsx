@@ -51,91 +51,91 @@ export const LeadJourneyAnalytics: React.FC<AnalyticsProps> = ({ showToast }) =>
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 text-slate-800">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* STATS ACCUMULATION CARDS */}
-        <div className="bg-gradient-to-br from-brand/10 to-brand-alt/5 border border-brand/20 p-5 rounded-2xl flex items-center justify-between text-left">
-          <div className="space-y-2">
-            <span className="text-[10px] font-bold text-brand uppercase tracking-wider font-mono">Conversion Speed Average</span>
-            <div className="text-2xl font-black font-syne text-text">14.2 Days</div>
-            <p className="text-[9px] text-text-muted">Avg days from Contact Load to Close Won state.</p>
+        {/* STATS ACCUMULATION CARDS IN LIGHT THEME */}
+        <div className="bg-white border border-slate-200 p-5 rounded-2xl flex items-center justify-between text-left shadow-sm">
+          <div className="space-y-1">
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider font-mono">Conversion Speed Average</span>
+            <div className="text-2xl font-extrabold font-syne text-slate-900 leading-none">14.2 Days</div>
+            <p className="text-[10px] text-slate-500 mt-1">Avg days from Contact Load to Close Won state.</p>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-brand/20 flex items-center justify-center text-brand">
-            <Clock className="w-5 h-5" />
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-[#00d4aa]/10 to-emerald-500/5 border border-[#00d4aa]/20 p-5 rounded-2xl flex items-center justify-between text-left">
-          <div className="space-y-2">
-            <span className="text-[10px] font-bold text-[#00d4aa] uppercase tracking-wider font-mono">Closing Success Rate</span>
-            <div className="text-2xl font-black font-syne text-[#00d4aa]">18.4%</div>
-            <p className="text-[9px] text-text-muted">Outperforms competitor standards by +3.2%.</p>
-          </div>
-          <div className="w-12 h-12 rounded-xl bg-[#00d4aa]/20 flex items-center justify-center text-[#00d4aa]">
-            <Award className="w-5 h-5" />
+          <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-200/65 text-slate-600 flex items-center justify-center shadow-xs">
+            <Clock className="w-4 h-4" />
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-amber-500/10 to-yellow-500/5 border border-amber-500/20 p-5 rounded-2xl flex items-center justify-between text-left">
-          <div className="space-y-2">
-            <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider font-mono">Active SLAs Breaches</span>
-            <div className="text-2xl font-black font-syne text-amber-400">0 Overdue</div>
-            <p className="text-[9px] text-text-muted">All targets remain within stage SLA limits.</p>
+        <div className="bg-white border border-slate-200 p-5 rounded-2xl flex items-center justify-between text-left shadow-sm">
+          <div className="space-y-1">
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider font-mono">Closing Success Rate</span>
+            <div className="text-2xl font-extrabold font-syne text-slate-900 leading-none">18.4%</div>
+            <p className="text-[10px] text-slate-500 mt-1">Global average deal progression rating.</p>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-400">
-            <AlertTriangle className="w-5 h-5 animate-bounce" />
+          <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-200/65 text-slate-600 flex items-center justify-center shadow-xs">
+            <Award className="w-4 h-4" />
+          </div>
+        </div>
+
+        <div className="bg-white border border-slate-200 p-5 rounded-2xl flex items-center justify-between text-left shadow-sm">
+          <div className="space-y-1">
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider font-mono">Active SLAs Breaches</span>
+            <div className="text-2xl font-extrabold font-syne text-slate-900 leading-none">0 Overdue</div>
+            <p className="text-[10px] text-slate-500 mt-1">All pipeline targets remain within SLA timelines.</p>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-200/65 text-slate-600 flex items-center justify-center shadow-xs">
+            <ShieldCheck className="w-4 h-4" />
           </div>
         </div>
 
       </div>
 
-      {/* CHARTS CONTAINER GRID */}
+      {/* CHARTS CONTAINER GRID IN LIGHT THEME */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 text-left">
         
         {/* CHART 1: Average Time-In-Stage index */}
-        <div className="bg-[#090a0f]/40 border border-border/70 rounded-2xl p-5 space-y-4">
+        <div className="bg-white border border-slate-200 p-5 rounded-2xl space-y-4 shadow-sm">
           <div>
-            <h4 className="text-xs font-bold text-text uppercase tracking-wider flex items-center gap-2">
-              <Clock className="w-4 h-4 text-brand" />
+            <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+              <Clock className="w-4 h-4 text-blue-600" />
               Time-In-Stage Averages (vs SLA ceilings)
             </h4>
-            <p className="text-[10px] text-text-muted mt-1">Tracks average chronology days of deal staging compared with designated ceilings.</p>
+            <p className="text-xs text-slate-500 mt-1">Tracks average chronology days of deal staging compared with designated ceilings.</p>
           </div>
           
           <div className="h-48">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={timeInStageData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#222" />
-                <XAxis dataKey="name" stroke="#666" fontSize={10} />
-                <YAxis stroke="#666" fontSize={10} />
-                <Tooltip contentStyle={{ backgroundColor: "#090a0f", borderColor: "#333", color: "#fff", fontSize: 11 }} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="name" stroke="#64748b" fontSize={10} />
+                <YAxis stroke="#64748b" fontSize={10} />
+                <Tooltip contentStyle={{ backgroundColor: "#ffffff", borderColor: "#cbd5e1", color: "#0f172a", fontSize: 11, borderRadius: 8 }} />
                 <Bar dataKey="days" fill="#3b82f6" radius={[4, 4, 0, 0]} name="Average Days" />
-                <Bar dataKey="limit" fill="#ef4444" opacity={0.4} radius={[4, 4, 0, 0]} name="SLA Days limit" />
+                <Bar dataKey="limit" fill="#f87171" opacity={0.4} radius={[4, 4, 0, 0]} name="SLA Days limit" />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* CHART 2: Win/Loss drops ratios */}
-        <div className="bg-[#090a0f]/40 border border-border/70 rounded-2xl p-5 space-y-4">
+        <div className="bg-white border border-slate-200 p-5 rounded-2xl space-y-4 shadow-sm">
           <div>
-            <h4 className="text-xs font-bold text-text uppercase tracking-wider flex items-center gap-2">
-              <BarChart3 className="w-4 h-4 text-[#00d4aa]" />
+            <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-emerald-600" />
               Staged Win vs Loss Distribution
             </h4>
-            <p className="text-[10px] text-text-muted mt-1">Chronicles final deal outcomes segmented by the dynamic promotional stage blocks.</p>
+            <p className="text-xs text-slate-500 mt-1">Files final deal outcomes segmented by target journey promotional blocks.</p>
           </div>
           
           <div className="h-48">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={winLossData} stackOffset="expand">
-                <CartesianGrid strokeDasharray="3 3" stroke="#222" />
-                <XAxis dataKey="stage" stroke="#666" fontSize={10} />
-                <YAxis stroke="#666" fontSize={10} />
-                <Tooltip contentStyle={{ backgroundColor: "#090a0f", borderColor: "#333", color: "#fff", fontSize: 11 }} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="stage" stroke="#64748b" fontSize={10} />
+                <YAxis stroke="#64748b" fontSize={10} />
+                <Tooltip contentStyle={{ backgroundColor: "#ffffff", borderColor: "#cbd5e1", color: "#0f172a", fontSize: 11, borderRadius: 8 }} />
                 <Bar dataKey="won" fill="#10b981" stackId="a" name="Won" />
-                <Bar dataKey="lost" fill="#ef4444" stackId="a" name="Lost / Disqualified" />
+                <Bar dataKey="lost" fill="#f43f5e" stackId="a" name="Lost / Disqualified" />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -147,30 +147,23 @@ export const LeadJourneyAnalytics: React.FC<AnalyticsProps> = ({ showToast }) =>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 text-left">
         
         {/* FUNNEL DROP OFF HEATMAP */}
-        <div className="lg:col-span-2 bg-[#090a0f]/40 border border-border/70 rounded-2xl p-5 space-y-4">
+        <div className="lg:col-span-2 bg-white border border-slate-200 p-5 rounded-2xl space-y-4 shadow-sm">
           <div>
-            <h4 className="text-xs font-bold text-text uppercase tracking-wider flex items-center gap-2">
-              <Flame className="w-4 h-4 text-brand-alt" />
+            <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+              <Flame className="w-4 h-4 text-amber-500" />
               Pipeline Journey Drop-Off Heatmap
             </h4>
-            <p className="text-[10px] text-text-muted mt-1">High-contrast representation of lead volumes drop values across consecutive segments.</p>
+            <p className="text-xs text-slate-500 mt-1 font-medium">Pragmatic representation of lead volumes drop values across consecutive segments.</p>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 pt-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 pt-2">
             {conversionFunnelData.map((f, i) => {
-              const bgColors = [
-                "bg-brand/20 border-brand/45",
-                "bg-brand-alt/20 border-brand-alt/45",
-                "bg-cyan-500/10 border-cyan-500/25",
-                "bg-amber-500/10 border-amber-500/25",
-                "bg-[#00d4aa]/15 border-[#00d4aa]/30"
-              ];
               return (
-                <div key={i} className={`p-3.5 border rounded-xl text-center space-y-1 ${bgColors[i]}`}>
-                  <span className="text-[8px] font-mono text-text-muted uppercase block">Step {i+1}</span>
-                  <div className="text-[10px] font-bold text-text truncate" title={f.name}>{f.name}</div>
-                  <div className="text-lg font-black font-mono text-text">{f.count}</div>
-                  <span className="inline-block px-1.5 py-0.5 rounded bg-black/60 font-mono text-[9px] font-bold text-white mt-1">
+                <div key={i} className="p-4 border border-slate-250/70 rounded-xl text-center space-y-2 bg-slate-50 hover:bg-slate-100/50 hover:border-slate-300 transition-all shadow-xs overflow-hidden">
+                  <span className="text-[8px] font-mono text-slate-400 font-bold uppercase tracking-widest block">Step {i+1}</span>
+                  <div className="text-[10px] font-bold text-slate-800 truncate" title={f.name}>{f.name}</div>
+                  <div className="text-lg font-black font-mono text-slate-900 leading-none">{f.count}</div>
+                  <span className="inline-block px-2 py-0.5 rounded bg-blue-50 border border-blue-150 font-mono text-[9px] font-bold text-blue-600 mt-1">
                     {f.conversion}
                   </span>
                 </div>
@@ -180,24 +173,24 @@ export const LeadJourneyAnalytics: React.FC<AnalyticsProps> = ({ showToast }) =>
         </div>
 
         {/* WORKFLOWS ALIGNMENT SETTINGS */}
-        <div className="bg-[#090a0f]/40 border border-border/70 rounded-2xl p-5 space-y-4 flex flex-col justify-between">
+        <div className="bg-white border border-slate-200 p-5 rounded-2xl space-y-4 flex flex-col justify-between shadow-sm">
           <div className="space-y-3">
-            <h4 className="text-xs font-bold text-text uppercase tracking-wider flex items-center gap-2">
-              <Users className="w-4 h-4 text-brand" />
+            <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+              <Users className="w-4 h-4 text-blue-600" />
               Assignment Workflows Rules
             </h4>
             
             <div className="space-y-2">
               {workflowsList.map((wf) => (
-                <div key={wf.id} className="p-2.5 bg-surface border border-border rounded-xl text-xs space-y-1 text-left">
+                <div key={wf.id} className="p-2.5 bg-slate-50 border border-slate-250 rounded-xl text-xs space-y-1 text-left">
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-text">{wf.name}</span>
-                    <span className={`w-2 h-2 rounded-full ${wf.active ? "bg-[#00d4aa]" : "bg-text-muted/40"}`} />
+                    <span className="font-bold text-slate-900">{wf.name}</span>
+                    <span className={`w-2 h-2 rounded-full ${wf.active ? "bg-emerald-500" : "bg-slate-300"}`} />
                   </div>
-                  <div className="text-[10px] text-text-muted flex items-center gap-1">
+                  <div className="text-[10px] text-slate-500 flex items-center gap-1">
                     <span>Type: {wf.type}</span>
                     <span>•</span>
-                    <span className="font-mono text-[8px] tracking-wide text-brand bg-brand/5 border border-brand/10 rounded px-1">{wf.condition}</span>
+                    <span className="font-mono text-[8px] tracking-wide text-blue-700 bg-blue-50 border border-blue-100 rounded px-1">{wf.condition}</span>
                   </div>
                 </div>
               ))}
@@ -207,7 +200,7 @@ export const LeadJourneyAnalytics: React.FC<AnalyticsProps> = ({ showToast }) =>
           <button
             onClick={handleTriggerWorkflowsRun}
             disabled={loading}
-            className="w-full bg-surface-alt border border-border-muted/65 text-text hover:text-brand px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer mt-4"
+            className="w-full bg-slate-900 hover:bg-slate-800 text-white px-3 py-2 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-2 cursor-pointer mt-4"
           >
             <RotateCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
             Run Automatic Allocation
