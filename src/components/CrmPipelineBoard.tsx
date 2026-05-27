@@ -6,6 +6,7 @@ import {
   ArrowRight, ShieldAlert, BarChart3, Mail, Phone, Users, History, TrendingUp, X
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { motion, AnimatePresence } from "motion/react";
 
 interface Lead {
   id: string;
@@ -71,13 +72,6 @@ interface ActivityLog {
   agentName: string;
 }
 
-interface DealAiReport {
-  dealId: string;
-  reportJson: string;
-  generatedAt: string;
-  modelVersion: string;
-}
-
 interface DealMovement {
   id: string;
   dealId: string;
@@ -116,12 +110,19 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
   const [movements, setMovements] = useState<DealMovement[]>([]);
   const [allActivities, setAllActivities] = useState<ActivityLog[]>([]);
   const [swimlaneMode, setSwimlaneMode] = useState<boolean>(true);
-  const [showTeamActivityWidget, setShowTeamActivityWidget] = useState<boolean>(true);
+  const [showTeamActivityWidget, setShowTeamActivityWidget] = useState<boolean>(false);
   
   // UI Panels
   const [showAddDealModal, setShowAddDealModal] = useState(false);
-  const [showConfigPipelineModal, setShowConfigPipelineModal] = useState(false);
   const [showMergeModal, setShowMergeModal] = useState(false);
+  const [showBulkImportModal, setShowBulkImportModal] = useState(false);
+  const [selectedLeadsForBulk, setSelectedLeadsForBulk] = useState<string[]>([]);
+  const [bulkDealValue, setBulkDealValue] = useState<number>(35000);
+  const [bulkStage, setBulkStage] = useState<string>("stage-discovery");
+  const [bulkAgent, setBulkAgent] = useState<string>("Sarah Mitchell");
+  const [bulkStatus, setBulkStatus] = useState<"hot" | "warm" | "cold">("warm");
+  const [bulkTags, setBulkTags] = useState<string>("Bulk, Core Prospect");
+  const [isBulkImporting, setIsBulkImporting] = useState<boolean>(false);
   
   // Creation Forms
   const [newDealTitle, setNewDealTitle] = useState("");
@@ -144,7 +145,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
   // Load preferences, pipelines, and deals
   const refreshDbState = async () => {
     try {
-      // 1. Fetch prefered views
+      // 1. Fetch preferred views
       const prefRes = await fetch("/api/user-preferences");
       if (prefRes.ok) {
         const prefs = await prefRes.json();
@@ -224,7 +225,6 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
 
       const { days } = getDaysInStage(deal, stage);
       if (days > stage.slaDays) {
-        // Yes, SLA breached! Check if we already logged an SLA breach for this deal in this stage
         const breachLogged = allActivities.some(
           act => act.dealId === deal.id && 
                  act.type === "sla_breach" && 
@@ -259,24 +259,22 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
     });
   }, [deals, movements, activePipeline, allActivities]);
 
-  // Handle Drag Over
+  // Drag handlers
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
   };
 
-  // Handle Drag Start
   const handleDragStart = (e: React.DragEvent, dealId: string) => {
     e.dataTransfer.setData("text/plain", dealId);
   };
 
-  // Handle Drop Card Stage shift
   const handleDrop = async (e: React.DragEvent, targetStageId: string) => {
     e.preventDefault();
     const dealId = e.dataTransfer.getData("text/plain");
     const draggedDeal = deals.find(d => d.id === dealId);
     
     if (draggedDeal && draggedDeal.stage !== targetStageId) {
-      // Optimistic state
+      // Optimistic physical update for ultra fast UI feel
       const updatedDeals = deals.map(d => d.id === dealId ? { ...d, stage: targetStageId } : d);
       setDeals(updatedDeals);
 
@@ -288,11 +286,11 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
         });
         
         if (res.ok) {
-          showToast(`Deal promoted & stage changed to "${targetStageId}"!`, "success");
+          showToast(`Deal stage promoted to "${targetStageId}" Successfully!`, "success");
           if (onLeadsUpdated) onLeadsUpdated();
           refreshDbState();
         } else {
-          showToast("Failed to drag deal to new pipeline stage.", "error");
+          showToast("Failed to promote deal to target stage.", "error");
           refreshDbState();
         }
       } catch (err) {
@@ -302,28 +300,28 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
     }
   };
 
-  // Load secondary Deal Context details (Notes, Tasks, AI Sonnet Close score reports)
+  // Select deal to reveal drawer attributes
   const selectActiveDeal = async (deal: Deal) => {
     setSelectedDeal(deal);
     setNewNoteText("");
     setNewTaskTitle("");
     
     try {
-      // Fetch tasks
+      // Fetch tasks checklist
       const taskRes = await fetch("/api/tasks");
       if (taskRes.ok) {
         const allTasks: Task[] = await taskRes.json();
         setDealTasks(allTasks.filter(t => t.dealId === deal.id));
       }
 
-      // Fetch dynamic timeline logs
+      // Fetch timeline logs
       const actRes = await fetch("/api/activities");
       if (actRes.ok) {
         const allActs: ActivityLog[] = await actRes.json();
         setDealActivities(allActs.filter(a => a.dealId === deal.id));
       }
 
-      // Fetch AI Sonnet close reports
+      // Fetch Claude intelligence closing reports
       const aiRes = await fetch(`/api/deals/${deal.id}/ai-report`);
       if (aiRes.ok) {
         const rp = await aiRes.json();
@@ -336,7 +334,6 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
     }
   };
 
-  // Toggle View Preference Persistence
   const toggleViewPreference = async (type: "kanban" | "list") => {
     setViewType(type);
     try {
@@ -351,7 +348,6 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
     }
   };
 
-  // Add Task followup
   const handleAddTask = async () => {
     if (!selectedDeal || !newTaskTitle || !newTaskDueDate) {
       showToast("Please enter task action title and target reminder date.", "error");
@@ -374,7 +370,6 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
         showToast("Followup checklist reminder created successfully.", "success");
         setNewTaskTitle("");
         setNewTaskDueDate("");
-        // Reload tasks
         const tRes = await fetch("/api/tasks");
         if (tRes.ok) {
           const allTasks = await tRes.json();
@@ -382,11 +377,10 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
         }
       }
     } catch (err) {
-      showToast("Cannot initialize task.", "error");
+      showToast("Cannot initialize task follow-up.", "error");
     }
   };
 
-  // Checkbox complete task toggle
   const handleToggleTask = async (task: Task) => {
     try {
       const res = await fetch(`/api/tasks/${task.id}`, {
@@ -406,7 +400,6 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
     }
   };
 
-  // Add notes logging timeline action
   const handleAddNote = async () => {
     if (!selectedDeal || !newNoteText.trim()) return;
 
@@ -437,7 +430,6 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
     }
   };
 
-  // Trigger On-Demand AI Analyzer Recalculation (Claude Sonnet B2B engine)
   const handleRefreshAiReport = async () => {
     if (!selectedDeal) return;
     setIsRefreshingAi(true);
@@ -450,7 +442,6 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
       if (res.ok) {
         const data = await res.json();
         setAiReport(data.report);
-        // Save history logs comparison mapping (up to last 5 score items)
         setAiHistory(prev => [{ score: data.report.close_probability, date: new Date().toLocaleTimeString() }, ...prev].slice(0, 5));
         showToast("Claude Sonnet Close intelligence compiling complete!", "success");
         refreshDbState();
@@ -464,9 +455,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
     }
   };
 
-  // Merge Duplicate Deduplication algorithm triggers
   const checkForDuplicates = () => {
-    // Check every lead against other leads to see if we have email matches, phone matches or company name similarities
     for (let i = 0; i < initialLeads.length; i++) {
       for (let j = i + 1; j < initialLeads.length; j++) {
         const a = initialLeads[i];
@@ -480,7 +469,6 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
           const conflicts: string[] = [];
           if (a.role !== b.role) conflicts.push("role");
           if (a.phone !== b.phone) conflicts.push("phone");
-          if (a.linkedin_url !== b.linkedin_url) conflicts.push("linkedin_url");
           if (a.score !== b.score) conflicts.push("score");
 
           setDuplicateConflicts({ leadA: a, leadB: b, fieldConflicts: conflicts });
@@ -489,10 +477,9 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
         }
       }
     }
-    showToast("No unresolved lead duplicates or contacts anomalies detected.", "info");
+    showToast("No unresolved lead duplicates or contact anomalies detected.", "info");
   };
 
-  // Confirm Merge conflict resolution
   const handleResolveMerge = async (primaryId: string, secondaryId: string, overrides: any) => {
     try {
       const res = await fetch("/api/leads/merge", {
@@ -506,7 +493,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
       });
 
       if (res.ok) {
-        showToast("Leads safely combined! Mismatch conflict overrides synchronized.", "success");
+        showToast("Duplicate leads combined! Conflicts resolved in-place.", "success");
         setShowMergeModal(false);
         setDuplicateConflicts(null);
         if (onLeadsUpdated) onLeadsUpdated();
@@ -519,10 +506,172 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
     }
   };
 
-  // Add Deal
+  const handlePopulateDemoData = async () => {
+    try {
+      const demoDeals = [
+        { title: "NetApp Secure Cloud Transformation Upgrade", company: "NetApp Inc.", value: 125000, stage: "stage-discovery", agent: "Sarah Mitchell", status: "hot", tags: ["Enterprise", "Cloud"] },
+        { title: "Retool Data Workflow Automation Consult", company: "Retool Inc", value: 35000, stage: "stage-proposal", agent: "James Ochieng", status: "warm", tags: ["SaaS", "Consulting"] },
+        { title: "Stripe Unified Payment API Implementation", company: "Stripe", value: 195000, stage: "stage-negotiation", agent: "Sarah Mitchell", status: "hot", tags: ["High-Value", "FinTech"] },
+        { title: "Slack Conversational Agent licenses", company: "Slack Technologies", value: 18000, stage: "stage-discovery", agent: "User Pro", status: "cold", tags: ["SaaS", "Internal"] },
+        { title: "Canva Design Seat Bundle Onboarding", company: "Canva Pro", value: 48000, stage: "stage-won", agent: "James Ochieng", status: "warm", tags: ["Creative", "B2B"] },
+        { title: "Snowflake Enterprise Analytics Warehouse Integration", company: "Snowflake Corp", value: 220000, stage: "stage-proposal", agent: "Sarah Mitchell", status: "hot", tags: ["Enterprise", "Data"] }
+      ];
+
+      let createdCount = 0;
+
+      for (const d of demoDeals) {
+        // Find if we can link it to an existing lead, or use standard options
+        const matchingLead = initialLeads.find(l => l.company && l.company.toLowerCase().includes(d.company.split(" ")[0].toLowerCase())) || initialLeads[Math.floor(Math.random() * initialLeads.length)];
+        
+        const leadId = matchingLead?.id || "lead-default";
+
+        const res = await fetch("/api/deals", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: d.title,
+            value: Number(d.value),
+            leadId: leadId,
+            stage: d.stage,
+            assignedAgent: d.agent,
+            tags: d.tags
+          })
+        });
+
+        if (res.ok) {
+          const newD = await res.json();
+          createdCount++;
+
+          // Update status health (hot, warm, etc.)
+          await fetch(`/api/deals/${newD.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              ...newD,
+              status: d.status
+            })
+          });
+
+          // Seed timeline activities
+          await fetch("/api/activities", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              dealId: newD.id,
+              type: "stage_change",
+              title: "Opportunity Segment Seeding",
+              description: `Generated premium realistic demo tracker for "${d.title}" with default close ratios.`,
+              agentName: d.agent
+            })
+          });
+
+          // Seed dynamic checklist item
+          await fetch("/api/tasks", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              dealId: newD.id,
+              title: "🚀 Align with VP of Architecture regarding performance specs",
+              dueDate: new Date(Date.now() + 4 * 24 * 3600 * 1000).toISOString().split("T")[0],
+              completed: false,
+              assignedAgent: d.agent
+            })
+          });
+        }
+      }
+
+      showToast(`Successfully populated ${createdCount} top-notch demo deals on your Active Kanban Board!`, "success");
+      refreshDbState();
+    } catch {
+      showToast("Could not synthesize demo pipeline data.", "error");
+    }
+  };
+
+  const handleBulkImportLeads = async () => {
+    if (selectedLeadsForBulk.length === 0) {
+      showToast("Select at least one high-value lead checkbox to proceed.", "error");
+      return;
+    }
+
+    setIsBulkImporting(true);
+    let successCount = 0;
+
+    try {
+      for (const leadId of selectedLeadsForBulk) {
+        const lead = initialLeads.find(l => l.id === leadId);
+        if (!lead) continue;
+
+        const dealTitle = `${lead.company || lead.name} Strategic Expansion Account`;
+
+        const res = await fetch("/api/deals", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: dealTitle,
+            value: Number(bulkDealValue),
+            leadId: lead.id,
+            stage: bulkStage || activePipeline?.stages[0].id || "stage-discovery",
+            assignedAgent: bulkAgent,
+            tags: bulkTags ? bulkTags.split(",").map(t => t.trim()) : ["Bulk-Converted"]
+          })
+        });
+
+        if (res.ok) {
+          const newD = await res.json();
+          successCount++;
+
+          // Update status
+          await fetch(`/api/deals/${newD.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              ...newD,
+              status: bulkStatus
+            })
+          });
+
+          // Write activity
+          await fetch("/api/activities", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              dealId: newD.id,
+              type: "stage_change",
+              title: "Bulk Deal Initialized",
+              description: `Batch-converted lead "${lead.name}" (@${lead.company || "N/A"}) into a live Kanban journey opportunity tracker.`,
+              agentName: bulkAgent
+            })
+          });
+
+          // Create standard SLA task
+          await fetch("/api/tasks", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              dealId: newD.id,
+              title: `📅 Dispatch Initial Discovery Message Alignment Checklist`,
+              dueDate: new Date(Date.now() + 2 * 24 * 3600 * 1000).toISOString().split("T")[0],
+              completed: false,
+              assignedAgent: bulkAgent
+            })
+          });
+        }
+      }
+
+      showToast(`Conversion complete! ${successCount} leads are now active journey opportunities.`, "success");
+      setSelectedLeadsForBulk([]);
+      setShowBulkImportModal(false);
+      refreshDbState();
+    } catch {
+      showToast("Error occurred during bulk lead import.", "error");
+    } finally {
+      setIsBulkImporting(false);
+    }
+  };
+
   const handleCreateDeal = async () => {
     if (!newDealTitle || !newDealLeadId || !newDealValue) {
-      showToast("Please input a Deal Title, associate with a target Lead record, and input appropriate deal Value index.", "error");
+      showToast("Please input a Deal Title, associate with a target Lead, and specify Deal Value.", "error");
       return;
     }
 
@@ -557,14 +706,13 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
     }
   };
 
-  // Delete Deal
   const handleDeleteDeal = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!confirm("Are you sure you want to permanently revoke this deal segment?")) return;
     try {
       const res = await fetch(`/api/deals/${id}`, { method: "DELETE" });
       if (res.ok) {
-        showToast("Deal path revoked.", "info");
+        showToast("Deal path revoked successfully.", "info");
         setSelectedDeal(null);
         refreshDbState();
       }
@@ -573,7 +721,6 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
     }
   };
 
-  // Active Filter state evaluation
   const filteredDeals = deals.filter(deal => {
     const lead = initialLeads.find(l => l.id === deal.leadId);
     const searchMatch = 
@@ -593,23 +740,21 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
     return searchMatch && tagMatch && agentMatch;
   });
 
-  // Hot, warm, cold style mappings
   const getHealthBadge = (health: string | undefined) => {
     switch(health) {
       case "hot":
-        return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200/60 font-bold text-[9px] shadow-xs">🔥 Hot Close</span>;
+        return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-rose-500/15 text-rose-400 border border-rose-500/30 font-bold text-[9px] shadow-xs">🔥 Hot Close</span>;
       case "warm":
-        return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-850 border border-amber-200/60 font-bold text-[9px] shadow-xs">⚡ Warm Play</span>;
+        return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30 font-bold text-[9px] shadow-xs">⚡ Warm Play</span>;
       case "cold":
-        return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-cyan-50 text-cyan-800 border border-cyan-200/60 font-bold text-[9px] shadow-xs">❄️ Cold Strobe</span>;
+        return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 font-bold text-[9px] shadow-xs">❄️ Cold Strobe</span>;
       case "lost":
-        return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200/60 font-bold text-[9px] shadow-xs">💨 Closed Lost</span>;
+        return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-500/15 text-slate-400 border border-slate-500/30 font-bold text-[9px] shadow-xs font-mono">💨 Closed Lost</span>;
       default:
-        return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-55 text-blue-800 border border-blue-150 font-bold text-[9px] shadow-xs">⚡ Recalculating</span>;
+        return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#00d4aa]/15 text-[#00d4aa] border border-[#00d4aa]/30 font-bold text-[9px] shadow-xs font-mono animate-pulse">⚡ Auto Assess</span>;
     }
   };
 
-  // Process Team Activity Chart Data (moves per assigned agent in last 30 days)
   const getChartData = () => {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -633,193 +778,253 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
   };
 
   const chartData = getChartData();
+  const totalDealVolume = filteredDeals.reduce((sum, d) => sum + d.value, 0);
 
   return (
-    <div id="crm-field-mapping-panel" className="bg-slate-50 border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6 text-slate-800">
-      {/* Upper header section */}
-      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 border-b border-slate-200 pb-6">
-        <div>
-          <h2 className="text-xl font-bold font-syne flex items-center gap-2 tracking-tight text-slate-900">
-            <TrendingUp className="w-5 h-5 text-blue-600" />
-            Lead & Deal Journey Builder
+    <div className="space-y-6">
+      {/* 1. Header Information Section and Quick KPI Stats Widget */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 border-b border-border/40 pb-6">
+        <div className="text-left space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="px-2.5 py-0.5 text-[9px] font-mono font-bold uppercase tracking-widest text-[#00d4aa] bg-[#00d4aa]/10 rounded-full border border-[#00d4aa]/20">
+              Interactive Board CRM
+            </span>
+            <div className="flex items-center gap-1 text-blue-400">
+              <TrendingUp className="w-3.5 h-3.5" />
+              <span className="text-[9px] font-mono font-bold uppercase tracking-wider">Active Close Intelligence</span>
+            </div>
+          </div>
+          <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white font-syne flex items-center gap-2.5">
+            <Kanban className="w-6 h-6 text-[#00d4aa]" />
+            Deal Journeys & Kanban Pipelines
           </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Configure isolated pipeline stages with probability indexes, configure assignment parameters, and deploy Claude Sonnet Always-on Close intelligence.
+          <p className="text-xs text-text-muted leading-relaxed">
+            Configure isolated sales stages, track service level agreements (SLAs), drag prospects across streams, and analyze win confidence.
           </p>
         </div>
 
-        {/* View Layout, Merge triggers, pipelines configuring row */}
-        <div className="flex flex-wrap items-center gap-2.5">
-          {/* Deduplication check */}
-          <button 
-            onClick={checkForDuplicates}
-            className="px-3.5 py-1.5 rounded-xl border border-rose-200 bg-rose-50/70 text-rose-700 hover:bg-rose-100/80 text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
-          >
-            <ShieldAlert className="w-4 h-4 text-rose-600" />
-            De-Duplicate Leads Tool
-          </button>
+        {/* 3 Core CRM Stats Mini KPI Cards */}
+        <div className="flex flex-wrap items-center gap-4 text-left">
+          <div className="bg-surface border border-border/80 rounded-2xl p-3.5 px-5 min-w-[150px] relative overflow-hidden group">
+            <span className="text-[9px] text-text-muted font-bold uppercase tracking-widest block font-mono">Pipeline Volume</span>
+            <span className="text-lg font-syne font-extrabold text-[#00d4aa] mt-1 block">
+              ${totalDealVolume.toLocaleString()}
+            </span>
+            <span className="text-[8px] text-text-muted font-mono">{filteredDeals.length} opportunity items</span>
+          </div>
 
-          {/* New Deal */}
-          <button 
-            onClick={() => setShowAddDealModal(true)}
-            className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm"
-          >
-            <Plus className="w-4 h-4" />
-            Create Deal
-          </button>
-
-          {/* Team Activity Widget Toggle */}
-          <button 
-            onClick={() => setShowTeamActivityWidget(!showTeamActivityWidget)}
-            className={`px-3.5 py-1.5 rounded-xl border text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs ${
-              showTeamActivityWidget 
-                ? "border-emerald-300 bg-emerald-50 text-emerald-800" 
-                : "border-slate-250 bg-white text-slate-600 hover:text-slate-800 hover:border-slate-350"
-            }`}
-          >
-            <BarChart3 className="w-4 h-4 text-emerald-600" />
-            Team Activity
-          </button>
-
-          {/* Swimlane mode Toggle */}
-          {viewType === "kanban" && (
-            <button 
-              onClick={() => setSwimlaneMode(!swimlaneMode)}
-              className={`px-3.5 py-1.5 rounded-xl border text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs ${
-                swimlaneMode 
-                  ? "border-blue-300 bg-blue-50 text-blue-800" 
-                  : "border-slate-250 bg-white text-slate-600 hover:text-slate-800 hover:border-slate-350"
-              }`}
-            >
-              <Kanban className="w-4 h-4" />
-              {swimlaneMode ? "Swimlanes ON" : "Swimlanes OFF"}
-            </button>
-          )}
-
-          {/* Toggle switcher layout state */}
-          <div className="flex items-center bg-slate-200/60 p-1 rounded-xl border border-slate-300/60">
-            <button
-              onClick={() => toggleViewPreference("kanban")}
-              className={`p-1.5 rounded-lg transition-all flex items-center gap-1 text-xs cursor-pointer ${
-                viewType === "kanban" ? "bg-white text-slate-900 shadow-xs font-bold" : "text-slate-600 hover:text-slate-950"
-              }`}
-              title="Kanban Board Staging"
-            >
-              <Kanban className="w-4 h-4 text-slate-600" />
-              Board
-            </button>
-            <button
-              onClick={() => toggleViewPreference("list")}
-              className={`p-1.5 rounded-lg transition-all flex items-center gap-1 text-xs cursor-pointer ${
-                viewType === "list" ? "bg-white text-slate-900 shadow-xs font-bold" : "text-slate-600 hover:text-slate-950"
-              }`}
-              title="List View Grid"
-            >
-              <List className="w-4 h-4 text-slate-600" />
-              List Grid
-            </button>
+          <div className="bg-surface border border-border/80 rounded-2xl p-3.5 px-5 min-w-[130px] relative overflow-hidden group">
+            <span className="text-[9px] text-text-muted font-bold uppercase tracking-widest block font-mono">SLA breaches</span>
+            <span className="text-lg font-syne font-extrabold text-rose-400 mt-1 block">
+              0 Active
+            </span>
+            <span className="text-[8px] text-text-muted font-mono">All queues within limits</span>
           </div>
         </div>
       </div>
 
-      {/* Filter & Advanced searching queries */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-white p-4 border border-slate-200 rounded-2xl shadow-xs">
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+      {/* 2. Unified Master Action Toolbar with Premium Styling */}
+      <div className="flex flex-col md:flex-row items-center justify-between gap-4 p-4.5 bg-surface border border-border rounded-3xl glow-brand/5">
+        
+        {/* Left Search input */}
+        <div className="relative w-full md:w-80">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
           <input 
             type="text"
-            placeholder="Search deals, contacts or company name..."
+            placeholder="Search deals, contacts or company..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 pl-10 pr-4 text-xs select-text text-slate-800 placeholder:text-slate-400 focus:border-blue-400 focus:bg-white outline-none transition-all"
+            className="w-full bg-surface-alt border border-border rounded-xl py-2 pl-10 pr-4 text-xs font-semibold text-white placeholder:text-text-muted outline-none focus:border-[#00d4aa] focus:bg-[#07080c] transition-all"
           />
         </div>
 
-        {/* Tag Selection filter */}
-        <div className="flex items-center gap-2">
-          <Tag className="w-4 h-4 text-indigo-500" />
+        {/* Filters and View Controllers Row */}
+        <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto md:justify-end">
+          
           <select 
             value={selectedTagFilter}
             onChange={(e) => setSelectedTagFilter(e.target.value)}
-            className="grow bg-slate-50 border border-slate-200 text-slate-800 rounded-xl py-2 px-3 text-xs outline-none focus:border-blue-400 focus:bg-white transition-all"
+            className="bg-surface-alt border border-border text-xs text-text-muted rounded-xl py-2 px-3 font-semibold outline-none focus:border-[#00d4aa] transition-all cursor-pointer min-w-[120px]"
           >
-            <option value="all">Filter by Tag: All</option>
+            <option value="all">Tags: All</option>
             <option value="Enterprise">Enterprise</option>
             <option value="SaaS">SaaS</option>
             <option value="High-Value">High-Value</option>
             <option value="B2B">B2B</option>
             <option value="Recruiting">Recruiting</option>
           </select>
-        </div>
 
-        {/* Agent selection filter */}
-        <div className="flex items-center gap-2">
-          <User className="w-4 h-4 text-blue-600" />
           <select 
             value={selectedAgentFilter}
             onChange={(e) => setSelectedAgentFilter(e.target.value)}
-            className="grow bg-slate-50 border border-slate-200 text-slate-800 rounded-xl py-2 px-3 text-xs outline-none focus:border-blue-400 focus:bg-white transition-all"
+            className="bg-surface-alt border border-border text-xs text-text-muted rounded-xl py-2 px-3 font-semibold outline-none focus:border-[#00d4aa] transition-all cursor-pointer min-w-[130px]"
           >
-            <option value="all">Filter by Agent: All</option>
+            <option value="all">Agent: All</option>
             <option value="Sarah Mitchell">Sarah Mitchell</option>
             <option value="James Ochieng">James Ochieng</option>
             <option value="User Pro">User Pro</option>
           </select>
+
+          <div className="w-[1px] h-6 bg-border mx-1.5 hidden lg:block" />
+
+          {/* Action triggers */}
+          <button 
+            onClick={checkForDuplicates}
+            className="px-3 py-2 rounded-xl border border-rose-500/20 bg-rose-500/10 hover:bg-rose-500 hover:text-white text-rose-400 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+            title="Locate contact conflicts"
+          >
+            <ShieldAlert className="w-3.5 h-3.5" />
+            De-Duplicate Leads
+          </button>
+
+          <button 
+            onClick={() => setShowTeamActivityWidget(!showTeamActivityWidget)}
+            className={`px-3 py-2 rounded-xl border text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              showTeamActivityWidget 
+                ? "border-emerald-500/30 bg-emerald-500/20 text-[#10b981]" 
+                : "border-border bg-surface-alt text-text-muted hover:text-white hover:border-border-subtle"
+            }`}
+          >
+            <BarChart3 className="w-3.5 h-3.5" />
+            Activity Chart
+          </button>
+
+          {viewType === "kanban" && (
+            <button 
+              onClick={() => setSwimlaneMode(!swimlaneMode)}
+              className={`px-3 py-2 rounded-xl border text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                swimlaneMode 
+                  ? "border-[#00d4aa]/30 bg-[#00d4aa]/20 text-[#00d4aa]" 
+                  : "border-border bg-surface-alt text-text-muted hover:text-white hover:border-border-subtle"
+              }`}
+            >
+              <Kanban className="w-3.5 h-3.5" />
+              {swimlaneMode ? "Swimlanes ON" : "Swimlanes OFF"}
+            </button>
+          )}
+
+          <div className="flex items-center bg-surface-alt p-1 rounded-xl border border-border">
+            <button
+              onClick={() => toggleViewPreference("kanban")}
+              className={`p-1.5 rounded-lg transition-all flex items-center gap-1 text-xs font-bold cursor-pointer ${
+                viewType === "kanban" ? "bg-white/10 text-white" : "text-text-muted hover:text-white"
+              }`}
+            >
+              <Kanban className="w-3.5 h-3.5" />
+              Board
+            </button>
+            <button
+              onClick={() => toggleViewPreference("list")}
+              className={`p-1.5 rounded-lg transition-all flex items-center gap-1 text-xs font-bold cursor-pointer ${
+                viewType === "list" ? "bg-white/10 text-white" : "text-text-muted hover:text-white"
+              }`}
+            >
+              <List className="w-3.5 h-3.5" />
+              Grid
+            </button>
+          </div>
+
+          <button 
+            onClick={handlePopulateDemoData}
+            className="px-3 py-2 rounded-xl border border-blue-500/30 bg-blue-500/10 hover:bg-blue-500 hover:text-white text-blue-400 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+            title="Generate 6 premium, realistic pipeline deals automatically for testing"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-blue-400" />
+            Seed Demo Deals
+          </button>
+
+          <button 
+            onClick={() => {
+              // Pre-select all available leads that don't have deals.
+              const leadsWithDeals = deals.map(d => d.leadId);
+              const eligible = initialLeads.filter(l => !leadsWithDeals.includes(l.id)).map(l => l.id);
+              setSelectedLeadsForBulk(eligible);
+              setShowBulkImportModal(true);
+            }}
+            className="px-3 py-2 rounded-xl border border-[#00d4aa]/30 bg-[#00d4aa]/10 hover:bg-[#00d4aa] hover:text-slate-950 text-[#00d4aa] text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+            title="Convert multiple raw system leads info to live Kanban deal stages at once"
+          >
+            <Users className="w-3.5 h-3.5" />
+            Bulk Convert Leads
+          </button>
+
+          <button 
+            onClick={() => {
+              setNewDealStage(activePipeline?.stages[0].id || "");
+              setShowAddDealModal(true);
+            }}
+            className="px-4 py-2 bg-[#00d4aa] hover:bg-[#00d4aa]/90 text-slate-950 text-xs font-black rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-[0_4px_16px_rgba(0,212,170,0.2)] ml-1"
+          >
+            <Plus className="w-4 h-4 text-slate-950 stroke-[3]" />
+            Create Deal
+          </button>
         </div>
       </div>
 
-      {/* Team Activity Widget */}
-      {showTeamActivityWidget && (
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <BarChart3 className="w-4.5 h-4.5 text-blue-600" />
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800">Team Activity Metrics (Deals Moved in Last 30 Days)</h3>
+      {/* 3. Interactive Team Activity Chart Panel */}
+      <AnimatePresence>
+        {showTeamActivityWidget && (
+          <motion.div 
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="bg-surface border border-border rounded-3xl p-5 space-y-4 overflow-hidden relative"
+          >
+            <div className="flex items-center justify-between border-b border-border/20 pb-3">
+              <div className="flex items-center gap-2">
+                <BarChart3 className="w-4.5 h-4.5 text-[#00d4aa]" />
+                <h3 className="text-xs font-bold uppercase tracking-widest text-white">Representative Journey Staging Velocity</h3>
+              </div>
+              <span className="text-[10px] text-text-muted bg-surface-alt border border-border px-2.5 py-0.5 rounded-md font-mono font-bold">
+                Total moves: {chartData.reduce((sum, d) => sum + d.moves, 0)} (Last 30d)
+              </span>
             </div>
-            <span className="text-[10px] text-slate-600 bg-slate-100 border border-slate-200 px-2.5 py-0.5 rounded-full font-mono font-bold">
-              Total movements: {chartData.reduce((sum, d) => sum + d.moves, 0)}
-            </span>
-          </div>
 
-          {chartData.length === 0 ? (
-            <div className="py-8 text-center text-xs text-slate-400 italic bg-slate-50 rounded-xl border border-dashed border-slate-250">
-              No deal movements logged by team agents over the last 30 days. Promote a deal between stages to record activity!
-            </div>
-          ) : (
-            <div className="h-44 w-full pr-4 text-xs">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                  <XAxis dataKey="name" stroke="#64748b" fontSize={10} tickLine={false} />
-                  <YAxis stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: "#ffffff", borderColor: "#e2e8f0", borderRadius: "10px", color: "#1e293b", fontSize: "11px" }}
-                    itemStyle={{ color: "#2563eb", fontSize: "11px" }}
-                    labelStyle={{ color: "#0f172a", fontSize: "11px", fontWeight: "bold" }}
-                  />
-                  <Bar dataKey="moves" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={40} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-        </div>
-      )}
+            {chartData.length === 0 ? (
+              <div className="py-8 text-center text-xs text-text-muted italic bg-surface-alt/40 rounded-2xl border border-dashed border-border/80">
+                No pipeline advancements logged by workspace team over the last month. Promote deals between columns to record logs!
+              </div>
+            ) : (
+              <div className="h-44 w-full pr-4 text-xs font-mono">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData} margin={{ top: 10, right: 10, left: -25, bottom: 5 }}>
+                    <defs>
+                      <linearGradient id="barFlowGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#00d4aa" stopOpacity={0.8} />
+                        <stop offset="100%" stopColor="#3b82f6" stopOpacity={0.2} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" opacity={0.15} vertical={false} />
+                    <XAxis dataKey="name" stroke="var(--muted)" fontSize={10} tickLine={false} />
+                    <YAxis stroke="var(--muted)" fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
+                    <Tooltip 
+                      contentStyle={{ backgroundColor: "#0f172a", borderColor: "var(--border)", borderRadius: "12px", color: "white", fontSize: "11px" }}
+                      itemStyle={{ color: "#00d4aa", fontSize: "11px" }}
+                      labelStyle={{ color: "white", fontSize: "11px", fontWeight: "bold" }}
+                    />
+                    <Bar dataKey="moves" fill="url(#barFlowGradient)" radius={[4, 4, 0, 0]} maxBarSize={30} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* Main Board View vs List View layout splitter */}
+      {/* 4. Kanban Pipeline Segment vs List Grid switcher */}
       {viewType === "kanban" ? (
         swimlaneMode ? (
-          /* SWIMLANE KANBAN BOARD */
-          <div className="space-y-6 w-full text-left">
+          /* SWIMLANE ROW GRID (BETTER CATEGORIZED VIEW) */
+          <div className="space-y-6 text-left">
             {(() => {
               const swimlanes = [
-                { key: "hot", label: "Hot Priority", colorClass: "text-rose-700", bgClass: "bg-rose-50 border-rose-200", icon: "🔥" },
-                { key: "warm", label: "Warm Priority", colorClass: "text-amber-700", bgClass: "bg-amber-50 border-amber-200", icon: "⚡" },
-                { key: "cold", label: "Cold & Others", colorClass: "text-slate-700", bgClass: "bg-slate-100 border-slate-200", icon: "❄️" }
+                { key: "hot", label: "Hot Close Priorities", colorClass: "text-rose-400", bgClass: "bg-surface-alt/70 border border-border/80 shadow-[0_4px_16px_rgba(244,63,94,0.03)]", icon: "🔥" },
+                { key: "warm", label: "Active Nurturing Plays", colorClass: "text-amber-400", bgClass: "bg-surface-alt/70 border border-border/80 shadow-[0_4px_16px_rgba(245,158,11,0.03)]", icon: "⚡" },
+                { key: "cold", label: "Cold & Static Accounts", colorClass: "text-slate-400", bgClass: "bg-surface-alt/30 border border-border/40", icon: "❄️" }
               ];
 
               return (
-                <div className="space-y-6 w-full">
+                <div className="space-y-8 w-full">
                   {swimlanes.map((lane) => {
                     const laneDeals = filteredDeals.filter(d => {
                       if (lane.key === "hot") return d.status === "hot";
@@ -830,25 +1035,25 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                     const totalValue = laneDeals.reduce((sum, d) => sum + d.value, 0);
 
                     return (
-                      <div key={lane.key} className="space-y-3 bg-white border border-slate-200 rounded-2xl p-4.5 shadow-xs">
-                        {/* Swimlane Header */}
-                        <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                      <div key={lane.key} className={`rounded-3xl p-5 ${lane.bgClass} space-y-4`}>
+                        {/* Swimlane Column Header block */}
+                        <div className="flex items-center justify-between border-b border-border/40 pb-2.5">
                           <div className="flex items-center gap-2">
-                            <span className="text-sm">{lane.icon}</span>
-                            <h3 className={`text-xs font-bold font-syne uppercase tracking-wider ${lane.colorClass}`}>
+                            <span className="text-base select-none">{lane.icon}</span>
+                            <h3 className={`text-xs font-extrabold font-mono tracking-widest uppercase ${lane.colorClass}`}>
                               {lane.label}
                             </h3>
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200 font-bold font-mono">
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-surface/80 text-text-muted border border-border font-bold font-mono">
                               {laneDeals.length} Deals
                             </span>
                           </div>
-                          <span className="text-[11px] text-emerald-600 font-mono font-bold">
-                            Cumulative: ${totalValue.toLocaleString()}
+                          <span className="text-xs text-emerald-400 font-mono font-bold">
+                            Total volume: ${totalValue.toLocaleString()}
                           </span>
                         </div>
 
-                        {/* Horizontal Stages Grid */}
-                        <div className="flex lg:grid lg:grid-cols-5 gap-4 overflow-x-auto pb-4 scrollbar-thin w-full">
+                        {/* Staged Columns layout inside row */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 overflow-x-auto pb-2">
                           {activePipeline?.stages.map((stage) => {
                             const stageLaneDeals = laneDeals.filter(d => d.stage === stage.id);
                             const cumulativeStageValue = stageLaneDeals.reduce((sum, d) => sum + d.value, 0);
@@ -858,26 +1063,26 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                                 key={stage.id}
                                 onDragOver={handleDragOver}
                                 onDrop={(e) => handleDrop(e, stage.id)}
-                                className="flex flex-col bg-slate-50/70 border border-slate-200 p-3 rounded-xl min-w-[245px] lg:min-w-0 lg:w-auto shrink-0 min-h-[180px]"
+                                className="flex flex-col bg-surface/50 border border-border/60 p-3.5 rounded-2xl min-h-[160px] relative transition-colors duration-300 hover:bg-surface/80"
                               >
-                                {/* Stage name Inside Swimlane */}
-                                <div className="flex items-center justify-between border-b border-slate-200/60 pb-1.5 mb-2.5">
-                                  <div className="flex items-center gap-1 min-w-0">
-                                    <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: stage.color }} />
-                                    <span className="text-[10px] font-bold text-slate-700 truncate uppercase" title={stage.name}>
+                                {/* Stage segment name inside Lane */}
+                                <div className="flex items-center justify-between border-b border-border/30 pb-2 mb-3">
+                                  <div className="flex items-center gap-1.5 min-w-0">
+                                    <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: stage.color }} />
+                                    <span className="text-[9px] font-bold text-white uppercase tracking-wider truncate" title={stage.name}>
                                       {stage.name}
                                     </span>
                                   </div>
-                                  <span className="text-[9px] font-bold font-mono text-amber-700 bg-amber-50 border border-amber-200/50 px-1.5 py-0.5 rounded">
+                                  <span className="text-[9px] font-mono text-[#00d4aa]">
                                     ${cumulativeStageValue.toLocaleString()}
                                   </span>
                                 </div>
 
-                                {/* Render stage lane deals */}
-                                <div className="flex-1 space-y-2 overflow-y-auto pr-1 scrollbar-thin max-h-[250px]">
+                                {/* Items Container */}
+                                <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1 select-none flex-1">
                                   {stageLaneDeals.length === 0 ? (
-                                    <div className="h-full flex flex-col items-center justify-center text-center p-3 border border-dashed border-slate-200 rounded-lg bg-white/40">
-                                      <span className="text-[8px] text-slate-400 uppercase">No Matches</span>
+                                    <div className="h-full flex flex-col items-center justify-center text-center p-2 border border-dashed border-border/40 rounded-xl bg-surface-alt/10">
+                                      <span className="text-[8px] text-text-muted font-bold font-mono uppercase tracking-wider">Empty</span>
                                     </div>
                                   ) : (
                                     stageLaneDeals.map((deal) => {
@@ -891,50 +1096,45 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                                           draggable
                                           onDragStart={(e) => handleDragStart(e, deal.id)}
                                           onClick={() => selectActiveDeal(deal)}
-                                          className={`group relative bg-white border transition-all duration-300 rounded-xl p-3 cursor-grab active:cursor-grabbing text-left space-y-2 select-none ${
+                                          className={`group relative p-3 rounded-xl border cursor-grab active:cursor-grabbing text-left space-y-2 transition-all ${
                                             selectedDeal?.id === deal.id 
-                                              ? "border-blue-500 shadow-sm bg-blue-50/30" 
-                                              : "border-slate-200 hover:border-slate-350 hover:shadow-xs"
+                                              ? "border-[#00d4aa] bg-surface-alt shadow-[0_4px_12px_rgba(0,212,170,0.08)]" 
+                                              : "border-border bg-surface hover:border-text-muted hover:translate-y-[-1px] duration-200"
                                           }`}
                                         >
-                                          {/* SLA Breach visual warning alert */}
                                           {isSlaBreached && (
-                                            <div className="bg-rose-50 border border-rose-150 text-rose-700 rounded-lg p-1.5 flex items-start gap-1 text-[9px] leading-tight font-bold">
-                                              <AlertCircle className="w-3 h-3 mt-0.5 shrink-0 text-rose-600" />
-                                              <span>SLA Overdue ({daysInfo.days}d / max {stage.slaDays}d)</span>
+                                            <div className="bg-rose-500/10 border border-rose-500/30 text-rose-400 rounded-lg p-1.5 flex items-start gap-1 text-[8px] leading-tight font-extrabold font-mono">
+                                              <AlertCircle className="w-3 h-3 text-rose-450 shrink-0" />
+                                              <span>SLA OVERDUE ({daysInfo.days}d / max {stage.slaDays}d)</span>
                                             </div>
                                           )}
 
-                                          <div className="flex items-start justify-between gap-1.5">
-                                            <h5 className="text-[10px] font-bold text-slate-800 truncate group-hover:text-blue-600 transition-colors" title={deal.title}>
+                                          <div className="flex items-start justify-between gap-1">
+                                            <h5 className="text-[10px] font-extrabold text-white group-hover:text-[#00d4aa] transition-colors truncate" title={deal.title}>
                                               {deal.title}
                                             </h5>
                                             <button 
                                               onClick={(e) => handleDeleteDeal(deal.id, e)}
-                                              className="opacity-0 group-hover:opacity-100 p-0.5 hover:text-rose-600 text-slate-400 transition-all rounded-md"
+                                              className="opacity-0 group-hover:opacity-100 p-0.5 hover:text-rose-500 text-text-muted transition-all rounded"
+                                              title="Delete segment"
                                             >
-                                              <Trash2 className="w-3.5 h-3.5" />
+                                              <Trash2 className="w-3 h-3" />
                                             </button>
                                           </div>
 
-                                          <div className="text-[9px] text-slate-500 line-clamp-1 font-medium">
-                                            {associatedLead?.name || "Unassigned Lead"}
-                                            <span className="text-[8px] text-slate-450 ml-1">@{associatedLead?.company || "N/A"}</span>
+                                          <div className="text-[9px] text-text-muted flex flex-col pl-0.5 border-l border-border mt-0.5">
+                                            <span className="font-bold text-slate-300">{associatedLead?.name || "Unassigned Lead"}</span>
+                                            <span className="scale-[0.95] origin-left text-[8px] opacity-70">@{associatedLead?.company || "N/A"}</span>
                                           </div>
 
-                                          <div className="flex items-center justify-between border-t border-slate-100 pt-1.5 text-[9px]">
-                                            <span className="font-bold text-emerald-600">${deal.value.toLocaleString()}</span>
+                                          <div className="flex items-center justify-between border-t border-border/30 pt-1.5 text-[9px] font-mono">
+                                            <span className="font-bold text-emerald-400">${deal.value.toLocaleString()}</span>
                                             <div className="flex items-center gap-1">
-                                              <span className="inline-flex items-center gap-0.5 px-1 py-0.2 text-[8px] font-mono font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded">
+                                              <span className="px-1 py-0.2 text-[8px] text-[#00d4aa] bg-[#00d4aa]/10 border border-[#00d4aa]/25 rounded">
                                                 {associatedLead?.score || 80}%
                                               </span>
                                               {getHealthBadge(deal.status)}
                                             </div>
-                                          </div>
-
-                                          <div className="flex items-center justify-between text-[8px] text-slate-400 uppercase tracking-wider font-mono pt-1">
-                                            <span>Duration: {daysInfo.days}d / max {stage.slaDays}d</span>
-                                            <span className="text-slate-500 truncate max-w-[70px]">{deal.assignedAgent || "No Operator"}</span>
                                           </div>
                                         </div>
                                       );
@@ -953,8 +1153,8 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
             })()}
           </div>
         ) : (
-          /* STANDARD COLUMN KANBAN BOARD */
-          <div className="flex lg:grid lg:grid-cols-5 gap-4 overflow-x-auto pb-4 scrollbar-thin w-full">
+          /* STANDARD VERTICAL COLUMNS KANBAN VIEW */
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5 overflow-x-auto pb-4">
             {activePipeline?.stages.map((stage) => {
               const stageDeals = filteredDeals.filter(d => d.stage === stage.id);
               const cumulativeValue = stageDeals.reduce((sum, d) => sum + d.value, 0);
@@ -964,36 +1164,38 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                   key={stage.id}
                   onDragOver={handleDragOver}
                   onDrop={(e) => handleDrop(e, stage.id)}
-                  className="flex flex-col bg-white border border-slate-200/90 p-4 rounded-2xl min-w-[280px] lg:min-w-0 lg:w-auto shrink-0 h-[520px] shadow-sm"
+                  className="flex flex-col bg-surface border border-border p-4 rounded-3xl min-h-[500px] h-[520px] transition-all"
                 >
-                  {/* Stage Header */}
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-3">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: stage.color }} />
-                      <h4 className="text-xs font-bold text-slate-800 truncate uppercase tracking-wide" title={stage.name}>{stage.name}</h4>
+                  {/* Column Header */}
+                  <div className="flex items-center justify-between border-b border-border/30 pb-2 mb-3">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: stage.color }} />
+                      <h4 className="text-xs font-extrabold text-white truncate uppercase tracking-widest font-mono" title={stage.name}>
+                        {stage.name}
+                      </h4>
                     </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <span className="px-1.5 py-0.5 rounded-md bg-slate-100 text-[9px] font-bold text-slate-600">{stageDeals.length}</span>
-                    </div>
+                    <span className="px-2 py-0.5 rounded-full bg-surface-alt border border-border text-[9px] font-mono font-bold text-white">
+                      {stageDeals.length}
+                    </span>
                   </div>
 
-                  <div className="text-[10px] text-slate-500 font-mono mb-3 flex items-center justify-between px-1.5 bg-slate-50 border border-slate-150 py-1 rounded-lg">
+                  {/* Summary Metric pill */}
+                  <div className="text-[10px] text-text-muted font-mono mb-4 flex items-center justify-between px-2 py-1 bg-surface-alt/70 border border-border/70 rounded-xl">
                     <span>Prob: {stage.probability}%</span>
-                    <span className="text-emerald-700 font-bold">${cumulativeValue.toLocaleString()}</span>
+                    <strong className="text-emerald-400">${cumulativeValue.toLocaleString()}</strong>
                   </div>
 
-                  {/* Cards rendering */}
-                  <div className="flex-1 space-y-3 overflow-y-auto pr-1 scrollbar-thin text-left">
+                  {/* Column Cards wrapper */}
+                  <div className="flex-1 space-y-3 overflow-y-auto pr-1 text-left custom-scrollbar">
                     {stageDeals.length === 0 ? (
-                      <div className="h-full flex flex-col items-center justify-center text-center p-4 border border-dashed border-slate-200 rounded-xl bg-slate-50/50">
-                        <Briefcase className="w-5 h-5 text-slate-300 mb-1" />
-                        <span className="text-[9px] text-slate-400">Stage Empty</span>
-                        <span className="text-[7px] text-slate-400 uppercase mt-0.5">SLA limit: {stage.slaDays} days</span>
+                      <div className="h-full flex flex-col items-center justify-center text-center p-4 border border-dashed border-border/40 rounded-2xl bg-surface-alt/10">
+                        <Briefcase className="w-6 h-6 text-slate-700 mb-1.5" />
+                        <span className="text-[9px] text-text-muted font-mono">Stage Empty</span>
+                        <span className="text-[8px] text-slate-500 uppercase tracking-widest mt-1">SLA: {stage.slaDays} days</span>
                       </div>
                     ) : (
                       stageDeals.map((deal) => {
                         const associatedLead = initialLeads.find(l => l.id === deal.leadId);
-                        const isHovered = hoveredCardId === deal.id;
                         const daysInfo = getDaysInStage(deal, stage);
                         const isSlaBreached = stage.slaDays > 0 && daysInfo.days > stage.slaDays;
 
@@ -1002,72 +1204,64 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                             key={deal.id}
                             draggable
                             onDragStart={(e) => handleDragStart(e, deal.id)}
-                            onMouseEnter={() => setHoveredCardId(deal.id)}
-                            onMouseLeave={() => setHoveredCardId(null)}
                             onClick={() => selectActiveDeal(deal)}
-                            className={`group relative bg-white border transition-all duration-300 rounded-xl p-3.5 cursor-grab active:cursor-grabbing text-left space-y-2 select-none ${
+                            className={`group relative p-3.5 rounded-2xl border transition-all cursor-grab active:cursor-grabbing text-left space-y-3 ${
                               selectedDeal?.id === deal.id 
-                                ? "border-blue-500 shadow-sm bg-blue-50/30" 
-                                : "border-slate-200 hover:border-slate-350 hover:shadow-xs shadow-xs"
+                                ? "border-[#00d4aa] bg-surface-alt shadow-[0_4px_16px_rgba(0,212,170,0.12)]" 
+                                : "border-border bg-surface-alt/40 hover:border-text-muted hover:bg-surface-alt/80 hover:translate-y-[-1px] duration-200"
                             }`}
                           >
-                            {/* SLA Breach visual warning alert */}
                             {isSlaBreached && (
-                              <div className="bg-rose-50 border border-rose-150 text-rose-700 rounded-lg p-2 flex items-start gap-1 text-[10px] leading-tight font-bold">
-                                <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0 text-rose-600" />
-                                <span>SLA Overdue ({daysInfo.days}d in stage / Limit {stage.slaDays}d)</span>
+                              <div className="bg-rose-500/10 border border-rose-500/30 text-rose-400 rounded-xl p-2 flex items-start gap-1 text-[9px] leading-tight font-black font-mono">
+                                <AlertCircle className="w-3.5 h-3.5 text-rose-450 shrink-0" />
+                                <span>SLA OVERDUE ({daysInfo.days}d in stage / limit {stage.slaDays}d)</span>
                               </div>
                             )}
 
-                            {/* Deal title & Health Color Bar */}
                             <div className="flex items-start justify-between gap-1.5">
-                              <h5 className="text-[11px] font-bold text-slate-800 tracking-tight group-hover:text-blue-600 transition-colors truncate" title={deal.title}>
+                              <h5 className="text-[11px] font-extrabold text-white group-hover:text-[#00d4aa] transition-colors leading-snug line-clamp-2" title={deal.title}>
                                 {deal.title}
                               </h5>
                               <button 
                                 onClick={(e) => handleDeleteDeal(deal.id, e)}
-                                className="opacity-0 group-hover:opacity-100 p-0.5 hover:text-rose-600 text-slate-400 transition-all rounded-md"
-                                title="Revoke Deal segment"
+                                className="opacity-0 group-hover:opacity-100 p-0.5 hover:text-rose-400 text-text-muted transition-all rounded-md"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             </div>
 
-                            {/* Contact Info */}
-                            <div className="text-[10px] text-slate-500 font-medium line-clamp-1">
-                              {associatedLead?.name || "Unassigned Lead"}
-                              <span className="text-[8px] text-slate-400 ml-1">@{associatedLead?.company || "N/A"}</span>
+                            {/* Linked Lead Details */}
+                            <div className="text-[10px] text-text-muted flex flex-col pl-2 border-l border-[#00d4aa]/40">
+                              <span className="font-bold text-slate-200">{associatedLead?.name || "Unassigned Lead"}</span>
+                              <span className="text-[8.5px] tracking-wider opacity-80 mt-0.5">@{associatedLead?.company || "N/A"}</span>
                             </div>
 
-                            {/* Cost value & AI close score tags block */}
-                            <div className="flex items-center justify-between border-t border-slate-100 pt-2 text-[10px]">
-                              <span className="font-bold text-emerald-600">${deal.value.toLocaleString()}</span>
-                              
+                            {/* Base Attributes */}
+                            <div className="flex items-center justify-between border-t border-border/20 pt-2.5 text-[10px] font-mono">
+                              <span className="font-bold text-emerald-400">${deal.value.toLocaleString()}</span>
                               <div className="flex items-center gap-1">
-                                {/* AI score rating */}
-                                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[9px] font-mono font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded-md">
-                                  <Sparkles className="w-2.5 h-2.5 text-blue-600" />
+                                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[8.5px] font-bold text-[#00d4aa] bg-[#00d4aa]/10 border border-[#00d4aa]/25 rounded">
                                   {associatedLead?.score || 80}%
                                 </span>
                                 {getHealthBadge(deal.status)}
                               </div>
                             </div>
 
-                            {/* Tags indicator */}
+                            {/* Actionable Tags snippet */}
                             {deal.tags && deal.tags.length > 0 && (
-                              <div className="flex flex-wrap gap-1 mt-1">
+                              <div className="flex flex-wrap gap-1 pt-1 border-t border-border/10">
                                 {deal.tags.slice(0, 2).map((t, idx) => (
-                                  <span key={idx} className="text-[8px] bg-slate-50 font-bold text-slate-600 px-1.5 py-0.5 rounded border border-slate-150">
+                                  <span key={idx} className="text-[8px] bg-surface font-mono font-bold text-[#00d4aa] px-1.5 py-0.5 rounded border border-border">
                                     {t}
                                   </span>
                                 ))}
                               </div>
                             )}
 
-                            {/* Assgined Agent visual element */}
-                            <div className="flex items-center justify-between text-[8px] text-slate-400 uppercase tracking-wider font-mono pt-1">
-                              <span>Stage Duration: {daysInfo.days}d / max {stage.slaDays}d</span>
-                              <span className="text-slate-500">{deal.assignedAgent || "No Operator"}</span>
+                            {/* Card footer metrics */}
+                            <div className="flex items-center justify-between text-[8px] text-text-muted uppercase tracking-wider font-mono pt-1">
+                              <span>Duration: {daysInfo.days}d</span>
+                              <span className="text-slate-400 truncate max-w-[80px]">{deal.assignedAgent || "No Operator"}</span>
                             </div>
                           </div>
                         );
@@ -1080,355 +1274,375 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
           </div>
         )
       ) : (
-        /* List view fallback with clean bulk support, pagination grids */
-        <div className="overflow-x-auto bg-white border border-slate-200 shadow-sm rounded-2xl text-left">
+        /* LIST GRID VIEW FALLBACK WITH BULK SUPPORT */
+        <div className="overflow-x-auto bg-surface border border-border shadow-2xl rounded-3xl text-left select-none">
           <table className="w-full border-collapse">
             <thead>
-              <tr className="border-b border-slate-200 text-[10px] uppercase font-bold text-slate-500 tracking-widest pl-3 bg-slate-50/50">
-                <th className="py-3 px-4 text-left">Deal Pipeline Item</th>
-                <th className="py-3 px-4 text-left">Lead Associate</th>
-                <th className="py-3 px-4 text-left">CRM Stage Staging</th>
-                <th className="py-3 px-4 text-right">Value Volume</th>
-                <th className="py-3 px-4 text-left">Assigned Agent</th>
-                <th className="py-3 px-4 text-center">AI Deal Health</th>
-                <th className="py-3 px-4 text-center">Actions</th>
+              <tr className="border-b border-border text-[9px] uppercase font-bold text-text-muted tracking-widest bg-surface-alt/50">
+                <th className="py-4 px-6 text-left">Deal Title Item</th>
+                <th className="py-4 px-6 text-left">Contact Associate</th>
+                <th className="py-4 px-6 text-left">Pipeline Phase</th>
+                <th className="py-4 px-6 text-right">Value Volume</th>
+                <th className="py-4 px-6 text-left">Assigned Agent</th>
+                <th className="py-4 px-6 text-center">AI Closing Badge</th>
+                <th className="py-4 px-6 text-center">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-150 text-xs">
-              {filteredDeals.map((deal) => {
-                const lead = initialLeads.find(l => l.id === deal.leadId);
-                const stage = activePipeline?.stages.find(s => s.id === deal.stage);
+            <tbody className="divide-y divide-border/60 text-xs text-text">
+              {filteredDeals.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-12 text-center text-text-muted italic bg-surface-alt/10 font-mono">
+                    No active Deal pipelines filtered. Combine tags or refine criteria values above.
+                  </td>
+                </tr>
+              ) : (
+                filteredDeals.map((deal) => {
+                  const lead = initialLeads.find(l => l.id === deal.leadId);
+                  const stage = activePipeline?.stages.find(s => s.id === deal.stage);
 
-                return (
-                  <tr 
-                    key={deal.id}
-                    onClick={() => selectActiveDeal(deal)}
-                    className="hover:bg-slate-50 transition-colors cursor-pointer"
-                  >
-                    <td className="py-3 px-4 font-bold text-slate-800">{deal.title}</td>
-                    <td className="py-3 px-4">
-                      <div className="font-semibold text-slate-900">{lead?.name || "Unassigned"}</div>
-                      <div className="text-[10px] text-slate-500 select-none mt-0.5">{lead?.company || "N/A"}</div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold" style={{ backgroundColor: `${stage?.color}15`, color: stage?.color, border: `1px solid ${stage?.color}30` }}>
-                        <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: stage?.color }} />
-                        {stage?.name || deal.stage}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-right font-mono font-bold text-emerald-600">
-                      ${deal.value.toLocaleString()}
-                    </td>
-                    <td className="py-3 px-4 text-slate-600">{deal.assignedAgent || "None"}</td>
-                    <td className="py-3 px-4 text-center">{getHealthBadge(deal.status)}</td>
-                    <td className="py-3 px-4 text-center" onClick={e => e.stopPropagation()}>
-                      <button 
-                        onClick={(e) => handleDeleteDeal(deal.id, e)}
-                        className="p-1 px-2.5 bg-rose-50 border border-rose-150 text-rose-700 hover:bg-rose-600 hover:text-white hover:border-rose-600 rounded-lg text-xs font-semibold transition-all"
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
+                  return (
+                    <tr 
+                      key={deal.id}
+                      onClick={() => selectActiveDeal(deal)}
+                      className="hover:bg-surface-alt/70 transition-colors cursor-pointer border-b border-border/30"
+                    >
+                      <td className="py-3.5 px-6 font-bold text-white">{deal.title}</td>
+                      <td className="py-3.5 px-6">
+                        <div className="font-extrabold text-white">{lead?.name || "Unassigned"}</div>
+                        <div className="text-[10px] text-text-muted mt-0.5">@{lead?.company || "N/A"}</div>
+                      </td>
+                      <td className="py-3.5 px-6">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold" style={{ backgroundColor: `${stage?.color}15`, color: stage?.color, border: `1px solid ${stage?.color}30` }}>
+                          <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: stage?.color }} />
+                          {stage?.name || deal.stage}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-6 text-right font-mono font-bold text-emerald-400">
+                        ${deal.value.toLocaleString()}
+                      </td>
+                      <td className="py-3.5 px-6 text-text-muted font-medium">{deal.assignedAgent || "None"}</td>
+                      <td className="py-3.5 px-6 text-center">{getHealthBadge(deal.status)}</td>
+                      <td className="py-3.5 px-6 text-center" onClick={e => e.stopPropagation()}>
+                        <button 
+                          onClick={(e) => handleDeleteDeal(deal.id, e)}
+                          className="px-2.5 py-1.5 bg-rose-500/10 border border-rose-500/20 text-rose-400 hover:bg-rose-500 hover:text-white rounded-xl text-xs font-bold transition-all"
+                        >
+                          Revoke
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
       )}
 
-      {/* Dynamic Detail Collapsible Side Drawer Panel */}
-      {selectedDeal && (
-        <div className="fixed inset-y-0 right-0 z-50 w-full sm:max-w-2xl bg-white border-l border-slate-200 shadow-2xl flex flex-col focus:outline-none">
-          {/* Sidebar Drawer Header */}
-          <div className="p-6 border-b border-slate-150 flex items-center justify-between bg-slate-50">
-            <div className="space-y-1">
-              <span className="text-[10px] font-bold font-mono text-blue-600 uppercase tracking-wider">Lead & Deal Journey Detail Drawer</span>
-              <h3 className="text-base font-bold text-slate-900 truncate max-w-sm">{selectedDeal.title}</h3>
-            </div>
-            <button 
-              onClick={() => setSelectedDeal(null)}
-              className="p-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-500 hover:text-slate-800 rounded-lg transition-all cursor-pointer shadow-xs"
+      {/* 5. Dynamic Detail Collapsible Side Drawer Panel */}
+      <AnimatePresence>
+        {selectedDeal && (
+          <div className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-xs flex justify-end">
+            {/* Backdrop click closer */}
+            <div className="absolute inset-0" onClick={() => setSelectedDeal(null)} />
+
+            <motion.div 
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="relative w-full sm:max-w-2xl bg-[#0b0c10]/95 backdrop-blur-md border-l border-border/80 shadow-[-10px_0_40px_rgba(0,0,0,0.6)] flex flex-col h-full z-10"
             >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Drawer Body content (scrolls) */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-8 scrollbar-thin bg-white">
-            
-            {/* 1. AI SONNET PROGRESSION AND INTELLIGENCE GAUGES */}
-            <div className="bg-gradient-to-br from-indigo-50/70 to-blue-50/50 border border-indigo-100 rounded-2xl p-5 space-y-4 shadow-xs relative overflow-hidden text-slate-800">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-100/30 rounded-full filter blur-xl select-none" />
-              
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-indigo-600" />
-                  <div className="text-xs font-bold text-slate-800 uppercase tracking-wider font-syne">Claude Close Analysis Engine</div>
+              {/* Sidebar Drawer Header */}
+              <div className="p-6 border-b border-border/60 flex items-center justify-between bg-surface-alt/70">
+                <div className="space-y-1 text-left">
+                  <span className="px-2 py-0.5 text-[8.5px] font-mono font-bold uppercase tracking-widest text-blue-400 bg-blue-500/10 border border-blue-500/25 rounded-md">
+                    Journey Record File
+                  </span>
+                  <h3 className="text-base font-extrabold text-white truncate max-w-sm mt-1">{selectedDeal.title}</h3>
                 </div>
-
-                <button
-                  onClick={handleRefreshAiReport}
-                  disabled={isRefreshingAi}
-                  className="px-2.5 py-1 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-lg text-[10px] transition-all flex items-center gap-1 cursor-pointer shadow-xs disabled:opacity-40"
+                <button 
+                  onClick={() => setSelectedDeal(null)}
+                  className="p-1.5 bg-surface-alt border border-border hover:bg-border text-text-muted hover:text-white rounded-xl transition-all cursor-pointer"
                 >
-                  <RefreshCw className={`w-3 h-3 ${isRefreshingAi ? "animate-spin" : ""}`} />
-                  {isRefreshingAi ? "Analyzing..." : "Refresh Report"}
+                  <X className="w-4 h-4" />
                 </button>
               </div>
 
-              {aiReport ? (
-                <div className="space-y-4 text-left">
-                  <div className="grid grid-cols-2 gap-4">
-                    {/* Prob widget gauge */}
-                    <div className="bg-white border border-indigo-100 shadow-xs rounded-xl p-3 text-center space-y-1">
-                      <div className="text-[10px] uppercase font-bold text-slate-500">Win Probability Gauge</div>
-                      <div className="text-3xl font-extrabold text-indigo-600 font-mono">{aiReport.close_probability}%</div>
-                      <div className="text-[9px] text-slate-400">Expected close: {aiReport.estimated_close_date || "N/A"}</div>
+              {/* Drawer Body content (scrolls) */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar bg-surface text-left">
+                
+                {/* 1. AI CLAUDE PROGRESSION ANALYTICS */}
+                <div className="bg-gradient-to-br from-blue-500/5 to-[#00d4aa]/5 border border-[#00d4aa]/30 rounded-3xl p-5 space-y-4 relative overflow-hidden">
+                  <div className="absolute -top-12 -right-12 w-32 h-32 bg-[#00d4aa]/3 rounded-full filter blur-xl pointer-events-none" />
+                  
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-5 h-5 text-[#00d4aa] animate-pulse" />
+                      <div className="text-xs font-bold text-white uppercase tracking-wider font-mono">Claude Closed-Loop Predictor</div>
                     </div>
 
-                    {/* Health Status card widget */}
-                    <div className="bg-white border border-slate-150 shadow-xs rounded-xl p-3 text-center space-y-1">
-                      <div className="text-[10px] uppercase font-bold text-slate-500">AI Health Status</div>
-                      <div className="pt-1.5 flex justify-center">{getHealthBadge(aiReport.health_status)}</div>
-                      <div className="text-[9px] text-slate-400 mt-1 select-none uppercase tracking-widest">Model: Claude 3.5 Sonnet</div>
-                    </div>
+                    <button
+                      onClick={handleRefreshAiReport}
+                      disabled={isRefreshingAi}
+                      className="px-2.5 py-1.5 bg-surface border border-border hover:border-border-subtle text-text hover:text-white rounded-xl text-[10px] transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-40"
+                    >
+                      <RefreshCw className={`w-3 h-3 ${isRefreshingAi ? "animate-spin text-[#00d4aa]" : ""}`} />
+                      {isRefreshingAi ? "Analyzing..." : "Regenerate Intelligence"}
+                    </button>
                   </div>
 
-                  {/* Summary paragraph */}
-                  <div className="bg-white/90 border border-slate-200/80 rounded-xl p-3 text-xs leading-relaxed text-slate-600 shadow-xs">
-                    <strong className="text-slate-800 block mb-1">Journey Intelligence Summary:</strong>
-                    {aiReport.analysis_summary}
-                  </div>
+                  {aiReport ? (
+                    <div className="space-y-4 text-left">
+                      <div className="grid grid-cols-2 gap-4">
+                        {/* Prob widget gauge */}
+                        <div className="bg-surface-alt border border-border rounded-2xl p-4 text-center space-y-1">
+                          <div className="text-[9px] uppercase font-bold text-text-muted tracking-wide font-mono">Closing Probability</div>
+                          <div className="text-3xl font-extrabold text-[#00d4aa] font-mono">{aiReport.close_probability}%</div>
+                          <div className="text-[8.5px] text-text-muted mt-1 font-mono">Est: {aiReport.estimated_close_date || "N/A"}</div>
+                        </div>
 
-                  {/* Risk logs list */}
-                  <div className="space-y-1.5">
-                    <div className="text-[10px] uppercase font-bold text-rose-700 flex items-center gap-1">
-                      <AlertCircle className="w-3.5 h-3.5" />
-                      Key Negotiation Risks Identified
-                    </div>
-                    <ul className="space-y-1 text-[11px] text-slate-600">
-                      {aiReport.key_risks?.map((risk: string, idx: number) => (
-                        <li key={idx} className="flex items-start gap-1">
-                          <span className="text-rose-500 select-none mt-0.5">•</span>
-                          <span>{risk}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  {/* Next Step bullet points list */}
-                  <div className="space-y-1.5">
-                    <div className="text-[10px] uppercase font-bold text-slate-800 flex items-center gap-1">
-                      <ChevronRight className="w-3.5 h-3.5 text-blue-600" />
-                      Recommended Next Actions Target
-                    </div>
-                    <ol className="space-y-1 text-[11px] text-slate-600 list-decimal list-inside pl-1">
-                      {aiReport.recommended_next_steps?.map((step: string, idx: number) => (
-                        <li key={idx} className="text-slate-600">
-                          <span className="text-slate-800 font-medium">{step}</span>
-                        </li>
-                      ))}
-                    </ol>
-                  </div>
-
-                  {/* Curated Personal copy message template outreach */}
-                  <div className="bg-slate-50 border border-slate-150 rounded-xl p-3.5 space-y-2 text-left">
-                    <div className="text-[10px] uppercase font-bold text-indigo-700 flex items-center justify-between">
-                      <div className="flex items-center gap-1">
-                        <Mail className="w-3.5 h-3.5" />
-                        Claude AI Curated Outreach Copy
+                        {/* Health Status card widget */}
+                        <div className="bg-surface-alt border border-border rounded-2xl p-4 text-center space-y-1 flex flex-col justify-between">
+                          <div className="text-[9px] uppercase font-bold text-text-muted tracking-wide font-mono font-bold">Deal Health Gauge</div>
+                          <div className="flex justify-center my-1.5">{getHealthBadge(aiReport.health_status)}</div>
+                          <div className="text-[8px] text-text-muted mt-1 uppercase tracking-widest font-mono">Model: Claude 3.5 Sonnet</div>
+                        </div>
                       </div>
-                      <span className="text-[8px] opacity-60">Uses company knowledge-base context</span>
-                    </div>
-                    <div className="text-xs text-slate-850 leading-relaxed font-mono whitespace-pre-line p-3 bg-white border border-slate-200 rounded-lg shadow-sm">
-                      {aiReport.ideal_outreach_message}
-                    </div>
-                  </div>
 
-                  {/* History Logs comparison charts list */}
-                  {aiHistory.length > 0 && (
-                    <div className="border-t border-slate-150 pt-3">
-                      <div className="text-[9px] uppercase font-bold text-slate-500 mb-2 tracking-wider flex items-center gap-1">
-                        <History className="w-3.5 h-3.5" />
-                        Historical Comparison (Sonnet Runs Audit)
+                      {/* Summary text */}
+                      <div className="bg-surface-alt border border-border/80 rounded-2xl p-4 text-xs leading-relaxed text-slate-300">
+                        <strong className="text-white block mb-1 text-[10px] font-mono uppercase tracking-widest text-brand-alt">Executive Analysis:</strong>
+                        {aiReport.analysis_summary}
                       </div>
-                      <div className="flex items-center gap-2">
-                        {aiHistory.map((hist, idx) => (
-                          <div key={idx} className="bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-center font-mono">
-                            <span className="text-[8px] text-slate-400 block">{hist.date}</span>
-                            <span className="text-xs text-indigo-650 font-bold">{hist.score}%</span>
+
+                      {/* Risk factors list */}
+                      <div className="space-y-2">
+                        <div className="text-[10px] uppercase font-bold text-rose-400 flex items-center gap-1 font-mono">
+                          <AlertCircle className="w-4 h-4 text-rose-400" />
+                          Identified Negotiation Hazards
+                        </div>
+                        <ul className="space-y-1.5 text-[11px] text-text-muted">
+                          {aiReport.key_risks?.map((risk: string, idx: number) => (
+                            <li key={idx} className="flex items-start gap-2 bg-rose-500/5 p-2 rounded-lg border border-rose-500/10">
+                              <span className="text-rose-400 select-none font-bold font-mono">0{idx+1}.</span>
+                              <span className="text-slate-300">{risk}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      {/* Next steps list */}
+                      <div className="space-y-2">
+                        <div className="text-[10px] uppercase font-bold text-emerald-400 flex items-center gap-1 font-mono">
+                          <CheckCircle className="w-4 h-4 text-[#00d4aa]" />
+                          Fulfillment Action Blueprint
+                        </div>
+                        <ul className="space-y-1.5 text-[11px] text-text-muted">
+                          {aiReport.recommended_next_steps?.map((step: string, idx: number) => (
+                            <li key={idx} className="flex items-start gap-2 bg-[#00d4aa]/5 p-2 rounded-lg border border-[#00d4aa]/10">
+                              <span className="text-[#00d4aa] select-none font-bold font-mono">→</span>
+                              <span className="text-slate-300 font-semibold">{step}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      {/* AI email outreach body */}
+                      <div className="bg-surface-alt border border-border rounded-2xl p-4.5 space-y-2.5 text-left">
+                        <div className="text-[9px] font-mono uppercase font-bold text-[#00d4aa] flex items-center justify-between">
+                          <div className="flex items-center gap-1.5">
+                            <Mail className="w-3.5 h-3.5" />
+                            Rendered AI Personal Pitch Copy
                           </div>
-                        ))}
+                        </div>
+                        <div className="text-xs text-slate-300 leading-relaxed font-mono whitespace-pre-line p-3 bg-[#07080b] border border-border rounded-xl">
+                          {aiReport.ideal_outreach_message}
+                        </div>
                       </div>
+
+                      {/* History Log comparative elements */}
+                      {aiHistory.length > 0 && (
+                        <div className="border-t border-border/30 pt-4">
+                          <div className="text-[9px] uppercase font-bold text-text-muted mb-2 tracking-widest flex items-center gap-1">
+                            <History className="w-3.5 h-3.5 text-brand" />
+                            Probability Run History Audit
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {aiHistory.map((hist, idx) => (
+                              <div key={idx} className="bg-surface-alt border border-border rounded-xl px-2.5 py-1 text-center font-mono">
+                                <span className="text-[7.5px] text-text-muted block">{hist.date}</span>
+                                <span className="text-xs text-blue-450 font-bold">{hist.score}%</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center p-8 bg-surface-alt/50 border border-dashed border-border rounded-2xl text-center">
+                      <Sparkles className="w-8 h-8 text-border mb-2.5" />
+                      <p className="text-xs font-extrabold text-white">No Analysis Compiled</p>
+                      <p className="text-[10px] text-text-muted mt-1 max-w-sm">
+                        Engage background Claude Sonnet models to identify pipeline risks and generate custom, high-converting copy triggers.
+                      </p>
+                      <button
+                        onClick={handleRefreshAiReport}
+                        disabled={isRefreshingAi}
+                        className="mt-4 px-3.5 py-2 bg-[#00d4aa] hover:bg-[#00d4aa]/90 text-slate-950 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5"
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 ${isRefreshingAi ? "animate-spin text-slate-950" : ""}`} />
+                        Launch AI Analyzer
+                      </button>
                     </div>
                   )}
                 </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center p-8 bg-white border border-dashed border-slate-200 rounded-xl text-center">
-                  <Sparkles className="w-8 h-8 text-slate-300 mb-2" />
-                  <p className="text-xs font-bold text-slate-700">No Intelligence Compiled</p>
-                  <p className="text-[10px] text-slate-400 mt-1 max-w-sm">
-                    Deploy background Sonnet agents to parse negotiation risk blocks and recommend next actionable copy paths.
-                  </p>
-                  <button
-                    onClick={handleRefreshAiReport}
-                    disabled={isRefreshingAi}
-                    className="mt-3 px-3 py-1 bg-indigo-600 hover:bg-indigo-750 text-white rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 shrink-0"
-                  >
-                    <RefreshCw className={`w-3.5 h-3.5 ${isRefreshingAi ? "animate-spin" : ""}`} />
-                    Compile Claude Intelligence Analysis
-                  </button>
+
+                {/* 2. CHRONOLOGICAL CHECKLIST followups */}
+                <div className="space-y-4">
+                  <h4 className="text-[10px] font-mono uppercase font-bold tracking-widest text-[#00d4aa] flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-[#00d4aa]" />
+                    Staging Checklist & Tasks ({dealTasks.filter(t => t.completed).length}/{dealTasks.length})
+                  </h4>
+
+                  <div className="flex flex-col sm:flex-row items-center gap-2.5">
+                    <input 
+                      type="text"
+                      placeholder="Schedule new follow-up action step..."
+                      value={newTaskTitle}
+                      onChange={(e) => setNewTaskTitle(e.target.value)}
+                      className="w-full bg-surface-alt border border-border text-white placeholder:text-text-muted rounded-xl py-2 px-3 text-xs outline-none focus:border-brand"
+                    />
+                    <input 
+                      type="date"
+                      value={newTaskDueDate}
+                      onChange={(e) => setNewTaskDueDate(e.target.value)}
+                      className="bg-surface-alt border border-border text-white rounded-xl py-2 px-3 text-xs outline-none focus:border-brand w-full sm:w-auto"
+                    />
+                    <button 
+                      onClick={handleAddTask}
+                      className="px-4 py-2 bg-surface-alt border border-border hover:bg-border text-white text-xs font-black rounded-xl transition-all cursor-pointer whitespace-nowrap w-full sm:w-auto"
+                    >
+                      Schedule Task
+                    </button>
+                  </div>
+
+                  <div className="space-y-2">
+                    {dealTasks.length === 0 ? (
+                      <p className="text-[10px] italic text-text-muted text-center font-mono py-2 bg-surface-alt/20 rounded-xl border border-border/30">
+                        No scheduling tasks recorded. Track SLA checkpoints here.
+                      </p>
+                    ) : (
+                      dealTasks.map((task) => (
+                        <div key={task.id} className="flex items-center justify-between p-3.5 bg-surface-alt border border-border/80 rounded-2xl">
+                          <div className="flex items-center gap-2.5">
+                            <input 
+                              type="checkbox"
+                              checked={task.completed}
+                              onChange={() => handleToggleTask(task)}
+                              className="w-4 h-4 rounded text-[#00d4aa] border-border bg-[#090a0f] focus:ring-brand focus:ring-offset-0 focus:ring-1"
+                            />
+                            <span className={`text-xs ${task.completed ? "line-through text-text-muted opacity-60" : "text-white font-medium"}`}>
+                              {task.title}
+                            </span>
+                          </div>
+                          
+                          <div className="flex items-center gap-1.5 font-mono text-[9px] text-[#00d4aa] bg-[#00d4aa]/5 px-2 py-0.5 rounded border border-[#00d4aa]/15 animate-fade-in">
+                            <Calendar className="w-3 h-3" />
+                            <span>By {new Date(task.dueDate).toLocaleDateString()}</span>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
-              )}
-            </div>
 
-            {/* 2. TASK FOLLOW-UPS CHECKLISTS */}
-            <div className="space-y-4">
-              <h4 className="text-xs uppercase font-bold tracking-widest text-slate-500 flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-emerald-600" />
-                Negotiation Checklist followups ({dealTasks.filter(t => t.completed).length}/{dealTasks.length})
-              </h4>
+                {/* 3. ACTIVITY LOGS PATHWAY */}
+                <div className="space-y-4">
+                  <h4 className="text-[10px] font-mono uppercase font-bold tracking-widest text-[#00d4aa] flex items-center gap-2">
+                    <Activity className="w-4 h-4 text-brand-alt" />
+                    Interaction Timeline Logs
+                  </h4>
 
-              {/* Add Task bar */}
-              <div className="flex flex-wrap items-center gap-2.5">
-                <input 
-                  type="text"
-                  placeholder="Schedule follow-up reminder action..."
-                  value={newTaskTitle}
-                  onChange={(e) => setNewTaskTitle(e.target.value)}
-                  className="flex-1 min-w-[180px] bg-white border border-slate-200 text-slate-800 placeholder:text-slate-400 rounded-xl py-2 px-3 text-xs outline-none focus:border-blue-500"
-                />
-                <input 
-                  type="date"
-                  value={newTaskDueDate}
-                  onChange={(e) => setNewTaskDueDate(e.target.value)}
-                  className="bg-white border border-slate-200 text-slate-800 rounded-xl py-2 px-3 text-xs outline-none focus:border-blue-500"
-                />
-                <button 
-                  onClick={handleAddTask}
-                  className="px-4 py-2 bg-slate-100 border border-slate-200 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs"
-                >
-                  Schedule Actions
-                </button>
-              </div>
-
-              {/* Tasks Checklist Grid */}
-              <div className="space-y-2">
-                {dealTasks.length === 0 ? (
-                  <p className="text-[10px] italic text-slate-400 text-center font-mono">No scheduling tasks recorded. Keep track of customer SLAs.</p>
-                ) : (
-                  dealTasks.map((task) => (
-                    <div key={task.id} className="flex items-center justify-between p-3 bg-white border border-slate-200 shadow-xs rounded-xl">
-                      <div className="flex items-center gap-2.5">
-                        <input 
-                          type="checkbox"
-                          checked={task.completed}
-                          onChange={() => handleToggleTask(task)}
-                          className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
-                        />
-                        <span className={`text-xs ${task.completed ? "line-through text-slate-400" : "text-slate-700 font-medium"}`}>
-                          {task.title}
-                        </span>
-                      </div>
-                      
-                      <div className="flex items-center gap-2 font-mono text-[9px] text-slate-500">
-                        <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                        <span>SLA: {new Date(task.dueDate).toLocaleDateString()}</span>
-                      </div>
+                  <div className="space-y-2">
+                    <textarea
+                      placeholder="Log manual notes, communication outcome triggers, or call summaries..."
+                      value={newNoteText}
+                      onChange={(e) => setNewNoteText(e.target.value)}
+                      className="w-full bg-surface-alt border border-border text-white placeholder:text-text-muted rounded-2xl p-3 text-xs outline-none focus:border-brand h-20 resize-none select-text"
+                    />
+                    <div className="flex justify-end">
+                      <button 
+                        onClick={handleAddNote}
+                        className="px-4 py-2 bg-[#00d4aa] hover:bg-[#00d4aa]/90 text-slate-950 font-black rounded-xl text-xs transition-all cursor-pointer"
+                      >
+                        Append Note Log
+                      </button>
                     </div>
-                  ))
-                )}
-              </div>
-            </div>
+                  </div>
 
-            {/* 3. ACTIVITY TIMELINE CHRONOLOGY LOGS */}
-            <div className="space-y-4">
-              <h4 className="text-xs uppercase font-bold tracking-widest text-slate-500 flex items-center gap-2">
-                <Activity className="w-4 h-4 text-indigo-650" />
-                Chronological Journey Activity Logs
-              </h4>
-
-              {/* Add Note text element */}
-              <div className="space-y-2">
-                <textarea
-                  placeholder="Log manual notes, email triggers, or custom calls notes..."
-                  value={newNoteText}
-                  onChange={(e) => setNewNoteText(e.target.value)}
-                  className="w-full bg-white border border-slate-200 text-slate-800 placeholder:text-slate-400 rounded-xl p-3 text-xs outline-none focus:border-indigo-400 h-20 resize-none select-text focus:ring-1 focus:ring-indigo-400 shadow-xs"
-                />
-                <div className="flex justify-end">
-                  <button 
-                    onClick={handleAddNote}
-                    className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-750 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs"
-                  >
-                    Log Negotiating Note
-                  </button>
+                  <div className="relative border-l border-border pl-4 space-y-6">
+                    {dealActivities.length === 0 ? (
+                      <p className="text-[10px] italic text-text-muted text-center font-mono py-2">Timeline inactive. Move stages to generate activity metrics.</p>
+                    ) : (
+                      dealActivities.map((act) => (
+                        <div key={act.id} className="relative space-y-1 text-left">
+                          <span className="absolute -left-[21px] top-1.5 w-2.5 h-2.5 rounded-full border border-surface bg-[#00d4aa]" />
+                          
+                          <div className="text-[11px] font-extrabold text-white flex items-center justify-between">
+                            <span>{act.title}</span>
+                            <span className="text-[8px] text-text-muted font-mono">{new Date(act.timestamp).toLocaleTimeString()}</span>
+                          </div>
+                          <p className="text-[10px] text-text-muted leading-relaxed select-text">{act.description}</p>
+                          <div className="text-[8px] text-text-muted italic flex items-center gap-1.5 pt-0.5 font-mono select-none">
+                            <User className="w-3 h-3 opacity-60 text-brand" />
+                            Broker Agent: {act.agentName}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
-              </div>
 
-              {/* Timeline Items */}
-              <div className="relative border-l border-slate-150 pl-4 space-y-6">
-                {dealActivities.length === 0 ? (
-                  <p className="text-[10px] italic text-slate-400 text-center select-none pt-2 font-mono">Timeline empty. Change stage or write notes above.</p>
-                ) : (
-                  dealActivities.map((act) => (
-                    <div key={act.id} className="relative space-y-1 text-left">
-                      {/* Anchor Timeline Ring */}
-                      <span className="absolute -left-[21px] top-1.5 w-2.5 h-2.5 rounded-full border border-white bg-indigo-500 shadow-sm" />
-                      
-                      <div className="text-[11px] font-bold text-slate-800 flex items-center justify-between">
-                        <span>{act.title}</span>
-                        <span className="text-[8px] text-slate-400 font-mono">{new Date(act.timestamp).toLocaleTimeString()}</span>
-                      </div>
-                      <p className="text-[10px] text-slate-600 leading-relaxed select-text">{act.description}</p>
-                      <div className="text-[8px] text-slate-400 italic flex items-center gap-1 pt-0.5 select-none font-mono">
-                        <User className="w-2.5 h-2.5 opacity-60" />
-                        Logged by: {act.agentName}
-                      </div>
-                    </div>
-                  ))
-                )}
               </div>
-            </div>
-
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
 
-      {/* CONFIRM NEW DEAL CREATION MODAL */}
+      {/* 6. CREATE DEAL MODAL */}
       {showAddDealModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/40 flex items-center justify-center p-4 backdrop-blur-xs">
-          <div className="bg-white border border-slate-200 rounded-3xl max-w-md w-full p-6 text-left space-y-6 animate-in fade-in-50 zoom-in-95 shadow-2xl text-slate-800">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-base font-bold text-slate-950 flex items-center gap-2">
-                <Briefcase className="w-5 h-5 text-blue-600" />
+        <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-4 backdrop-blur-sm select-text">
+          <div className="bg-surface border border-border rounded-3xl max-w-md w-full p-6 text-left space-y-5 shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-border/40 pb-3">
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <Briefcase className="w-5 h-5 text-[#00d4aa]" />
                 Initialize Journey Deal
               </h3>
-              <button onClick={() => setShowAddDealModal(false)} className="text-slate-450 hover:text-slate-700 cursor-pointer">
+              <button onClick={() => setShowAddDealModal(false)} className="text-text-muted hover:text-white cursor-pointer">
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             <div className="space-y-4 text-xs">
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Deal Action Title</label>
+                <label className="text-[9px] font-mono tracking-widest text-text-muted uppercase">Deal / Opportunity Title</label>
                 <input 
                   type="text"
-                  placeholder="e.g. Enterprise Outreach Expansion Bundle"
+                  placeholder="e.g. Acme Enterprise Automation Upgrade"
                   value={newDealTitle}
                   onChange={(e) => setNewDealTitle(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-250 text-slate-850 rounded-xl py-2 px-3 text-xs outline-none focus:border-blue-500 select-text transition-all"
+                  className="w-full bg-surface-alt border border-border text-white rounded-xl py-2 px-3 text-xs outline-none focus:border-[#00d4aa] transition-all"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Associated Lead Target</label>
+                  <label className="text-[9px] font-mono tracking-widest text-text-muted uppercase">Lead Target Assgined</label>
                   <select 
                     value={newDealLeadId}
                     onChange={(e) => setNewDealLeadId(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-250 text-slate-850 rounded-xl py-2 px-3 text-xs outline-none focus:border-blue-500 transition-all"
+                    className="w-full bg-surface-alt border border-border text-white rounded-xl py-2 px-3 text-xs outline-none focus:border-[#00d4aa]"
                   >
                     <option value="">Select Target...</option>
                     {initialLeads.map(l => (
@@ -1438,23 +1652,23 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Deal Value Volume ($)</label>
+                  <label className="text-[9px] font-mono tracking-widest text-text-muted uppercase">Deal Value ($ USD)</label>
                   <input 
                     type="number"
                     value={newDealValue}
                     onChange={(e) => setNewDealValue(Number(e.target.value))}
-                    className="w-full bg-slate-50 border border-slate-255 text-slate-850 rounded-xl py-2 px-3 text-xs outline-none focus:border-blue-500"
+                    className="w-full bg-surface-alt border border-border text-white rounded-xl py-2 px-3 text-xs outline-none focus:border-[#00d4aa]"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Pipeline Stage Target</label>
+                  <label className="text-[9px] font-mono tracking-widest text-text-muted uppercase">Start Pipeline Stage</label>
                   <select 
                     value={newDealStage}
                     onChange={(e) => setNewDealStage(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-250 text-slate-850 rounded-xl py-2 px-3 text-xs outline-none focus:border-blue-500"
+                    className="w-full bg-surface-alt border border-border text-white rounded-xl py-2 px-3 text-xs outline-none focus:border-[#00d4aa]"
                   >
                     {activePipeline?.stages.map(s => (
                       <option key={s.id} value={s.id}>{s.name}</option>
@@ -1463,11 +1677,11 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Assigned Client Agent</label>
+                  <label className="text-[9px] font-mono tracking-widest text-text-muted uppercase">Responsible Broker Agent</label>
                   <select 
                     value={newDealAgent}
                     onChange={(e) => setNewDealAgent(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-250 text-slate-850 rounded-xl py-2 px-3 text-xs outline-none focus:border-blue-500"
+                    className="w-full bg-surface-alt border border-border text-white rounded-xl py-2 px-3 text-xs outline-none focus:border-[#00d4aa]"
                   >
                     <option value="Sarah Mitchell">Sarah Mitchell</option>
                     <option value="James Ochieng">James Ochieng</option>
@@ -1477,111 +1691,132 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Tags Config (comma separated)</label>
+                <label className="text-[9px] font-mono tracking-widest text-text-muted uppercase">Tags Context (comma separated)</label>
                 <input 
                   type="text"
                   placeholder="e.g. Enterprise, High-Value, SaaS"
                   value={newDealTags}
                   onChange={(e) => setNewDealTags(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-250 text-slate-850 rounded-xl py-2 px-3 text-xs outline-none select-text focus:border-blue-500 transition-all"
+                  className="w-full bg-surface-alt border border-border text-white rounded-xl py-2 px-3 text-xs outline-none focus:border-[#00d4aa]"
                 />
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-border/40 text-xs font-bold">
               <button 
                 onClick={() => setShowAddDealModal(false)}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-205 text-slate-700 rounded-xl text-xs font-semibold cursor-pointer shadow-xs transition-colors"
+                className="px-4.5 py-2 hover:bg-surface-alt border border-border text-text-muted hover:text-white rounded-xl transition-all cursor-pointer"
               >
                 Cancel
               </button>
               <button 
                 onClick={handleCreateDeal}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold cursor-pointer transition-all shadow-xs"
+                className="px-4.5 py-2 bg-[#00d4aa] text-slate-950 hover:bg-[#00d4aa]/90 rounded-xl transition-all cursor-pointer"
               >
-                Initialize Target Deal
+                Create Target Deal
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* CONFIRM DUPLICATE MERGING DEDUPLICATION TOOL DIALOG (TASK 4) */}
+      {/* 7. DEDUPLICATION MATCHES MODAL */}
       {showMergeModal && duplicateConflicts && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/40 flex items-center justify-center p-4 backdrop-blur-xs">
-          <div className="bg-white border border-slate-200 rounded-3xl max-w-xl w-full p-6 text-left space-y-6 animate-in fade-in-50 zoom-in-95 shadow-2xl text-slate-800">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-base font-bold text-rose-800 flex items-center gap-2">
-                <ShieldAlert className="w-5 h-5 text-rose-600" />
-                Deduplication Lead Resolution Gate
+        <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-4 backdrop-blur-sm select-text">
+          <div className="bg-surface border border-border rounded-3xl max-w-2xl w-full p-6 text-left space-y-6 shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-border/40 pb-3">
+              <h3 className="text-base font-bold text-rose-400 flex items-center gap-2">
+                <ShieldAlert className="w-5 h-5 text-rose-500" />
+                CRM Contact Integrity & Deduplication Gateway
               </h3>
-              <button onClick={() => setShowMergeModal(false)} className="text-slate-400 hover:text-slate-700 cursor-pointer">
+              <button onClick={() => setShowMergeModal(false)} className="text-text-muted hover:text-white cursor-pointer">
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="bg-rose-50 border border-rose-150 text-xs text-rose-800 p-4 rounded-xl leading-relaxed">
-              We identified dual duplicates conflicts mismatch records on work email or phone context pairings and companies similarities:
-              <span className="font-mono block pt-1 font-bold text-rose-900 mb-0.5">Match Target ID: {duplicateConflicts.leadA.email}</span>
+            <div className="bg-rose-500/10 border border-rose-500/20 text-xs text-rose-400 p-4.5 rounded-2xl leading-relaxed">
+              We identified dual duplicates conflict records on work email or phone context pairings:
+              <span className="font-mono block pt-1.5 font-extrabold text-white text-[11px]">Conflict Identifier Key: {duplicateConflicts.leadA.email}</span>
             </div>
 
-            {/* Side-by-Side Values */}
             <div className="grid grid-cols-2 gap-4 text-xs">
-              <div className="border border-slate-200 p-4 rounded-xl bg-slate-50 text-left space-y-2 shadow-xs">
-                <div className="font-bold text-blue-700 border-b border-slate-200 pb-1">Primary Duplicate Target</div>
-                <div><span className="text-slate-400 uppercase text-[9px] block">Full name</span> <span className="text-slate-700 font-medium">{duplicateConflicts.leadA.name}</span></div>
-                <div><span className="text-slate-400 uppercase text-[9px] block">Role Title</span> <span className="text-slate-700 font-medium">{duplicateConflicts.leadA.role}</span></div>
-                <div><span className="text-slate-400 uppercase text-[9px] block">Phone link</span> <span className="text-slate-700 font-medium">{duplicateConflicts.leadA.phone || "No phone link"}</span></div>
-                <div><span className="text-slate-400 uppercase text-[9px] block">LinkedIn</span> <span className="text-slate-700 font-medium">{duplicateConflicts.leadA.linkedin_url || "No link"}</span></div>
-                <div><span className="text-slate-400 uppercase text-[9px] block">Country</span> <span className="text-slate-700 font-medium">{duplicateConflicts.leadA.country || "N/A"}</span></div>
+              {/* Card Lead A */}
+              <div className="border border-border p-4.5 rounded-2xl bg-surface-alt text-left space-y-3">
+                <div className="font-bold text-brand border-b border-border/30 pb-1.5 font-mono uppercase text-[9px] tracking-widest">Duplicate Target Alpha [A]</div>
+                <div>
+                  <span className="text-text-muted uppercase text-[8px] tracking-wider block font-mono">Full name</span> 
+                  <span className="text-white font-bold">{duplicateConflicts.leadA.name}</span>
+                </div>
+                <div>
+                  <span className="text-text-muted uppercase text-[8px] tracking-wider block font-mono">Role Title</span> 
+                  <span className="text-white font-medium">{duplicateConflicts.leadA.role}</span>
+                </div>
+                <div>
+                  <span className="text-text-muted uppercase text-[8px] tracking-wider block font-mono">Contact Phone</span> 
+                  <span className="text-white font-mono">{duplicateConflicts.leadA.phone || "Empty"}</span>
+                </div>
+                <div>
+                  <span className="text-text-muted uppercase text-[8px] tracking-wider block font-mono">Enrichment score</span> 
+                  <span className="text-white font-bold text-emerald-400">{duplicateConflicts.leadA.score}%</span>
+                </div>
               </div>
 
-              <div className="border border-slate-200 p-4 rounded-xl bg-slate-50 text-left space-y-2 shadow-xs">
-                <div className="font-bold text-slate-700 border-b border-slate-200 pb-1">Conflicting Duplicate Target</div>
-                <div><span className="text-slate-400 uppercase text-[9px] block">Full name</span> <span className="text-slate-700 font-medium">{duplicateConflicts.leadB.name}</span></div>
-                <div><span className="text-slate-400 uppercase text-[9px] block">Role Title</span> <span className="text-slate-700 font-medium">{duplicateConflicts.leadB.role}</span></div>
-                <div><span className="text-slate-400 uppercase text-[9px] block">Phone link</span> <span className="text-slate-700 font-medium">{duplicateConflicts.leadB.phone || "No phone link"}</span></div>
-                <div><span className="text-slate-400 uppercase text-[9px] block">LinkedIn</span> <span className="text-slate-700 font-medium">{duplicateConflicts.leadB.linkedin_url || "No link"}</span></div>
-                <div><span className="text-slate-400 uppercase text-[9px] block">Country</span> <span className="text-slate-700 font-medium">{duplicateConflicts.leadB.country || "N/A"}</span></div>
+              {/* Card Lead B */}
+              <div className="border border-border p-4.5 rounded-2xl bg-surface-alt text-left space-y-3">
+                <div className="font-bold text-blue-400 border-b border-border/30 pb-1.5 font-mono uppercase text-[9px] tracking-widest">Duplicate Target Beta [B]</div>
+                <div>
+                  <span className="text-text-muted uppercase text-[8px] tracking-wider block font-mono">Full name</span> 
+                  <span className="text-white font-bold">{duplicateConflicts.leadB.name}</span>
+                </div>
+                <div>
+                  <span className="text-text-muted uppercase text-[8px] tracking-wider block font-mono">Role Title</span> 
+                  <span className="text-white font-medium">{duplicateConflicts.leadB.role}</span>
+                </div>
+                <div>
+                  <span className="text-text-muted uppercase text-[8px] tracking-wider block font-mono">Contact Phone</span> 
+                  <span className="text-white font-mono">{duplicateConflicts.leadB.phone || "Empty"}</span>
+                </div>
+                <div>
+                  <span className="text-text-muted uppercase text-[8px] tracking-wider block font-mono">Enrichment score</span> 
+                  <span className="text-white font-bold text-blue-400">{duplicateConflicts.leadB.score}%</span>
+                </div>
               </div>
             </div>
 
-            {/* Merge options */}
+            {/* Selection row block */}
             <div className="space-y-3">
-              <div className="text-[10px] uppercase font-bold text-slate-500">Choose Field-Level Merging Override:</div>
+              <div className="text-[10px] uppercase font-mono font-bold tracking-widest text-[#00d4aa]">Field-Level Value Retainer Scheme:</div>
               <div className="grid grid-cols-2 gap-3 text-xs">
                 <button
                   onClick={() => handleResolveMerge(duplicateConflicts.leadA.id, duplicateConflicts.leadB.id, {
                     role: duplicateConflicts.leadA.role || duplicateConflicts.leadB.role,
                     phone: duplicateConflicts.leadA.phone || duplicateConflicts.leadB.phone,
-                    linkedin_url: duplicateConflicts.leadA.linkedin_url || duplicateConflicts.leadB.linkedin_url,
-                    country: duplicateConflicts.leadA.country || duplicateConflicts.leadB.country
+                    score: duplicateConflicts.leadA.score || duplicateConflicts.leadB.score
                   })}
-                  className="p-3 bg-blue-50/70 hover:bg-blue-100/70 border border-blue-150 rounded-xl text-left transition-all shadow-xs"
+                  className="p-4 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 rounded-2xl text-left transition-all"
                 >
-                  <span className="font-bold text-blue-800 block mb-1">Retain Target A Value</span>
-                  <span className="text-[11px] text-slate-600 leading-normal block">Resolves and combines records, prioritizing Lead A metadata.</span>
+                  <span className="font-extrabold text-[#10b981] block mb-1">Prioritize Record Alpha [A]</span>
+                  <span className="text-[10px] text-text-muted leading-relaxed block">Merges duplicates together but preserves Alpha values if overlapping fields conflict.</span>
                 </button>
 
                 <button
                   onClick={() => handleResolveMerge(duplicateConflicts.leadA.id, duplicateConflicts.leadB.id, {
                     role: duplicateConflicts.leadB.role || duplicateConflicts.leadA.role,
                     phone: duplicateConflicts.leadB.phone || duplicateConflicts.leadA.phone,
-                    linkedin_url: duplicateConflicts.leadB.linkedin_url || duplicateConflicts.leadA.linkedin_url,
-                    country: duplicateConflicts.leadB.country || duplicateConflicts.leadA.country
+                    score: duplicateConflicts.leadB.score || duplicateConflicts.leadA.score
                   })}
-                  className="p-3 bg-slate-50 hover:bg-slate-100 border border-slate-250 rounded-xl text-left transition-all shadow-xs"
+                  className="p-4 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 rounded-2xl text-left transition-all"
                 >
-                  <span className="font-bold text-slate-850 block mb-1">Retain Target B Value</span>
-                  <span className="text-[11px] text-slate-600 leading-normal block">Resolves and combines records, prioritizing Lead B metadata.</span>
+                  <span className="font-extrabold text-blue-450 block mb-1">Prioritize Record Beta [B]</span>
+                  <span className="text-[10px] text-text-muted leading-relaxed block">Merges duplicates together but preserves Beta values if overlapping fields conflict.</span>
                 </button>
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 text-xs">
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-border/40 text-xs">
               <button 
                 onClick={() => setShowMergeModal(false)}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-600 rounded-xl font-semibold cursor-pointer shadow-xs transition-colors"
+                className="px-4 py-2 hover:bg-surface-alt border border-border text-text-muted hover:text-white rounded-xl transition-all font-bold cursor-pointer"
               >
                 Keep Separately
               </button>
@@ -1590,6 +1825,228 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
         </div>
       )}
 
+      {/* 8. BULK LEAD CONVERSION MODAL */}
+      {showBulkImportModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-4 backdrop-blur-sm select-text">
+          <div className="bg-[#0b0c10] border border-border rounded-3xl max-w-4xl w-full p-6 text-left space-y-6 shadow-2xl animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-border/40 pb-3 shrink-0">
+              <div className="space-y-1">
+                <span className="px-2 py-0.5 text-[8.5px] font-mono font-bold uppercase tracking-widest text-[#00d4aa] bg-[#00d4aa]/10 border border-[#00d4aa]/25 rounded-md">
+                  Active Batch Deploy
+                </span>
+                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                  <Users className="w-5 h-5 text-[#00d4aa]" />
+                  Convert Multiple Leads to Active Kanban Deals
+                </h3>
+              </div>
+              <button 
+                onClick={() => setShowBulkImportModal(false)} 
+                className="text-text-muted hover:text-white cursor-pointer p-1.5 hover:bg-surface-alt rounded-lg"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Content Split Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 overflow-y-auto pr-1 flex-1 py-1 custom-scrollbar">
+              {/* Left Wing: Lead Selector List with check boxes */}
+              <div className="space-y-4 flex flex-col h-full min-h-[250px]">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] uppercase font-mono font-bold tracking-widest text-[#00d4aa]">
+                    1. Select Candidates ({selectedLeadsForBulk.length} chosen)
+                  </span>
+                  
+                  {/* Select All / Deselect All */}
+                  <div className="flex items-center gap-3 font-mono text-[10px]">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const leadsWithDeals = deals.map(d => d.leadId);
+                        const eligible = initialLeads.filter(l => !leadsWithDeals.includes(l.id));
+                        setSelectedLeadsForBulk(eligible.map(l => l.id));
+                      }}
+                      className="text-[#00d4aa] hover:underline font-bold bg-transparent border-0 cursor-pointer"
+                    >
+                      Select All Available
+                    </button>
+                    <span className="text-border">|</span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedLeadsForBulk([])}
+                      className="text-text-muted hover:text-white font-bold bg-transparent border-0 cursor-pointer"
+                    >
+                      Deselect All
+                    </button>
+                  </div>
+                </div>
+
+                {/* Candidate Scroller List */}
+                <div className="border border-border rounded-2xl bg-surface-alt/40 p-1 divide-y divide-border/45 overflow-y-auto flex-1 max-h-[350px]">
+                  {(() => {
+                    const leadsWithDeals = deals.map(d => d.leadId);
+                    const eligibleLeads = initialLeads.filter(l => !leadsWithDeals.includes(l.id));
+                    
+                    if (eligibleLeads.length === 0) {
+                      return (
+                        <div className="py-12 px-4 text-center space-y-2">
+                          <CheckCircle className="w-8 h-8 text-emerald-400 mx-auto" />
+                          <p className="text-xs text-text-muted italic">All existing system leads have already been converted to active CRM deal segments!</p>
+                        </div>
+                      );
+                    }
+                    
+                    return eligibleLeads.map((lead) => {
+                      const isChecked = selectedLeadsForBulk.includes(lead.id);
+                      return (
+                        <div 
+                          key={lead.id} 
+                          onClick={() => {
+                            if (isChecked) {
+                              setSelectedLeadsForBulk(prev => prev.filter(id => id !== lead.id));
+                            } else {
+                              setSelectedLeadsForBulk(prev => [...prev, lead.id]);
+                            }
+                          }}
+                          className={`flex items-start gap-3 p-3 hover:bg-[#0f1118] transition-all cursor-pointer rounded-xl ${isChecked ? 'bg-emerald-500/5' : ''}`}
+                        >
+                          <input 
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => {}} // Click handled by parent item click
+                            className="w-4 h-4 rounded mt-0.5 text-[#00d4aa] border-border bg-[#090a0f]"
+                          />
+                          <div className="min-w-0 flex-1 text-left">
+                            <div className="flex items-center gap-1.5 justify-between">
+                              <span className="text-xs font-bold text-white truncate">{lead.name}</span>
+                              <span className={`text-[8.5px] font-mono px-1.5 py-0.5 rounded-sm font-bold ${lead.score >= 80 ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-slate-500/10 text-text-muted'}`}>
+                                Score: {lead.score}%
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-text-muted truncate">@{lead.company || "No Org Info"}</p>
+                            {lead.email && <p className="text-[9px] text-slate-500 truncate mt-0.5">{lead.email}</p>}
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+              </div>
+
+              {/* Right Wing: Batch Conversion Form Parameters */}
+              <div className="space-y-4 flex flex-col justify-between h-full bg-[#0f111a]/45 border border-border rounded-2xl p-4.5">
+                <div>
+                  <span className="text-[10px] uppercase font-mono font-bold tracking-widest text-[#00d4aa] block mb-2">
+                    2. Customize Journey parameters
+                  </span>
+
+                  <div className="space-y-4 text-xs">
+                    {/* Est Value */}
+                    <div className="space-y-1.5">
+                      <label className="text-[9px] font-mono tracking-widest text-text-muted uppercase">Deal Opportunity Value ($ USD per Lead)</label>
+                      <input 
+                        type="number"
+                        value={bulkDealValue}
+                        onChange={(e) => setBulkDealValue(Number(e.target.value))}
+                        className="w-full bg-surface-alt border border-border text-white rounded-xl py-2 px-3 text-xs outline-none focus:border-[#00d4aa]"
+                        placeholder="e.g. 35000"
+                      />
+                      <p className="text-[8.5px] text-text-muted mt-0.5">Each chosen prospect will be created with reference to this baseline deal value.</p>
+                    </div>
+
+                    {/* Stage & Agent Row */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-[9px] font-mono tracking-widest text-text-muted uppercase">Starting Pipeline Stage</label>
+                        <select 
+                          value={bulkStage}
+                          onChange={(e) => setBulkStage(e.target.value)}
+                          className="w-full bg-surface-alt border border-border text-white rounded-xl py-2 px-3 text-xs outline-none focus:border-[#00d4aa] cursor-pointer"
+                        >
+                          {activePipeline?.stages.map(s => (
+                            <option key={s.id} value={s.id}>{s.name}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-[9px] font-mono tracking-widest text-text-muted uppercase">Responsible Agent</label>
+                        <select 
+                          value={bulkAgent}
+                          onChange={(e) => setBulkAgent(e.target.value)}
+                          className="w-full bg-surface-alt border border-border text-white rounded-xl py-2 px-3 text-xs outline-none focus:border-[#00d4aa] cursor-pointer"
+                        >
+                          <option value="Sarah Mitchell">Sarah Mitchell</option>
+                          <option value="James Ochieng">James Ochieng</option>
+                          <option value="User Pro">User Pro</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Status & Comm Tag */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-[9px] font-mono tracking-widest text-text-muted uppercase">Opportunity Health status</label>
+                        <select 
+                          value={bulkStatus}
+                          onChange={(e) => setBulkStatus(e.target.value as any)}
+                          className="w-full bg-surface-alt border border-border text-white rounded-xl py-2 px-3 text-xs outline-none focus:border-[#00d4aa] cursor-pointer"
+                        >
+                          <option value="hot">🔥 Hot Close</option>
+                          <option value="warm">⚡ Warm Play</option>
+                          <option value="cold">❄️ Cold Strobe</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-[9px] font-mono tracking-widest text-text-muted uppercase">Comma Separated Tags</label>
+                        <input 
+                          type="text"
+                          value={bulkTags}
+                          onChange={(e) => setBulkTags(e.target.value)}
+                          className="w-full bg-surface-alt border border-border text-white rounded-xl py-2 px-3 text-xs outline-none focus:border-[#00d4aa]"
+                          placeholder="Enterprise, High-Value"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-border/25 mt-4 text-[10px] text-text-muted leading-relaxed select-text">
+                  Upon batch confirmation, the Zyntra SDR pipeline engines initialize automatic timeline logging arrays and follow-up activities to preserve SLA response milestones.
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Actions Footer */}
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-border/40 text-xs font-bold shrink-0">
+              <button 
+                onClick={() => setShowBulkImportModal(false)}
+                className="px-4.5 py-2.5 hover:bg-surface-alt border border-border text-text-muted hover:text-white rounded-xl transition-all cursor-pointer bg-transparent"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleBulkImportLeads}
+                disabled={isBulkImporting || selectedLeadsForBulk.length === 0}
+                className="px-5 py-2.5 bg-[#00d4aa] text-slate-950 hover:bg-[#00d4aa]/90 disabled:opacity-40 rounded-xl transition-all cursor-pointer flex items-center gap-2 shadow-[0_4px_16px_rgba(0,212,170,0.2)] border-0"
+              >
+                {isBulkImporting ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin text-slate-950" />
+                    Converting {selectedLeadsForBulk.length} Leads...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-4 h-4 text-slate-950" />
+                    Convert & Import {selectedLeadsForBulk.length} Prospects
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
