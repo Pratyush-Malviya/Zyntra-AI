@@ -510,6 +510,30 @@ let pipelines: Pipeline[] = [
       { id: "stage-won", name: "Closed Won", color: "#10b981", probability: 100, slaDays: 0, statuses: ["Signed", "Onboarded"] },
       { id: "stage-lost", name: "Closed Lost", color: "#ef4444", probability: 0, slaDays: 0, statuses: ["Disqualified", "Competitor lost"] }
     ]
+  },
+  {
+    id: "pipe-onboarding",
+    orgId: "org-default",
+    name: "Customer Onboarding & Success",
+    stages: [
+      { id: "stage-kickoff", name: "Kickoff Meeting", color: "#06b6d4", probability: 15, slaDays: 3, statuses: ["Introduced", "Agenda Prepared"] },
+      { id: "stage-integration", name: "Data Integration", color: "#3b82f6", probability: 40, slaDays: 7, statuses: ["API Configured", "Data Cleansing"] },
+      { id: "stage-training", name: "Team Training", color: "#a855f7", probability: 70, slaDays: 5, statuses: ["Materials Ready", "Training Scheduled"] },
+      { id: "stage-active", name: "Fully Activated", color: "#10b981", probability: 95, slaDays: 14, statuses: ["Adoption Measured", "Live Feedback Loop"] },
+      { id: "stage-success", name: "Complete Handoff", color: "#22c55e", probability: 100, slaDays: 0, statuses: ["Customer Signed Off"] }
+    ]
+  },
+  {
+    id: "pipe-support",
+    orgId: "org-default",
+    name: "Support & Incident Escalation",
+    stages: [
+      { id: "stage-triage", name: "Level 1 Triage", color: "#ec4899", probability: 10, slaDays: 1, statuses: ["Report Received", "Priority Assigned"] },
+      { id: "stage-investigate", name: "Team Investigation", color: "#f97316", probability: 45, slaDays: 3, statuses: ["Reproduced", "Logs Analyzed"] },
+      { id: "stage-hotfix", name: "Hotfix Development", color: "#a855f7", probability: 80, slaDays: 2, statuses: ["Pull Request Open", "Unit Tested"] },
+      { id: "stage-qa", name: "QA Verification", color: "#06b6d4", probability: 90, slaDays: 2, statuses: ["Staging Verified", "Peer Reviewed"] },
+      { id: "stage-resolved", name: "Ticket Resolved", color: "#10b981", probability: 100, slaDays: 0, statuses: ["Released", "Client Confirmed"] }
+    ]
   }
 ];
 

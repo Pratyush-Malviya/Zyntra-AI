@@ -134,6 +134,8 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
 
   // Quick Action State
   const [hoveredCardId, setHoveredCardId] = useState<string | null>(null);
+  const [draggingDealId, setDraggingDealId] = useState<string | null>(null);
+  const [dragOverStageId, setDragOverStageId] = useState<string | null>(null);
   const [isRefreshingAi, setIsRefreshingAi] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [newTaskDueDate, setNewTaskDueDate] = useState("");
@@ -260,16 +262,27 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
   }, [deals, movements, activePipeline, allActivities]);
 
   // Drag handlers
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = (e: React.DragEvent, stageId: string) => {
     e.preventDefault();
+    if (dragOverStageId !== stageId) {
+      setDragOverStageId(stageId);
+    }
   };
 
   const handleDragStart = (e: React.DragEvent, dealId: string) => {
     e.dataTransfer.setData("text/plain", dealId);
+    setDraggingDealId(dealId);
+  };
+
+  const handleDragEnd = () => {
+    setDraggingDealId(null);
+    setDragOverStageId(null);
   };
 
   const handleDrop = async (e: React.DragEvent, targetStageId: string) => {
     e.preventDefault();
+    setDraggingDealId(null);
+    setDragOverStageId(null);
     const dealId = e.dataTransfer.getData("text/plain");
     const draggedDeal = deals.find(d => d.id === dealId);
     
@@ -722,6 +735,11 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
   };
 
   const filteredDeals = deals.filter(deal => {
+    // Multi-Pipeline Filter Support: only show deals in stages of the current active pipeline
+    const pipelineStageIds = activePipeline?.stages.map(s => s.id) || [];
+    const isInPipeline = pipelineStageIds.includes(deal.stage);
+    if (!isInPipeline) return false;
+
     const lead = initialLeads.find(l => l.id === deal.leadId);
     const searchMatch = 
       deal.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -777,8 +795,48 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
     }));
   };
 
+  const getAiNextBestAction = (deal: Deal) => {
+    if (deal.stage.includes("discovery") || deal.stage.includes("kickoff") || deal.stage.includes("triage")) {
+      return "📅 Arrange Initial Call & Needs Discovery Blueprint";
+    }
+    if (deal.stage.includes("proposal") || deal.stage.includes("integration") || deal.stage.includes("investigate")) {
+      return "📝 Share Custom Specs Estimate & Proposal";
+    }
+    if (deal.stage.includes("negotiation") || deal.stage.includes("training") || deal.stage.includes("hotfix")) {
+      return "🔑 SLA/Deal Terms Review With Key Stakeholders";
+    }
+    if (deal.stage.includes("won") || deal.stage.includes("active") || deal.stage.includes("qa") || deal.stage.includes("success")) {
+      return "🚀 Post-sale Onboarding Sync Call Scheduled";
+    }
+    return "⚡ Conduct Comprehensive Pipeline Calibration Review";
+  };
+
   const chartData = getChartData();
   const totalDealVolume = filteredDeals.reduce((sum, d) => sum + d.value, 0);
+
+  // Compute probability-weighted predictive expected revenue (AI Forecast value)
+  const expectedForecastVolume = filteredDeals.reduce((sum, d) => {
+    const stage = activePipeline?.stages.find(s => s.id === d.stage);
+    const probPct = stage ? stage.probability : 20;
+    return sum + (d.value * (probPct / 100));
+  }, 0);
+
+  // Count active hazards (SLA breaches + simulated Ghosting risks i.e. 4+ days duration)
+  const getHazardsCount = () => {
+    let count = 0;
+    filteredDeals.forEach(d => {
+      const stage = activePipeline?.stages.find(s => s.id === d.stage);
+      if (stage) {
+        const daysInfo = getDaysInStage(d, stage);
+        const isSlaBreached = stage.slaDays > 0 && daysInfo.days > stage.slaDays;
+        const isGhosted = daysInfo.days >= 4; // flag simulated ghosted if 4 days with no action
+        if (isSlaBreached || isGhosted) count++;
+      }
+    });
+    return count;
+  };
+
+  const hazardsCount = getHazardsCount();
 
   return (
     <div className="space-y-6">
@@ -787,11 +845,11 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
         <div className="text-left space-y-1">
           <div className="flex items-center gap-2">
             <span className="px-2.5 py-0.5 text-[9px] font-mono font-bold uppercase tracking-widest text-[#00d4aa] bg-[#00d4aa]/10 rounded-full border border-[#00d4aa]/20">
-              Interactive Board CRM
+              AI Intelligent Kanban Board
             </span>
-            <div className="flex items-center gap-1 text-blue-400">
+            <div className="flex items-center gap-1 text-[#00d4aa]">
               <TrendingUp className="w-3.5 h-3.5" />
-              <span className="text-[9px] font-mono font-bold uppercase tracking-wider">Active Close Intelligence</span>
+              <span className="text-[9px] font-mono font-bold uppercase tracking-wider">Predictive Revenue Intelligence</span>
             </div>
           </div>
           <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white font-syne flex items-center gap-2.5">
@@ -799,26 +857,38 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
             Deal Journeys & Kanban Pipelines
           </h2>
           <p className="text-xs text-text-muted leading-relaxed">
-            Configure isolated sales stages, track service level agreements (SLAs), drag prospects across streams, and analyze win confidence.
+            Manage your sales stages, track work-in-progress (WIP) thresholds, visualize velocity bottlenecks, and automate predictive forecasting algorithms.
           </p>
         </div>
 
-        {/* 3 Core CRM Stats Mini KPI Cards */}
+        {/* 3 Core CRM Stats Mini KPI Cards (AI Weighted Expected Revenue & Ghosting/SLA Alerts) */}
         <div className="flex flex-wrap items-center gap-4 text-left">
-          <div className="bg-surface border border-border/80 rounded-2xl p-3.5 px-5 min-w-[150px] relative overflow-hidden group">
-            <span className="text-[9px] text-text-muted font-bold uppercase tracking-widest block font-mono">Pipeline Volume</span>
+          <div className="bg-surface border border-border/80 rounded-2xl p-3.5 px-5 min-w-[130px] relative overflow-hidden group">
+            <span className="text-[9px] text-text-muted font-bold uppercase tracking-widest block font-mono">Absolute Volume</span>
             <span className="text-lg font-syne font-extrabold text-[#00d4aa] mt-1 block">
               ${totalDealVolume.toLocaleString()}
             </span>
             <span className="text-[8px] text-text-muted font-mono">{filteredDeals.length} opportunity items</span>
           </div>
 
-          <div className="bg-surface border border-border/80 rounded-2xl p-3.5 px-5 min-w-[130px] relative overflow-hidden group">
-            <span className="text-[9px] text-text-muted font-bold uppercase tracking-widest block font-mono">SLA breaches</span>
-            <span className="text-lg font-syne font-extrabold text-rose-400 mt-1 block">
-              0 Active
+          <div className="bg-surface border border-[#00d4aa]/30 rounded-2xl p-3.5 px-5 min-w-[155px] relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-20 h-20 bg-[#00d4aa]/5 rounded-full filter blur-md" />
+            <span className="text-[9px] text-[#00d4aa] font-black uppercase tracking-widest block font-mono flex items-center gap-1">
+              <Sparkles className="w-3 h-3 text-[#00d4aa] animate-pulse" />
+              AI Expected revenue
             </span>
-            <span className="text-[8px] text-text-muted font-mono">All queues within limits</span>
+            <span className="text-lg font-syne font-extrabold text-white mt-1 block">
+              ${Math.round(expectedForecastVolume).toLocaleString()}
+            </span>
+            <span className="text-[8.5px] text-text-muted font-mono">Stage probability weighted</span>
+          </div>
+
+          <div className="bg-surface border border-border/80 rounded-2xl p-3.5 px-5 min-w-[130px] relative overflow-hidden group">
+            <span className="text-[9px] text-text-muted font-bold uppercase tracking-widest block font-mono">Hazards & SLA Risks</span>
+            <span className={`text-lg font-syne font-extrabold mt-1 block ${hazardsCount > 0 ? "text-rose-400" : "text-emerald-400"}`}>
+              {hazardsCount} Active
+            </span>
+            <span className="text-[8px] text-text-muted font-mono">SLA delays & ghosting flags</span>
           </div>
         </div>
       </div>
@@ -841,6 +911,23 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
         {/* Filters and View Controllers Row */}
         <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto md:justify-end">
           
+          {/* Active Workflow Pipeline Selector (Supports Sales, Support, Onboarding flows in the visual layout) */}
+          <select 
+            value={activePipeline?.id || ""}
+            onChange={(e) => {
+              const selected = pipelinesList.find(p => p.id === e.target.value);
+              if (selected) {
+                setActivePipeline(selected);
+                showToast(`Switched pipeline schema to: ${selected.name}`, "info");
+              }
+            }}
+            className="bg-surface-alt border border-[#00d4aa]/30 text-xs text-[#00d4aa] rounded-xl py-2 px-3 font-bold outline-none focus:border-[#00d4aa] transition-all cursor-pointer min-w-[185px]"
+          >
+            {pipelinesList.map(p => (
+              <option key={p.id} value={p.id}>Pipeline: {p.name}</option>
+            ))}
+          </select>
+
           <select 
             value={selectedTagFilter}
             onChange={(e) => setSelectedTagFilter(e.target.value)}
@@ -1057,13 +1144,20 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                           {activePipeline?.stages.map((stage) => {
                             const stageLaneDeals = laneDeals.filter(d => d.stage === stage.id);
                             const cumulativeStageValue = stageLaneDeals.reduce((sum, d) => sum + d.value, 0);
+                            const isOver = dragOverStageId === stage.id;
 
                             return (
                               <div 
                                 key={stage.id}
-                                onDragOver={handleDragOver}
+                                onDragOver={(e) => handleDragOver(e, stage.id)}
+                                onDragLeave={() => setDragOverStageId(null)}
+                                onDragEnd={handleDragEnd}
                                 onDrop={(e) => handleDrop(e, stage.id)}
-                                className="flex flex-col bg-surface/50 border border-border/60 p-3.5 rounded-2xl min-h-[160px] relative transition-colors duration-300 hover:bg-surface/80"
+                                className={`flex flex-col rounded-2xl min-h-[160px] relative transition-all duration-200 p-3.5 ${
+                                  isOver 
+                                    ? "bg-[#00d4aa]/5 border-2 border-dashed border-[#00d4aa]/75 scale-[1.01] shadow-[inset_0_0_12px_rgba(0,212,170,0.15)]" 
+                                    : "bg-surface/50 border border-border/60 hover:bg-surface/80"
+                                }`}
                               >
                                 {/* Stage segment name inside Lane */}
                                 <div className="flex items-center justify-between border-b border-border/30 pb-2 mb-3">
@@ -1073,9 +1167,16 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                                       {stage.name}
                                     </span>
                                   </div>
-                                  <span className="text-[9px] font-mono text-[#00d4aa]">
-                                    ${cumulativeStageValue.toLocaleString()}
-                                  </span>
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    {stageLaneDeals.length > 2 && (
+                                      <span className="text-[7.5px] px-1 py-0.2 rounded bg-rose-500/10 border border-rose-500/35 text-rose-400 font-extrabold font-mono" title="Stage Overloaded (Cap: 2)">
+                                        ⚠️ WIP
+                                      </span>
+                                    )}
+                                    <span className="text-[9px] font-mono font-bold text-[#00d4aa]">
+                                      ${cumulativeStageValue.toLocaleString()}
+                                    </span>
+                                  </div>
                                 </div>
 
                                 {/* Items Container */}
@@ -1089,50 +1190,89 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                                       const associatedLead = initialLeads.find(l => l.id === deal.leadId);
                                       const daysInfo = getDaysInStage(deal, stage);
                                       const isSlaBreached = stage.slaDays > 0 && daysInfo.days > stage.slaDays;
+                                      const isGhosted = daysInfo.days >= 4;
+                                      const isDraggingThis = draggingDealId === deal.id;
+                                      
+                                      // Left indicator tag color based on deal health status
+                                      const leftBorderColor = 
+                                        deal.status === "hot" ? "border-l-[3.5px] border-l-[#00d4aa]" :
+                                        deal.status === "warm" ? "border-l-[3.5px] border-l-amber-500" :
+                                        deal.status === "cold" ? "border-l-[3.5px] border-l-blue-500" :
+                                        "border-l-[3.5px] border-l-slate-600";
 
                                       return (
                                         <div
                                           key={deal.id}
                                           draggable
                                           onDragStart={(e) => handleDragStart(e, deal.id)}
+                                          onDragEnd={handleDragEnd}
                                           onClick={() => selectActiveDeal(deal)}
-                                          className={`group relative p-3 rounded-xl border cursor-grab active:cursor-grabbing text-left space-y-2 transition-all ${
+                                          className={`group relative p-3 rounded-xl border cursor-grab active:cursor-grabbing text-left space-y-2 transition-all duration-200 select-none ${leftBorderColor} ${
                                             selectedDeal?.id === deal.id 
-                                              ? "border-[#00d4aa] bg-surface-alt shadow-[0_4px_12px_rgba(0,212,170,0.08)]" 
-                                              : "border-border bg-surface hover:border-text-muted hover:translate-y-[-1px] duration-200"
-                                          }`}
+                                              ? "border-[#00d4aa] bg-[#0c0d12] shadow-[0_4px_20px_rgba(0,212,170,0.15)] ring-1 ring-[#00d4aa]/30" 
+                                              : "border-border bg-[#090a0f] hover:border-text-muted hover:bg-surface-alt/75 hover:translate-y-[-1.5px]"
+                                          } ${isDraggingThis ? "opacity-35 border-dashed border-slate-500 scale-95" : ""}`}
                                         >
                                           {isSlaBreached && (
-                                            <div className="bg-rose-500/10 border border-rose-500/30 text-rose-400 rounded-lg p-1.5 flex items-start gap-1 text-[8px] leading-tight font-extrabold font-mono">
-                                              <AlertCircle className="w-3 h-3 text-rose-450 shrink-0" />
-                                              <span>SLA OVERDUE ({daysInfo.days}d / max {stage.slaDays}d)</span>
+                                            <div className="bg-rose-500/10 border border-rose-500/30 text-rose-400 rounded-lg p-1.5 flex items-center gap-1 text-[8px] leading-tight font-extrabold font-mono">
+                                              <AlertCircle className="w-3 h-3 text-rose-400 shrink-0" />
+                                              <span>SLA BREACH ({daysInfo.days}d)</span>
+                                            </div>
+                                          )}
+
+                                          {isGhosted && (
+                                            <div className="bg-amber-500/10 border border-amber-500/25 text-[#f59e0b] rounded-lg p-1 text-[7.5px] font-bold font-mono tracking-wide flex items-center justify-center gap-1">
+                                              <span className="animate-pulse">⚠️</span>
+                                              <span>Ghosting Risk (no timeline activity)</span>
                                             </div>
                                           )}
 
                                           <div className="flex items-start justify-between gap-1">
-                                            <h5 className="text-[10px] font-extrabold text-white group-hover:text-[#00d4aa] transition-colors truncate" title={deal.title}>
+                                            <h5 className="text-[10.5px] font-bold text-white group-hover:text-[#00d4aa] transition-colors truncate tracking-tight leading-snug" title={deal.title}>
                                               {deal.title}
                                             </h5>
                                             <button 
                                               onClick={(e) => handleDeleteDeal(deal.id, e)}
-                                              className="opacity-0 group-hover:opacity-100 p-0.5 hover:text-rose-500 text-text-muted transition-all rounded"
-                                              title="Delete segment"
+                                              className="opacity-0 group-hover:opacity-100 p-0.5 hover:text-rose-500 text-text-muted transition-all rounded shadow-sm"
+                                              title="Delete deal"
                                             >
                                               <Trash2 className="w-3 h-3" />
                                             </button>
                                           </div>
 
-                                          <div className="text-[9px] text-text-muted flex flex-col pl-0.5 border-l border-border mt-0.5">
-                                            <span className="font-bold text-slate-300">{associatedLead?.name || "Unassigned Lead"}</span>
-                                            <span className="scale-[0.95] origin-left text-[8px] opacity-70">@{associatedLead?.company || "N/A"}</span>
+                                          {/* Custom Lead Organization Info Box with letter avatar */}
+                                          <div className="flex items-center gap-1.5 min-w-0 bg-[#0f111a] p-1.5 rounded-lg border border-border/40">
+                                            <div className="w-4.5 h-4.5 rounded-full bg-slate-800 text-slate-300 flex items-center justify-center font-mono text-[8.5px] uppercase font-bold shrink-0 border border-border">
+                                              {associatedLead?.company ? associatedLead.company[0] : (associatedLead?.name ? associatedLead.name[0] : "L")}
+                                            </div>
+                                            <div className="truncate text-left leading-tight">
+                                              <span className="font-extrabold text-[#edf2f7] block truncate text-[9px]">{associatedLead?.name || "Unassigned Lead"}</span>
+                                              <span className="text-[7.5px] text-text-muted block truncate font-mono">@{associatedLead?.company || "N/A"}</span>
+                                            </div>
                                           </div>
 
+                                          {/* AI Copilot Suggestion Pill */}
+                                          <div className="bg-blue-500/5 hover:bg-blue-500/10 border border-blue-500/12 rounded-lg p-1.5 space-y-0.5 text-left text-[8px] text-blue-350 transition-colors">
+                                            <div className="flex items-center gap-1 font-mono uppercase tracking-wider font-extrabold text-blue-400">
+                                              <Sparkles className="w-2.5 h-2.5 text-blue-400 shrink-0" />
+                                              <span>AI Smart Step:</span>
+                                            </div>
+                                            <p className="font-medium text-slate-300 leading-snug line-clamp-2">{getAiNextBestAction(deal)}</p>
+                                          </div>
+
+                                          {/* Footer: Value and Custom Rating Indicator */}
                                           <div className="flex items-center justify-between border-t border-border/30 pt-1.5 text-[9px] font-mono">
-                                            <span className="font-bold text-emerald-400">${deal.value.toLocaleString()}</span>
-                                            <div className="flex items-center gap-1">
-                                              <span className="px-1 py-0.2 text-[8px] text-[#00d4aa] bg-[#00d4aa]/10 border border-[#00d4aa]/25 rounded">
-                                                {associatedLead?.score || 80}%
-                                              </span>
+                                            <span className="font-extrabold text-emerald-400">${deal.value.toLocaleString()}</span>
+                                            <div className="flex items-center gap-1.5">
+                                              {/* Rating Gauge */}
+                                              <div className="flex items-center gap-1 scale-[0.95] origin-right">
+                                                <div className="w-6 h-1 bg-slate-800 rounded-full overflow-hidden shrink-0">
+                                                  <div className="h-full bg-[#00d4aa]" style={{ width: `${associatedLead?.score || 85}%` }} />
+                                                </div>
+                                                <span className="text-[7.5px] font-bold text-slate-400 font-mono">
+                                                  {associatedLead?.score || 85}%
+                                                </span>
+                                              </div>
                                               {getHealthBadge(deal.status)}
                                             </div>
                                           </div>
@@ -1162,9 +1302,15 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
               return (
                 <div 
                   key={stage.id}
-                  onDragOver={handleDragOver}
+                  onDragOver={(e) => handleDragOver(e, stage.id)}
+                  onDragLeave={() => setDragOverStageId(null)}
+                  onDragEnd={handleDragEnd}
                   onDrop={(e) => handleDrop(e, stage.id)}
-                  className="flex flex-col bg-surface border border-border p-4 rounded-3xl min-h-[500px] h-[520px] transition-all"
+                  className={`flex flex-col rounded-3xl min-h-[500px] h-[520px] transition-all duration-300 p-4 ${
+                    dragOverStageId === stage.id 
+                      ? "bg-[#00d4aa]/5 border-2 border-dashed border-[#00d4aa]/70 scale-[1.015] shadow-[0_8px_32px_rgba(0,212,170,0.06)] ring-2 ring-[#00d4aa]/15" 
+                      : "bg-surface border border-border"
+                  }`}
                 >
                   {/* Column Header */}
                   <div className="flex items-center justify-between border-b border-border/30 pb-2 mb-3">
@@ -1174,9 +1320,16 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                         {stage.name}
                       </h4>
                     </div>
-                    <span className="px-2 py-0.5 rounded-full bg-surface-alt border border-border text-[9px] font-mono font-bold text-white">
-                      {stageDeals.length}
-                    </span>
+                    <div className="flex items-center gap-1.5 shink-0">
+                      {stageDeals.length > 3 && (
+                        <span className="text-[8px] px-1.5 py-0.2 rounded bg-rose-500/10 border border-rose-500/40 text-rose-400 font-bold font-mono tracking-tight animate-pulse" title="Stage Work-In-Progress Threshold Exceeded (Cap: 3)">
+                          ⚠️ WIP
+                        </span>
+                      )}
+                      <span className={`px-2 py-0.5 rounded-full border text-[9px] font-mono font-bold ${stageDeals.length > 3 ? "border-rose-500/50 text-rose-400 bg-rose-500/5" : "bg-surface-alt border border-border text-white"}`}>
+                        {stageDeals.length}
+                      </span>
+                    </div>
                   </div>
 
                   {/* Summary Metric pill */}
@@ -1186,7 +1339,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                   </div>
 
                   {/* Column Cards wrapper */}
-                  <div className="flex-1 space-y-3 overflow-y-auto pr-1 text-left custom-scrollbar">
+                  <div className={`flex-1 space-y-3 overflow-y-auto pr-1 text-left custom-scrollbar ${dragOverStageId === stage.id ? "bg-[#00d4aa]/2" : ""}`}>
                     {stageDeals.length === 0 ? (
                       <div className="h-full flex flex-col items-center justify-center text-center p-4 border border-dashed border-border/40 rounded-2xl bg-surface-alt/10">
                         <Briefcase className="w-6 h-6 text-slate-700 mb-1.5" />
@@ -1198,23 +1351,40 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                         const associatedLead = initialLeads.find(l => l.id === deal.leadId);
                         const daysInfo = getDaysInStage(deal, stage);
                         const isSlaBreached = stage.slaDays > 0 && daysInfo.days > stage.slaDays;
+                        const isGhosted = daysInfo.days >= 4;
+                        const isDraggingThis = draggingDealId === deal.id;
+
+                        // Left indicator tag color based on deal health status
+                        const leftBorderColor = 
+                          deal.status === "hot" ? "border-l-[4px] border-l-[#00d4aa]" :
+                          deal.status === "warm" ? "border-l-[4px] border-l-amber-500" :
+                          deal.status === "cold" ? "border-l-[4px] border-l-blue-500" :
+                          "border-l-[4px] border-l-slate-600";
 
                         return (
                           <div
                             key={deal.id}
                             draggable
                             onDragStart={(e) => handleDragStart(e, deal.id)}
+                            onDragEnd={handleDragEnd}
                             onClick={() => selectActiveDeal(deal)}
-                            className={`group relative p-3.5 rounded-2xl border transition-all cursor-grab active:cursor-grabbing text-left space-y-3 ${
+                            className={`group relative p-3.5 rounded-2xl border transition-all duration-250 cursor-grab active:cursor-grabbing text-left space-y-3 select-none ${leftBorderColor} ${
                               selectedDeal?.id === deal.id 
-                                ? "border-[#00d4aa] bg-surface-alt shadow-[0_4px_16px_rgba(0,212,170,0.12)]" 
-                                : "border-border bg-surface-alt/40 hover:border-text-muted hover:bg-surface-alt/80 hover:translate-y-[-1px] duration-200"
-                            }`}
+                                ? "border-[#00d4aa] bg-[#0c0d12] shadow-[0_4px_24px_rgba(0,212,170,0.18)] ring-1 ring-[#00d4aa]/30" 
+                                : "border-border bg-[#090a0f] hover:border-text-muted hover:bg-surface-alt/80 hover:translate-y-[-1.5px]"
+                            } ${isDraggingThis ? "opacity-35 border-dashed border-slate-500 scale-95" : ""}`}
                           >
                             {isSlaBreached && (
-                              <div className="bg-rose-500/10 border border-rose-500/30 text-rose-400 rounded-xl p-2 flex items-start gap-1 text-[9px] leading-tight font-black font-mono">
-                                <AlertCircle className="w-3.5 h-3.5 text-rose-450 shrink-0" />
-                                <span>SLA OVERDUE ({daysInfo.days}d in stage / limit {stage.slaDays}d)</span>
+                              <div className="bg-rose-500/10 border border-rose-500/30 text-rose-405 rounded-xl p-2 flex items-center gap-1 text-[9px] leading-tight font-black font-mono">
+                                <AlertCircle className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                                <span>SLA OVERDUE ({daysInfo.days}d / max {stage.slaDays}d)</span>
+                              </div>
+                            )}
+
+                            {isGhosted && (
+                              <div className="bg-amber-500/10 border border-amber-500/25 text-[#f59e0b] rounded-lg p-1 text-[8px] font-bold font-mono tracking-wide flex items-center justify-center gap-1">
+                                <span className="animate-pulse">⚠️</span>
+                                <span>Ghosting Risk (no timeline activity)</span>
                               </div>
                             )}
 
@@ -1230,19 +1400,39 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                               </button>
                             </div>
 
-                            {/* Linked Lead Details */}
-                            <div className="text-[10px] text-text-muted flex flex-col pl-2 border-l border-[#00d4aa]/40">
-                              <span className="font-bold text-slate-200">{associatedLead?.name || "Unassigned Lead"}</span>
-                              <span className="text-[8.5px] tracking-wider opacity-80 mt-0.5">@{associatedLead?.company || "N/A"}</span>
+                            {/* Custom Lead Organization Info Box with letter avatar */}
+                            <div className="flex items-center gap-2 min-w-0 bg-[#0f111a] p-2 rounded-xl border border-border/40">
+                              <div className="w-5.5 h-5.5 rounded-full bg-slate-800 text-slate-300 flex items-center justify-center font-mono text-[9px] uppercase font-bold shrink-0 border border-border/50">
+                                {associatedLead?.company ? associatedLead.company[0] : (associatedLead?.name ? associatedLead.name[0] : "L")}
+                              </div>
+                              <div className="truncate text-left leading-tight">
+                                <span className="font-extrabold text-[#edf2f7] block truncate text-[9.5px]">{associatedLead?.name || "Unassigned Lead"}</span>
+                                <span className="text-[8px] text-text-muted block truncate font-mono">@{associatedLead?.company || "N/A"}</span>
+                              </div>
+                            </div>
+
+                            {/* AI Copilot Suggestion Pill */}
+                            <div className="bg-blue-500/5 hover:bg-blue-500/10 border border-blue-500/12 rounded-lg p-2.5 space-y-0.5 text-left text-[8.5px] text-blue-350 transition-colors">
+                              <div className="flex items-center gap-1 font-mono uppercase tracking-wider font-extrabold text-blue-400">
+                                <Sparkles className="w-3 h-3 text-blue-400 shrink-0" />
+                                <span>AI Next Best Action:</span>
+                              </div>
+                              <p className="font-medium text-slate-200 leading-relaxed">{getAiNextBestAction(deal)}</p>
                             </div>
 
                             {/* Base Attributes */}
                             <div className="flex items-center justify-between border-t border-border/20 pt-2.5 text-[10px] font-mono">
-                              <span className="font-bold text-emerald-400">${deal.value.toLocaleString()}</span>
-                              <div className="flex items-center gap-1">
-                                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[8.5px] font-bold text-[#00d4aa] bg-[#00d4aa]/10 border border-[#00d4aa]/25 rounded">
-                                  {associatedLead?.score || 80}%
-                                </span>
+                              <span className="font-extrabold text-[#00d4aa]">${deal.value.toLocaleString()}</span>
+                              <div className="flex items-center gap-1.5">
+                                {/* Probability Close Gauge */}
+                                <div className="flex items-center gap-1">
+                                  <div className="w-8 h-1 bg-slate-800 rounded-full overflow-hidden shrink-0">
+                                    <div className="h-full bg-[#00d4aa]" style={{ width: `${associatedLead?.score || 85}%` }} />
+                                  </div>
+                                  <span className="text-[8.5px] font-mono text-slate-400 font-bold">
+                                    {associatedLead?.score || 85}%
+                                  </span>
+                                </div>
                                 {getHealthBadge(deal.status)}
                               </div>
                             </div>
