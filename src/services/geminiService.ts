@@ -319,7 +319,8 @@ export async function executeDynamicLlmChain(
   systemPrompt: string,
   action: string,
   isJson: boolean = false,
-  geminiSchemaConfig?: any
+  geminiSchemaConfig?: any,
+  nvidiaPrompt?: string
 ): Promise<string> {
   // Ensure default db is seeded
   await initializeLlmConfigs();
@@ -399,7 +400,16 @@ export async function executeDynamicLlmChain(
         content = await callGroqFallback(fallbackPrompt, systemPrompt, isJson, model.apiKey);
       } 
       else if (model.id === "nvidia") {
-        content = await callNvidiaFallback(fallbackPrompt, systemPrompt, isJson, model.apiKey, model.selectedModel);
+        const promptToUse = nvidiaPrompt || fallbackPrompt;
+        let targetModel = model.selectedModel || "meta/llama-3.3-70b-instruct";
+        if (action === "research") {
+          // Auto-escalate small models to premium models on Nvidia for deep research
+          if (targetModel.includes("8b") || targetModel.includes("gemma-2-9b")) {
+            console.log(`[Failover Chain] Auto-escalating NVIDIA model from ${targetModel} to meta/llama-3.3-70b-instruct for deep research...`);
+            targetModel = "meta/llama-3.3-70b-instruct";
+          }
+        }
+        content = await callNvidiaFallback(promptToUse, systemPrompt, isJson, model.apiKey, targetModel);
       }
       else if (model.id === "openrouter") {
         content = await callOpenRouterFallback(fallbackPrompt, systemPrompt, isJson, model.apiKey, model.selectedModel);
@@ -1200,7 +1210,8 @@ export async function generateProspectResearch(companyInput: string): Promise<Pr
       sysPrompt,
       "research",
       true,
-      geminiSchemaConfig
+      geminiSchemaConfig,
+      nvidiaPrompt
     );
     return { ...cleanAndParseJSON(rawContent) } as ProspectResearchReport;
   } catch (error) {
