@@ -42,14 +42,13 @@ function getAiClient(): GoogleGenAI {
   });
 }
 
-const DEFAULT_NVIDIA_API_KEY = "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";
-
 export function getNvidiaApiKey(): string {
   if (typeof window !== "undefined") {
     const saved = localStorage.getItem("zy_nvidia_api_key");
     if (saved) return saved;
+    return "";
   }
-  return process.env.NVIDIA_API_KEY || DEFAULT_NVIDIA_API_KEY;
+  return process.env.NVIDIA_API_KEY || "";
 }
 
 export function getNvidiaSelectedModel(): string {
@@ -64,18 +63,24 @@ const nvidiaApiKey = "DYNAMIC_LOADED";
 
 async function callNvidiaFallback(prompt: string, systemPrompt?: string, isJson: boolean = false): Promise<string> {
   const currentKey = getNvidiaApiKey();
-  if (!currentKey) {
+  if (!currentKey && typeof window === "undefined") {
     throw new Error("NVIDIA_API_KEY is not configured.");
   }
   
   const currentModel = getNvidiaSelectedModel();
   console.log(`[NVIDIA NIM Fallback] Invoking ${currentModel} via NVIDIA API...`);
   
-  const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+  const endpoint = typeof window !== "undefined"
+    ? "/api/llm/nvidia-chat"
+    : "https://integrate.api.nvidia.com/v1/chat/completions";
+
+  const response = await fetch(endpoint, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${currentKey}`
+      ...(typeof window === "undefined"
+        ? { "Authorization": `Bearer ${currentKey}` }
+        : currentKey ? { "x-nvidia-api-key": currentKey } : {})
     },
     body: JSON.stringify({
       model: currentModel,
