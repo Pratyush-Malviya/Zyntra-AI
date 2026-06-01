@@ -48,7 +48,7 @@ export function ensureAllDefaultConfigs(list: LLMConfig[]): LLMConfig[] {
       avgLatency: 0,
       totalTokens: 0,
       totalCost: 0,
-      selectedModel: "gemini-3.5-flash"
+      selectedModel: "gemini-1.5-flash"
     },
     {
       id: "openai",
@@ -127,7 +127,7 @@ export async function initializeLlmConfigs() {
         avgLatency: 0,
         totalTokens: 0,
         totalCost: 0,
-        selectedModel: "gemini-3.5-flash"
+        selectedModel: "gemini-1.5-flash"
       },
       {
         id: "openai",
@@ -374,12 +374,12 @@ export async function executeDynamicLlmChain(
         });
 
         // Resolve model dynamically based on user configuration and auto-escalation
-        let targetModel = model.selectedModel || "gemini-3.5-flash";
+        let targetModel = model.selectedModel || "gemini-1.5-flash";
         if (action === "research") {
           if (targetModel.includes("flash")) {
             targetModel = targetModel.replace("flash", "pro");
           } else if (!targetModel.includes("pro")) {
-            targetModel = "gemini-3.5-pro";
+            targetModel = "gemini-1.5-pro";
           }
         }
 
