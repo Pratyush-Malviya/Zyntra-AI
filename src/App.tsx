@@ -51,7 +51,11 @@ import {
   CreditCard,
   PlusCircle,
   Activity,
-  Filter
+  Filter,
+  Cpu,
+  List,
+  Kanban,
+  Search
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -63,9 +67,13 @@ import LandingPage from './components/LandingPage';
 import { SuperAdminDashboard as SuperAdminPanel } from './components/SuperAdminDashboard';
 import { CrmSyncLogsPanel } from './components/CrmSyncLogsPanel';
 import { SmartCsvImportModal } from './components/SmartCsvImportModal';
-import { SettingsHub } from './components/SettingsApiKeysPanel';
+import { SettingsApiKeysPanel } from './components/SettingsApiKeysPanel';
 import { CrmPipelineBoard } from './components/CrmPipelineBoard';
 import { LeadJourneyAnalytics } from './components/LeadJourneyAnalytics';
+import { OrgAdminPanel } from './components/OrgAdminPanel';
+import { ManagerWorkspacePanel } from './components/ManagerWorkspacePanel';
+import { AeWorkspacePanel } from './components/AeWorkspacePanel';
+import { SdrWorkspacePanel } from './components/SdrWorkspacePanel';
 import { 
   auth, 
   db, 
@@ -90,10 +98,7 @@ import {
   linkWithPopup,
   User 
 } from './firebase';
-import { UserManagement } from './components/admin/UserManagement';
-import { RoleWorkspaceSelector } from './components/RoleWorkspaceSelector';
-import { SidebarNav } from './components/SidebarNav';
-import { Role, usePermission, FieldGuard } from './lib/rbac';
+import { providedLeads } from './provided_leads';
 
 // --- Types ---
 enum OperationType {
@@ -150,7 +155,7 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
   }
 }
 
-interface Lead {
+export interface Lead {
   id?: string;
   name: string;
   role: string;
@@ -168,6 +173,7 @@ interface Lead {
   createdAt?: any;
   website?: string;
   employees?: string;
+  nextAction?: string;
 }
 
 interface Campaign {
@@ -203,8 +209,10 @@ interface UserProfile {
   email: string;
   displayName: string;
   photoURL: string;
-  role: 'super_admin' | 'org_admin' | 'user';
+  role: 'super_admin' | 'org_admin' | 'user' | 'sdr' | 'manager' | 'ae' | 'viewer';
   orgId: string;
+  orgName?: string;
+  tierLimit?: string;
   lastLogin: any;
   smtpConfig?: SmtpConfig;
   linkedinAccount?: {
@@ -380,20 +388,16 @@ const ReviewCard: React.FC<{
 
 // --- Utilities ---
 const calculateLeadScore = (lead: Lead): number => {
-  if (!lead) return 0;
   let score = 0;
   const highValueRoles = ['ceo', 'founder', 'vp', 'director', 'head', 'manager', 'owner', 'cto', 'cmo', 'coo'];
-  const role = String(lead.role || '').toLowerCase();
+  const role = (lead.role || '').toLowerCase();
   if (highValueRoles.some(r => role.includes(r))) score += 40;
   const techIndustries = ['software', 'tech', 'it', 'saas', 'digital', 'ai', 'cloud'];
-  const industry = String(lead.industry || '').toLowerCase();
+  const industry = (lead.industry || '').toLowerCase();
   if (techIndustries.some(i => industry.includes(i))) score += 20;
-  const linkedin = String(lead.linkedin_url || '');
-  if (linkedin && linkedin.length > 10) score += 10;
-  const phone = String(lead.phone || '');
-  if (phone && phone.length > 5) score += 10;
-  const email = String(lead.email || '');
-  if (email && email.includes('@')) score += 10;
+  if (lead.linkedin_url && lead.linkedin_url.length > 10) score += 10;
+  if (lead.phone && lead.phone.length > 5) score += 10;
+  if (lead.email && lead.email.includes('@')) score += 10;
   return score;
 };
 
@@ -496,6 +500,52 @@ export default function App() {
   }, [effectiveTheme]);
 
   if (loading) return <div className="min-h-screen bg-bg flex items-center justify-center"><Loader2 className="w-8 h-8 text-brand animate-spin" /></div>;
+
+  const handleDemoLogin = async (demo: { uid: string, email: string, displayName: string, role: string, orgId: string, orgName: string, tierLimit?: string }) => {
+    setLoading(true);
+    const mockUser = {
+      uid: demo.uid,
+      email: demo.email,
+      displayName: demo.displayName,
+      photoURL: `https://picsum.photos/seed/${demo.uid}/150`,
+      emailVerified: true
+    } as any;
+    
+    try {
+      const userRef = doc(db, 'users', demo.uid);
+      const newProfile: UserProfile = {
+        uid: demo.uid,
+        email: demo.email,
+        displayName: demo.displayName,
+        photoURL: `https://picsum.photos/seed/${demo.uid}/150`,
+        role: demo.role as any,
+        orgId: demo.orgId,
+        orgName: demo.orgName,
+        tierLimit: demo.tierLimit || 'Professional SDR',
+        lastLogin: Timestamp.now()
+      };
+      await setDoc(userRef, newProfile, { merge: true });
+      setUser(mockUser);
+      setProfile(newProfile);
+    } catch (e) {
+      console.warn("Firestore seed failed during demo login, using local fallback state:", e);
+      setUser(mockUser);
+      setProfile({
+        uid: demo.uid,
+        email: demo.email,
+        displayName: demo.displayName,
+        photoURL: `https://picsum.photos/seed/${demo.uid}/150`,
+        role: demo.role as any,
+        orgId: demo.orgId,
+        orgName: demo.orgName,
+        tierLimit: demo.tierLimit || 'Professional SDR',
+        lastLogin: Timestamp.now()
+      } as any);
+    } finally {
+      setLoading(false);
+      setShowLanding(false);
+    }
+  };
   
   if (!user || !profile) {
     if (showLanding) {
@@ -509,14 +559,122 @@ export default function App() {
         />
       );
     }
-    return <LoginView onBack={() => setShowLanding(true)} theme={effectiveTheme} setTheme={toggleTheme} isMobileDevice={isMobileDevice} />;
+    return (
+      <LoginView 
+        onBack={() => setShowLanding(true)} 
+        theme={effectiveTheme} 
+        setTheme={toggleTheme} 
+        isMobileDevice={isMobileDevice} 
+        onDemoLogin={handleDemoLogin}
+      />
+    );
   }
 
   return <MainApp user={user} profile={profile} theme={effectiveTheme} setTheme={toggleTheme} isMobileDevice={isMobileDevice} />;
 }
 
-function LoginView({ onBack, theme, setTheme, isMobileDevice }: { onBack: () => void, theme: 'dark' | 'light', setTheme: (t: 'dark' | 'light') => void, isMobileDevice: boolean }) {
+const DEMO_USERS = [
+  {
+    uid: 'demo-super-admin',
+    email: 'superadmin@zyntra.com',
+    displayName: 'Pratyush Malviya',
+    role: 'super_admin',
+    orgId: 'org-zyntra-global',
+    orgName: 'Zyntra Corp',
+    tierLimit: 'Enterprise Suite',
+    description: 'Tier 1 Control: Manage global tenants, licensing pricing, and system-wide dashboards.'
+  },
+  {
+    uid: 'demo-org-admin',
+    email: 'harvey@pearsonhardman.com',
+    displayName: 'Harvey Specter',
+    role: 'org_admin',
+    orgId: 'org-pearson-hardman',
+    orgName: 'Pearson Hardman LLC',
+    tierLimit: 'Professional SDR',
+    description: 'Tier 2 Settings: Configure custom email domain policies, company branding details, and staff seating.'
+  },
+  {
+    uid: 'demo-sdr',
+    email: 'mike.ross@pearsonhardman.com',
+    displayName: 'Mike Ross',
+    role: 'sdr',
+    orgId: 'org-pearson-hardman',
+    orgName: 'Pearson Hardman LLC',
+    tierLimit: 'Professional SDR',
+    description: 'SDR Outbound Panel: Launch sequence triggers, filter campaign leads, and manage real-time queues.'
+  },
+  {
+    uid: 'demo-manager',
+    email: 'louis.litt@pearsonhardman.com',
+    displayName: 'Louis Litt',
+    role: 'manager',
+    orgId: 'org-pearson-hardman',
+    orgName: 'Pearson Hardman LLC',
+    tierLimit: 'Professional SDR',
+    description: 'Manager Coach Hub: Monitor representative activity, approve outgoing scripts, and forecast deals.'
+  },
+  {
+    uid: 'demo-ae',
+    email: 'rachel.zane@pearsonhardman.com',
+    displayName: 'Rachel Zane',
+    role: 'ae',
+    orgId: 'org-pearson-hardman',
+    orgName: 'Pearson Hardman LLC',
+    tierLimit: 'Professional SDR',
+    description: 'Account Executive CRM: Interactive pipeline boards, health charts, and comprehensive opportunity briefs.'
+  },
+  {
+    uid: 'demo-viewer',
+    email: 'donna.paulsen@pearsonhardman.com',
+    displayName: 'Donna Paulsen',
+    role: 'viewer',
+    orgId: 'org-pearson-hardman',
+    orgName: 'Pearson Hardman LLC',
+    tierLimit: 'Professional SDR',
+    description: 'Viewer Read-Only seat: Corporate analytics boards and overview lists with limited write permission.'
+  }
+];
+
+function LoginView({ 
+  onBack, 
+  theme, 
+  setTheme, 
+  isMobileDevice,
+  onDemoLogin
+}: { 
+  onBack: () => void, 
+  theme: 'dark' | 'light', 
+  setTheme: (t: 'dark' | 'light') => void, 
+  isMobileDevice: boolean,
+  onDemoLogin: (demoInfo: any) => void
+}) {
   const handleLogin = async () => { try { await signInWithPopup(auth, googleProvider); } catch (e) { console.error(e); } };
+
+  const getRoleIcon = (role: string) => {
+    switch (role) {
+      case 'super_admin': return <Zap className="w-4 h-4 text-amber-400" />;
+      case 'org_admin': return <Building className="w-4 h-4 text-emerald-400" />;
+      case 'sdr': return <Target className="w-4 h-4 text-blue-400" />;
+      case 'manager': return <TrendingUp className="w-4 h-4 text-purple-400" />;
+      case 'ae': return <Briefcase className="w-4 h-4 text-rose-400" />;
+      case 'viewer': return <Eye className="w-4 h-4 text-slate-400" />;
+      default: return <UserCheck className="w-4 h-4 text-brand" />;
+    }
+  };
+
+  const getRoleLabel = (role: string) => {
+    switch (role) {
+      case 'super_admin': return 'Tier 1 • Super Admin';
+      case 'org_admin': return 'Tier 2 • Org Admin';
+      case 'sdr': return 'Tier 3 • Outbound SDR';
+      case 'manager': return 'Tier 3 • Coach & Forecast';
+      case 'ae': return 'Tier 3 • Account Executive';
+      case 'viewer': return 'Tier 3 • Viewer (Read-Only)';
+      default: return 'User';
+    }
+  };
+
   return (
     <div className={`min-h-screen ${theme === 'dark' ? 'bg-[#090a0f] text-slate-100' : 'bg-slate-50 text-slate-900'} flex items-center justify-center p-6 relative overflow-hidden transition-colors duration-300`}>
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-brand rounded-full blur-[120px] opacity-20" />
@@ -550,15 +708,88 @@ function LoginView({ onBack, theme, setTheme, isMobileDevice }: { onBack: () => 
         </div>
       )}
 
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className={`max-w-md w-full p-10 rounded-[40px] border text-center space-y-8 relative z-10 ${
-        theme === 'dark' ? 'bg-[#12131a] border-white/[0.05]' : 'bg-white border-slate-200'
-      }`}>
-        <div className="space-y-4">
-          <div className="w-20 h-20 bg-gradient-to-br from-brand to-brand-alt rounded-3xl mx-auto flex items-center justify-center shadow-2xl shadow-brand/20"><Zap className="w-10 h-10 text-white fill-current" /></div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Zyntra AI</h1>
-          <p className="text-text-muted text-sm font-medium">Enterprise Outreach Engine</p>
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }} 
+        animate={{ opacity: 1, y: 0 }} 
+        className={`max-w-5xl w-full p-8 md:p-12 rounded-[40px] border relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-12 text-left ${
+          theme === 'dark' ? 'bg-[#12131a] border-white/[0.05]' : 'bg-white border-slate-200'
+        }`}
+      >
+        {/* Left Side: Brand and Google Login */}
+        <div className="lg:col-span-5 flex flex-col justify-between py-2 space-y-8 lg:border-r lg:border-white/[0.05] lg:pr-10 text-center lg:text-left">
+          <div className="space-y-4">
+            <div className="w-16 h-16 bg-gradient-to-br from-brand to-brand-alt rounded-2xl flex items-center justify-center shadow-xl shadow-brand/25 mx-auto lg:mx-0">
+              <Zap className="w-8 h-8 text-white fill-current" />
+            </div>
+            <div className="space-y-1">
+              <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight font-syne text-white">Zyntra AI</h1>
+              <p className="text-[#a78bfa] text-xs font-bold uppercase tracking-widest font-mono">Enterprise Outreach & CRM Suite</p>
+            </div>
+            <p className="text-text-muted text-xs leading-relaxed max-w-sm mx-auto lg:mx-0">
+              A high-precision, multi-tier outreach sandbox configured for high-performing sales development, organizational settings, and intelligent client pipelines.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <button 
+              onClick={handleLogin} 
+              className="w-full py-3.5 rounded-xl bg-white hover:bg-slate-100 text-[#0f172a] font-bold flex items-center justify-center gap-3 transition-all shadow-xl hover:shadow-white/5 cursor-pointer text-xs"
+            >
+              <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-4 h-4" alt="Google" />
+              Sign in with Google Account
+            </button>
+            <p className="text-[10px] text-text-muted leading-normal">
+              Corporate Single Sign-On handles primary credentials and security profiles seamlessly.
+            </p>
+          </div>
         </div>
-        <button onClick={handleLogin} className="w-full py-3.5 rounded-2xl bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold flex items-center justify-center gap-3 transition-all shadow-xl cursor-pointer text-sm dark:bg-white dark:text-[#0f172a] dark:hover:bg-slate-100"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" alt="Google" />Sign in with Google</button>
+
+        {/* Right Side: Demo Quick Seats */}
+        <div className="lg:col-span-7 space-y-6">
+          <div className="space-y-1">
+            <h3 className="text-sm font-extrabold uppercase tracking-widest text-[#00d4aa]">Instant Demo Presets</h3>
+            <p className="text-xs text-text-muted leading-relaxed">
+              Skip external OAuth credentials for your live product presentation. Enter any sandbox workspace in one click:
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[420px] overflow-y-auto pr-1 scrollbar-thin">
+            {DEMO_USERS.map((demo) => (
+              <button
+                key={demo.uid}
+                onClick={() => onDemoLogin(demo)}
+                className="group flex flex-col p-4 bg-[#090a0f] hover:bg-brand/10 border border-border/80 hover:border-brand/60 rounded-2xl text-left transition-all duration-300 relative overflow-hidden cursor-pointer"
+              >
+                <div className="flex items-center justify-between w-full mb-1.5">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-[#12131a] rounded-lg group-hover:bg-brand/20 transition-colors">
+                      {getRoleIcon(demo.role)}
+                    </div>
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-text-muted group-hover:text-brand transition-colors">
+                      {getRoleLabel(demo.role).split(' • ')[1]}
+                    </span>
+                  </div>
+                  <span className="text-[9px] font-mono text-zinc-600 group-hover:text-brand/80">{demo.uid}</span>
+                </div>
+                
+                <div className="font-bold text-xs text-slate-200 group-hover:text-white transition-colors">
+                  {demo.displayName}
+                </div>
+                <div className="text-[10px] text-[#00d4aa]/90 font-mono mt-0.5 truncate w-full">
+                  {demo.email}
+                </div>
+                
+                <p className="text-[10px] text-text-muted group-hover:text-slate-300 mt-2 leading-relaxed font-normal">
+                  {demo.description}
+                </p>
+                
+                <div className="absolute right-3 bottom-3 opacity-0 group-hover:opacity-100 transition-opacity text-brand text-xs font-bold flex items-center gap-0.5">
+                  Enter <ChevronRight className="w-3.5 h-3.5" />
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
       </motion.div>
     </div>
   );
@@ -578,23 +809,45 @@ function MainApp({ user, profile, theme, setTheme, isMobileDevice }: { user: Use
   };
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [activeRole, setActiveRole] = useState<Role>(() => {
-    const saved = localStorage.getItem('zyntra-sim-role');
-    if (saved) return saved as Role;
-    
-    // Map existing default roles to new RBAC roles
-    const oldRole = profile.role as any;
-    if (oldRole === 'super_admin' || oldRole === 'org_admin') return 'Org Admin';
-    return 'SDR';
+  const [activePanel, setActivePanel] = useState(-1); 
+  const [simulatedRole, setSimulatedRole] = useState<'super_admin' | 'org_admin' | 'sdr' | 'manager' | 'ae' | 'viewer'>(() => {
+    if (profile?.role === 'super_admin') return 'super_admin';
+    if (profile?.role === 'org_admin') return 'org_admin';
+    return 'sdr';
   });
 
-  const handleRoleChange = (role: Role) => {
-    setActiveRole(role);
-    localStorage.setItem('zyntra-sim-role', role);
-    showToast(`Switched workspace role to: ${role}`, 'info');
+  const [activeView, setActiveView] = useState<string>('SUPER_ADMIN');
+
+  const handleSimulatedRoleChange = (role: 'super_admin' | 'org_admin' | 'sdr' | 'manager' | 'ae' | 'viewer') => {
+    setSimulatedRole(role);
+    if (role === 'super_admin') {
+      setActiveView('SUPER_ADMIN');
+      setSuperAdminTab('dashboard');
+    } else if (role === 'org_admin') {
+      setActiveView('ORG_DASHBOARD');
+    } else if (role === 'sdr') {
+      setActiveView('OUTREACH');
+      setActivePanel(-1);
+    } else if (role === 'manager') {
+      setActiveView('MGR_DASHBOARD');
+    } else if (role === 'ae') {
+      setActiveView('AE_PIPELINE');
+    } else if (role === 'viewer') {
+      setActiveView('VIEWER_DASHBOARD');
+    }
   };
-  const [activePanel, setActivePanel] = useState(-1); 
-  const [activeView, setActiveView] = useState<'OUTREACH' | 'SETTINGS' | 'TEAM_ADMIN' | 'SUPER_ADMIN' | 'RESEARCH' | 'JOURNEY' | 'ANALYTICS'>('OUTREACH');
+
+  useEffect(() => {
+    if (profile?.role === 'super_admin') {
+      handleSimulatedRoleChange('super_admin');
+    } else if (profile?.role === 'org_admin') {
+      handleSimulatedRoleChange('org_admin');
+    } else {
+      handleSimulatedRoleChange('sdr');
+    }
+  }, [profile?.role]);
+
+  const [superAdminTab, setSuperAdminTab] = useState<'dashboard' | 'employees_list' | 'add_employees' | 'organizations' | 'enterprise_suite' | 'llm_config'>('dashboard');
   const [researchKey, setResearchKey] = useState(0);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [currentCampaign, setCurrentCampaign] = useState<Campaign | null>(null);
@@ -629,7 +882,23 @@ function MainApp({ user, profile, theme, setTheme, isMobileDevice }: { user: Use
     status: '',
   });
   const [editingLeadId, setEditingLeadId] = useState<string | null>(null);
+  const [leadsViewMode, setLeadsViewMode] = useState<'list' | 'pipeline'>('pipeline');
+  const [leadsSearch, setLeadsSearch] = useState('');
+  const [leadsPage, setLeadsPage] = useState(1);
+  const [leadsPerPage, setLeadsPerPage] = useState(50);
+  const [pipelineColLimits, setPipelineColLimits] = useState<Record<string, number>>({});
+  const [draggedOverColumn, setDraggedOverColumn] = useState<string | null>(null);
   const [editedLeadData, setEditedLeadData] = useState<Partial<Lead> | null>(null);
+  const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>({
+    nameCompany: true,
+    score: true,
+    contact: true,
+    status: true,
+    role: false,
+    country: false,
+    industry: false,
+  });
+  const [showColumnDropdown, setShowColumnDropdown] = useState(false);
   const [showBulkAddModal, setShowBulkAddModal] = useState(false);
   const [bulkAddRowsText, setBulkAddRowsText] = useState('');
   
@@ -684,11 +953,10 @@ function MainApp({ user, profile, theme, setTheme, isMobileDevice }: { user: Use
 
   // --- Firestore Sync ---
   useEffect(() => {
-    if (!user || !profile.orgId) return;
+    if (!user || !profile?.orgId) return;
     const q = query(
       collection(db, 'campaigns'), 
-      where('orgId', '==', profile.orgId),
-      where('userId', '==', user.uid)
+      where('orgId', '==', profile.orgId)
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const camps = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Campaign));
@@ -697,21 +965,14 @@ function MainApp({ user, profile, theme, setTheme, isMobileDevice }: { user: Use
       handleFirestoreError(error, OperationType.LIST, 'campaigns');
     });
     return unsubscribe;
-  }, [user, profile.orgId]);
+  }, [user, profile?.orgId]);
 
   useEffect(() => {
-    if (campaigns.length > 0 && !currentCampaign) {
-      setCurrentCampaign(campaigns[0]);
-    }
-  }, [campaigns, currentCampaign]);
-
-  useEffect(() => {
-    if (!currentCampaign || !user || !profile.orgId) return;
+    if (!currentCampaign || !user || !profile?.orgId) return;
     const qLeads = query(
       collection(db, 'leads'), 
       where('orgId', '==', profile.orgId),
-      where('campaignId', '==', currentCampaign.id),
-      where('userId', '==', user.uid)
+      where('campaignId', '==', currentCampaign.id)
     );
     const unsubscribeLeads = onSnapshot(qLeads, (snapshot) => {
       setLeads(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Lead)));
@@ -722,8 +983,7 @@ function MainApp({ user, profile, theme, setTheme, isMobileDevice }: { user: Use
     const qMsg = query(
       collection(db, 'messages'), 
       where('orgId', '==', profile.orgId),
-      where('campaignId', '==', currentCampaign.id),
-      where('userId', '==', user.uid)
+      where('campaignId', '==', currentCampaign.id)
     );
     const unsubscribeMsg = onSnapshot(qMsg, (snapshot) => {
       const msgs: Record<string, OutreachMessages> = {};
@@ -736,7 +996,7 @@ function MainApp({ user, profile, theme, setTheme, isMobileDevice }: { user: Use
     if (currentCampaign.config) setConfig(currentCampaign.config);
 
     return () => { unsubscribeLeads(); unsubscribeMsg(); };
-  }, [currentCampaign, user, profile.orgId]);
+  }, [currentCampaign, user, profile?.orgId]);
 
 
 
@@ -968,19 +1228,23 @@ function MainApp({ user, profile, theme, setTheme, isMobileDevice }: { user: Use
       showToast('Error: Organization ID not found. Please re-login.', 'error');
       return;
     }
-    const newCamp = {
-      name,
-      userId: user.uid,
-      orgId: profile.orgId,
-      status: 'draft',
-      leadsCount: 0,
-      createdAt: Timestamp.now()
-    };
-    const docRef = await addDoc(collection(db, 'campaigns'), newCamp);
-    const createdCampaign = { id: docRef.id, ...newCamp } as Campaign;
-    setCurrentCampaign(createdCampaign);
-    setActivePanel(0);
-    return createdCampaign;
+    try {
+      const newCamp = {
+        name,
+        userId: user.uid,
+        orgId: profile.orgId,
+        status: 'draft',
+        leadsCount: 0,
+        createdAt: Timestamp.now()
+      };
+      const docRef = await addDoc(collection(db, 'campaigns'), newCamp);
+      setCurrentCampaign({ id: docRef.id, ...newCamp } as Campaign);
+      setActivePanel(0);
+      showToast(`Campaign "${name}" created successfully!`, 'success');
+    } catch (err: any) {
+      console.error("Error creating campaign: ", err);
+      handleFirestoreError(err, OperationType.WRITE, 'campaigns');
+    }
   };
 
   const handleDeleteCampaign = async (id: string) => {
@@ -1172,7 +1436,7 @@ function MainApp({ user, profile, theme, setTheme, isMobileDevice }: { user: Use
       const leadId = activeLead.id;
       const outreachInfo = leadId ? messages[leadId] : null;
       if (outreachInfo) {
-        logs.push(`[SYNC] Linked Active Channels: ${outreachInfo.whatsapp ? '✓ WA  ' : ''}${outreachInfo.linkedin ? '✓ LI  ' : ''}${outreachInfo.email ? '✓ Email' : ''}`);
+        logs.push(`[SYNC] Linked Active Channels: ${outreachInfo.whatsapp ? '✓ WA  ' : ''}${(outreachInfo.linkedin_connect || outreachInfo.linkedin_dm) ? '✓ LI  ' : ''}${(outreachInfo.email_body || outreachInfo.email_subject) ? '✓ Email' : ''}`);
       } else {
         logs.push(`[SYNC] No pre-generated outreach. Mapping custom B2B profile template parameters instead.`);
       }
@@ -1217,22 +1481,116 @@ function MainApp({ user, profile, theme, setTheme, isMobileDevice }: { user: Use
 
   const parseLeads = async (input: string) => {
     const lines = input.trim().split('\n').filter(l => l.trim());
-    if (lines.length < 2 || !currentCampaign || !user) return;
+    if (lines.length < 2) {
+      showToast("CSV input is empty or invalid.", "error");
+      return;
+    }
+    if (!user || !profile?.orgId) {
+      showToast("User session or Organization ID not found.", "error");
+      return;
+    }
 
-    const headers = lines[0].split(',').map(h => (h || '').trim().toLowerCase().replace(/\s+/g, '_'));
+    let targetCampaign = currentCampaign;
+    if (!targetCampaign) {
+      if (campaigns.length > 0) {
+        targetCampaign = campaigns[0];
+        setCurrentCampaign(campaigns[0]);
+        showToast(`Auto-selected campaign: ${campaigns[0].name}`, "info");
+      } else {
+        const newCamp = {
+          name: "Main Outreach Campaign",
+          userId: user.uid,
+          orgId: profile.orgId,
+          status: 'draft',
+          leadsCount: 0,
+          createdAt: Timestamp.now()
+        };
+        const docRef = await addDoc(collection(db, 'campaigns'), newCamp);
+        targetCampaign = { id: docRef.id, ...newCamp } as Campaign;
+        setCurrentCampaign(targetCampaign);
+        showToast("Created a new 'Main Outreach Campaign' to store these leads.", "info");
+      }
+    }
+
+    const headersRaw = lines[0].split(',').map(h => (h || '').trim());
+    const headers = headersRaw.map(h => h.toLowerCase().replace(/\s+/g, '_').replace(/['"]+/g, ''));
+    
     const parsed = lines.slice(1).map(line => {
-      const vals = splitCSV(line);
-      const obj: any = {
+      const vals = splitCSV(line).map(v => (v || '').trim());
+      const rowObj: any = {};
+      headers.forEach((h, i) => {
+        rowObj[h] = vals[i] || '';
+      });
+
+      const lead: any = {
         userId: user.uid,
         orgId: profile.orgId,
-        campaignId: currentCampaign.id,
-        status: 'imported'
+        campaignId: targetCampaign.id,
+        status: 'imported',
+        name: '',
+        role: '',
+        company: '',
+        industry: '',
+        country: '',
+        phone: '',
+        email: '',
+        linkedin_url: '',
+        score: Math.floor(60 + Math.random() * 30)
       };
-      headers.forEach((h, i) => { obj[h] = (vals[i] || '').trim(); });
-      return obj as Lead;
+
+      if (rowObj.name) {
+        lead.name = rowObj.name;
+      } else if (rowObj.full_name) {
+        lead.name = rowObj.full_name;
+      } else if (rowObj.first_name || rowObj.last_name) {
+        lead.name = `${rowObj.first_name || ''} ${rowObj.last_name || ''}`.trim();
+      }
+
+      lead.role = rowObj.role || rowObj.title || rowObj.job_title || rowObj.position || '';
+      lead.company = rowObj.company_name || rowObj.company || rowObj.organization || '';
+      lead.industry = rowObj.industry || rowObj.sector || '';
+      lead.country = rowObj.country || rowObj.location || '';
+      lead.phone = rowObj.phone || rowObj.work_direct_phone || rowObj.mobile_phone || rowObj.corporate_phone || rowObj.company_phone || '';
+      lead.email = rowObj.email || rowObj.email_address || rowObj.work_email || '';
+      lead.linkedin_url = rowObj.linkedin_url || rowObj.person_linkedin_url || rowObj.linkedin || '';
+
+      lead.name = lead.name.replace(/^['"]|['"]$/g, '').trim();
+      lead.role = lead.role.replace(/^['"]|['"]$/g, '').trim();
+      lead.company = lead.company.replace(/^['"]|['"]$/g, '').trim();
+      lead.industry = lead.industry.replace(/^['"]|['"]$/g, '').trim();
+      lead.country = lead.country.replace(/^['"]|['"]$/g, '').trim();
+      lead.phone = lead.phone.replace(/^['"]|['"]$/g, '').trim();
+      lead.email = lead.email.replace(/^['"]|['"]$/g, '').trim();
+      lead.linkedin_url = lead.linkedin_url.replace(/^['"]|['"]$/g, '').trim();
+
+      const seniority = String(rowObj.seniority || '').toLowerCase();
+      if (seniority.includes('founder') || seniority.includes('ceo') || seniority.includes('owner') || seniority.includes('c-suite')) {
+        lead.score = Math.floor(88 + Math.random() * 12);
+      } else if (seniority.includes('director') || seniority.includes('partner')) {
+        lead.score = Math.floor(80 + Math.random() * 10);
+      } else if (seniority.includes('manager')) {
+        lead.score = Math.floor(70 + Math.random() * 10);
+      }
+
+      return lead as Lead;
     }).filter(r => r.name);
 
-    await saveLeads(parsed);
+    if (parsed.length > 0) {
+      if (targetCampaign) {
+        for (const l of parsed) {
+          await addDoc(collection(db, 'leads'), {
+            ...l,
+            createdAt: Timestamp.now()
+          });
+        }
+        await updateDoc(doc(db, 'campaigns', targetCampaign.id), {
+          leadsCount: (targetCampaign.leadsCount || 0) + parsed.length
+        });
+      }
+      showToast(`Successfully imported ${parsed.length} B2B leads into the CRM!`, "success");
+    } else {
+      showToast("Could not find any valid leads with name fields in the CSV.", "error");
+    }
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1381,7 +1739,32 @@ function MainApp({ user, profile, theme, setTheme, isMobileDevice }: { user: Use
     } as Lead));
 
     await saveLeads(mappedLeads);
-    setShowSmartImportModal(false);
+    // Modal remains open on step 4 of wizard to display completed transit live stats & actual uploaded leads list.
+    // Closing is handled on click of bottom click dismiss triggers!
+  };
+
+  const handleImportProvidedLeads = async () => {
+    if (!currentCampaign) {
+      showToast("Please select or create an active campaign first.", "error");
+      return;
+    }
+    if (!user || !profile) {
+      showToast("User session not found.", "error");
+      return;
+    }
+    try {
+      const parsed = providedLeads.map(lead => ({
+        ...lead,
+        userId: user.uid,
+        orgId: profile.orgId,
+        campaignId: currentCampaign.id,
+      } as Lead));
+      
+      await saveLeads(parsed);
+      showToast(`Successfully synced all ${providedLeads.length} provided B2B leads to campaign!`, "success");
+    } catch (err: any) {
+      handleFirestoreError(err, OperationType.WRITE, 'leads');
+    }
   };
 
   const splitCSV = (line: string) => {
@@ -1602,24 +1985,298 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
           </button>
         </div>
 
-        
-      <SidebarNav 
-        activeView={activeView}
-        setActiveView={setActiveView}
-        isMobileMenuOpen={isMobileMenuOpen}
-        setIsMobileMenuOpen={setIsMobileMenuOpen}
-        isMenuCollapsed={isMenuCollapsed}
-        activeRole={activeRole}
-        setResearchKey={setResearchKey}
-        setCurrentCampaign={setCurrentCampaign}
-        setActivePanel={setActivePanel}
-        currentCampaign={currentCampaign}
-        campaigns={campaigns}
-        leads={leads}
-        messages={messages}
-        generateProjectPDF={generateProjectPDF}
-        showToast={showToast}
-      />
+        <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto max-h-[calc(100vh-180px)] scrollbar-thin">
+          {/* TIER 1: Super Admin Menu */}
+          {simulatedRole === 'super_admin' && (
+            <div className="space-y-1.5">
+              <div className="px-3 py-1 text-[8px] font-extrabold text-[#a78bfa] uppercase tracking-widest bg-purple-500/10 border border-purple-500/20 rounded-md mb-2 text-center">
+                TIER 1 — Super Admin
+              </div>
+              <NavButton 
+                active={activeView === 'SUPER_ADMIN' && superAdminTab === 'dashboard'} 
+                onClick={() => { setActiveView('SUPER_ADMIN'); setSuperAdminTab('dashboard'); setIsMobileMenuOpen(false); }}
+                icon={Activity}
+                label="Command Dashboard"
+                subLabel="SaaS Metrics Central"
+                isCollapsed={isMenuCollapsed}
+              />
+              <NavButton 
+                active={activeView === 'SUPER_ADMIN' && superAdminTab === 'organizations'} 
+                onClick={() => { setActiveView('SUPER_ADMIN'); setSuperAdminTab('organizations'); setIsMobileMenuOpen(false); }}
+                icon={Building}
+                label="Manage Orgs"
+                subLabel="Tenant Provisioning"
+                isCollapsed={isMenuCollapsed}
+              />
+              <NavButton 
+                active={activeView === 'SUPER_ADMIN' && superAdminTab === 'employees_list'} 
+                onClick={() => { setActiveView('SUPER_ADMIN'); setSuperAdminTab('employees_list'); setIsMobileMenuOpen(false); }}
+                icon={Users}
+                label="Employees Directory"
+                subLabel="Global Directory Map"
+                isCollapsed={isMenuCollapsed}
+              />
+              <NavButton 
+                active={activeView === 'SUPER_ADMIN' && superAdminTab === 'llm_config'} 
+                onClick={() => { setActiveView('SUPER_ADMIN'); setSuperAdminTab('llm_config'); setIsMobileMenuOpen(false); }}
+                icon={Cpu}
+                label="LLM Routing Hub"
+                subLabel="Failovers & Metering"
+                isCollapsed={isMenuCollapsed}
+              />
+              <NavButton 
+                active={activeView === 'SUPER_ADMIN' && superAdminTab === 'enterprise_suite'} 
+                onClick={() => { setActiveView('SUPER_ADMIN'); setSuperAdminTab('enterprise_suite'); setIsMobileMenuOpen(false); }}
+                icon={ShieldCheck}
+                label="Enterprise Audit"
+                subLabel="Compliance & SSO Logs"
+                isCollapsed={isMenuCollapsed}
+              />
+              <NavButton 
+                active={activeView === 'SUPER_ADMIN_BILLING'} 
+                onClick={() => { setActiveView('SUPER_ADMIN_BILLING'); setIsMobileMenuOpen(false); }}
+                icon={CreditCard}
+                label="Platform Gateways"
+                subLabel="MRR & Subscription Fee"
+                isCollapsed={isMenuCollapsed}
+              />
+            </div>
+          )}
+
+          {/* TIER 2: Organization Admin Menu */}
+          {simulatedRole === 'org_admin' && (
+            <div className="space-y-1.5">
+              <div className="px-3 py-1 text-[8px] font-extrabold text-[#60a5fa] uppercase tracking-widest bg-blue-500/10 border border-blue-500/20 rounded-md mb-2 text-center">
+                TIER 2 — Org Admin
+              </div>
+              <NavButton 
+                active={activeView === 'ORG_DASHBOARD'} 
+                onClick={() => { setActiveView('ORG_DASHBOARD'); setIsMobileMenuOpen(false); }}
+                icon={LayoutDashboard}
+                label="Tenant Overview"
+                subLabel="Quota & Seat Allocation"
+                isCollapsed={isMenuCollapsed}
+              />
+              <NavButton 
+                active={activeView === 'ORG_MEMBERS'} 
+                onClick={() => { setActiveView('ORG_MEMBERS'); setIsMobileMenuOpen(false); }}
+                icon={Users}
+                label="Member Directory"
+                subLabel="Invite & Role Allocation"
+                isCollapsed={isMenuCollapsed}
+              />
+              <NavButton 
+                active={activeView === 'ORG_BRANDING'} 
+                onClick={() => { setActiveView('ORG_BRANDING'); setIsMobileMenuOpen(false); }}
+                icon={Settings}
+                label="Custom Branding"
+                subLabel="Themes & Logos Setting"
+                isCollapsed={isMenuCollapsed}
+              />
+              <NavButton 
+                active={activeView === 'ORG_DOMAIN'} 
+                onClick={() => { setActiveView('ORG_DOMAIN'); setIsMobileMenuOpen(false); }}
+                icon={Globe}
+                label="Branded Domain"
+                subLabel="DKIM / SPF DNS Wizard"
+                isCollapsed={isMenuCollapsed}
+              />
+              <NavButton 
+                active={activeView === 'ORG_BILLING'} 
+                onClick={() => { setActiveView('ORG_BILLING'); setIsMobileMenuOpen(false); }}
+                icon={CreditCard}
+                label="Billing & Plans"
+                subLabel="Enterprise Subscription"
+                isCollapsed={isMenuCollapsed}
+              />
+              <NavButton 
+                active={activeView === 'ORG_FEATURES'} 
+                onClick={() => { setActiveView('ORG_FEATURES'); setIsMobileMenuOpen(false); }}
+                icon={Zap}
+                label="Feature Controls"
+                subLabel="Toggle Admin Modules"
+                isCollapsed={isMenuCollapsed}
+              />
+              <NavButton 
+                active={activeView === 'ORG_SECURITY'} 
+                onClick={() => { setActiveView('ORG_SECURITY'); setIsMobileMenuOpen(false); }}
+                icon={ShieldCheck}
+                label="Security & MFA"
+                subLabel="Enforce IP & Sessions"
+                isCollapsed={isMenuCollapsed}
+              />
+            </div>
+          )}
+
+          {/* TIER 3-A: SDR WORKSPACE */}
+          {simulatedRole === 'sdr' && (
+            <div className="space-y-1.5">
+              <div className="px-3 py-1 text-[8px] font-extrabold text-[#f59e0b] uppercase tracking-widest bg-amber-500/10 border border-amber-500/20 rounded-md mb-2 text-center">
+                TIER 3 — SDR Workspace
+              </div>
+              <NavButton 
+                active={activeView === 'OUTREACH'} 
+                onClick={() => { setActiveView('OUTREACH'); setActivePanel(-1); setIsMobileMenuOpen(false); }}
+                icon={Target}
+                label="Outreach Campaigns"
+                subLabel="Campaigns & Lead Map"
+                isCollapsed={isMenuCollapsed}
+              />
+              <NavButton 
+                active={activeView === 'RESEARCH'} 
+                onClick={() => { setActiveView('RESEARCH'); setIsMobileMenuOpen(false); }}
+                icon={Globe}
+                label="Prospect Intel"
+                subLabel="ICP Research & Dossiers"
+                isCollapsed={isMenuCollapsed}
+              />
+              <NavButton 
+                active={activeView === 'SDR_DAILY'} 
+                onClick={() => { setActiveView('SDR_DAILY'); setIsMobileMenuOpen(false); }}
+                icon={List}
+                label="Daily Action Queue"
+                subLabel="Priority tasks due today"
+                isCollapsed={isMenuCollapsed}
+              />
+              <NavButton 
+                active={activeView === 'SDR_STATS'} 
+                onClick={() => { setActiveView('SDR_STATS'); setIsMobileMenuOpen(false); }}
+                icon={TrendingUp}
+                label="Personal Analytics"
+                subLabel="Dials & Open Rates"
+                isCollapsed={isMenuCollapsed}
+              />
+            </div>
+          )}
+
+          {/* TIER 3-B: MANAGER WORKSPACE */}
+          {simulatedRole === 'manager' && (
+            <div className="space-y-1.5">
+              <div className="px-3 py-1 text-[8px] font-extrabold text-[#14b8a6] uppercase tracking-widest bg-teal-500/10 border border-teal-500/20 rounded-md mb-2 text-center">
+                TIER 3 — Manager Dashboard
+              </div>
+              <NavButton 
+                active={activeView === 'MGR_DASHBOARD'} 
+                onClick={() => { setActiveView('MGR_DASHBOARD'); setIsMobileMenuOpen(false); }}
+                icon={LayoutDashboard}
+                label="Team Activity Feed"
+                subLabel="Live outreach stream"
+                isCollapsed={isMenuCollapsed}
+              />
+              <NavButton 
+                active={activeView === 'MGR_APPROVALS'} 
+                onClick={() => { setActiveView('MGR_APPROVALS'); setIsMobileMenuOpen(false); }}
+                icon={Check}
+                label="Sequence Approvals"
+                subLabel="Approve SDR copy drafts"
+                isCollapsed={isMenuCollapsed}
+              />
+              <NavButton 
+                active={activeView === 'MGR_CALLS'} 
+                onClick={() => { setActiveView('MGR_CALLS'); setIsMobileMenuOpen(false); }}
+                icon={MessageSquare}
+                label="Call Coaching"
+                subLabel="AI summaries & metrics"
+                isCollapsed={isMenuCollapsed}
+              />
+              <NavButton 
+                active={activeView === 'MGR_FORECAST'} 
+                onClick={() => { setActiveView('MGR_FORECAST'); setIsMobileMenuOpen(false); }}
+                icon={TrendingUp}
+                label="Forecast & Overrides"
+                subLabel="Manager commits logs"
+                isCollapsed={isMenuCollapsed}
+              />
+            </div>
+          )}
+
+          {/* TIER 3-C: ACCOUNT EXECUTIVE WORKSPACE */}
+          {simulatedRole === 'ae' && (
+            <div className="space-y-1.5">
+              <div className="px-3 py-1 text-[8px] font-extrabold text-[#3b82f6] uppercase tracking-widest bg-blue-500/10 border border-blue-500/20 rounded-md mb-2 text-center">
+                TIER 3 — AE Workspace
+              </div>
+              <NavButton 
+                active={activeView === 'AE_PIPELINE'} 
+                onClick={() => { setActiveView('AE_PIPELINE'); setIsMobileMenuOpen(false); }}
+                icon={Kanban}
+                label="Deal Pipeline Board"
+                subLabel="Kanban opportunity flows"
+                isCollapsed={isMenuCollapsed}
+              />
+              <NavButton 
+                active={activeView === 'AE_HEALTH'} 
+                onClick={() => { setActiveView('AE_HEALTH'); setIsMobileMenuOpen(false); }}
+                icon={ShieldCheck}
+                label="Deal Scoring Health"
+                subLabel="AI explainability logs"
+                isCollapsed={isMenuCollapsed}
+              />
+              <NavButton 
+                active={activeView === 'AE_COPILOT'} 
+                onClick={() => { setActiveView('AE_COPILOT'); setIsMobileMenuOpen(false); }}
+                icon={Sparkles}
+                label="AI Copilot CRM Assistant"
+                subLabel="Query plain English CRM"
+                isCollapsed={isMenuCollapsed}
+              />
+              <NavButton 
+                active={activeView === 'AE_BRIEFS'} 
+                onClick={() => { setActiveView('AE_BRIEFS'); setIsMobileMenuOpen(false); }}
+                icon={FileText}
+                label="Pre-Call Briefings"
+                subLabel="Meeting preparation intel"
+                isCollapsed={isMenuCollapsed}
+              />
+            </div>
+          )}
+
+          {/* TIER 3-D: VIEWER WORKSPACE */}
+          {simulatedRole === 'viewer' && (
+            <div className="space-y-1.5">
+              <div className="px-3 py-1 text-[8px] font-extrabold text-[#a855f7] uppercase tracking-widest bg-purple-500/10 border border-purple-500/20 rounded-md mb-2 text-center">
+                TIER 3 — Viewer Read-Only
+              </div>
+              <NavButton 
+                active={activeView === 'VIEWER_DASHBOARD'} 
+                onClick={() => { setActiveView('VIEWER_DASHBOARD'); setIsMobileMenuOpen(false); }}
+                icon={LayoutDashboard}
+                label="Read-Only Metrics"
+                subLabel="Dashboard metrics feed"
+                isCollapsed={isMenuCollapsed}
+              />
+              <NavButton 
+                active={activeView === 'VIEWER_PIPELINE'} 
+                onClick={() => { setActiveView('VIEWER_PIPELINE'); setIsMobileMenuOpen(false); }}
+                icon={Kanban}
+                label="Pipeline Visibility"
+                subLabel="Corporate deal maps"
+                isCollapsed={isMenuCollapsed}
+              />
+            </div>
+          )}
+
+          {true && (
+            <div className="pt-4 mt-4 border-t border-border-subtle">
+              <button 
+                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-bg-subtle transition-all group text-left cursor-pointer"
+              >
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all shrink-0 ${
+                  theme === 'dark' ? 'bg-brand/10 text-brand' : 'bg-brand-alt/10 text-brand-alt'
+                } ${isMenuCollapsed && !isMobileMenuOpen ? 'mx-auto' : ''}`}>
+                  {theme === 'dark' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+                </div>
+                {(!isMenuCollapsed || isMobileMenuOpen) && (
+                  <div className="overflow-hidden transition-all duration-300 block">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-text">Appearance</div>
+                    <div className="text-[8px] text-text-muted uppercase tracking-widest">{theme === 'dark' ? 'Dark Mode' : 'Light Mode'}</div>
+                  </div>
+                )}
+              </button>
+            </div>
+          )}
+        </nav>
 
         <div className="p-4 border-t border-border-subtle">
           <div className={`flex items-center gap-3 p-2 rounded-2xl bg-bg-subtle ${isMenuCollapsed && !isMobileMenuOpen ? 'justify-center' : ''}`}>
@@ -1639,7 +2296,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
         </div>
       </aside>
 
-      <div className="flex-1 flex flex-col min-h-screen min-w-0">
+      <div className="flex-1 flex flex-col min-h-screen">
         {/* Top Bar (Simplified) */}
         <header className="h-20 border-b border-border-subtle flex items-center justify-between px-4 md:px-8 bg-bg/50 backdrop-blur-md sticky top-0 z-50">
           <div className="flex items-center gap-3 md:gap-4 w-full min-w-0">
@@ -1664,7 +2321,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
             <div className="hidden xs:block md:hidden w-px h-5 bg-border-subtle shrink-0" />
 
             <h2 className="text-xs md:text-sm font-bold uppercase tracking-[0.1em] md:tracking-[0.2em] text-text-muted truncate min-w-0 flex-1 md:flex-none">
-              {activeView === 'OUTREACH' ? 'Outreach Engine' : activeView === 'RESEARCH' ? 'Prospect Intelligence' : activeView === 'TEAM_ADMIN' ? 'Team Administration' : activeView === 'SETTINGS' ? 'System Settings' : 'Platform Control Center'}
+              {activeView === 'OUTREACH' ? 'Outreach' : activeView === 'RESEARCH' ? 'Research' : activeView === 'ANALYTICS' ? 'Pipeline Health' : activeView === 'TEAM_ADMIN' ? 'Team' : activeView === 'SETTINGS' ? 'Settings' : 'Admin'}
             </h2>
             {activeView === 'OUTREACH' && currentCampaign && (
               <>
@@ -1677,42 +2334,251 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
           </div>
           
           <div className="flex items-center gap-3">
-            {/* Interactive Workspace Role Switcher */}
-            <RoleWorkspaceSelector activeRole={activeRole} onRoleChange={handleRoleChange} />
+            {/* Multi-Role Simulator Dropdown Widget */}
+            <div className="flex items-center gap-1.5 p-1 bg-[#090a0f] border border-border rounded-xl">
+              <span className="hidden lg:inline text-[9px] font-extrabold uppercase tracking-widest text-text-muted px-2">
+                WORKSPACE ROLE:
+              </span>
+              <select
+                value={simulatedRole}
+                onChange={(e) => handleSimulatedRoleChange(e.target.value as any)}
+                className="bg-surface border border-border/80 rounded-lg text-[10px] font-bold text-white px-2 mt-0.5 py-1 focus:border-brand outline-none transition-colors cursor-pointer"
+              >
+                <option value="super_admin">⚡ [Tier 1] Super Admin</option>
+                <option value="org_admin">🏢 [Tier 2] Org Admin (Settings)</option>
+                <option value="sdr">🎯 [Tier 3] SDR Outbound Campaign</option>
+                <option value="manager">🧑‍💼 [Tier 3] Manager Coach & Forecast</option>
+                <option value="ae">💼 [Tier 3] Account Executive CRM</option>
+                <option value="viewer">👁️ [Tier 3] Viewer Read-Only</option>
+              </select>
+            </div>
 
-            <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-surface border border-border shrink-0">
+            <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-surface border border-border">
               <div className="w-1.5 h-1.5 rounded-full bg-brand-alt animate-pulse" />
-              <span className="text-[9px] font-bold text-text-muted uppercase tracking-wider">System Online</span>
+              <span className="text-[9px] font-bold text-text-muted uppercase tracking-wider">Online</span>
             </div>
           </div>
         </header>
 
         <main className="flex-1 p-4 md:p-8 overflow-x-hidden">
-          
-          {activeView === 'TEAM_ADMIN' && (
-            <UserManagement />
-          )}
-{activeView === 'SETTINGS' && (
-            <SettingsHub 
-              showToast={showToast}
-              profile={profile!}
-              emAccount={emAccount}
-              liAccount={liAccount}
-              crmAccount={crmAccount}
-              smtpConfig={smtpConfig}
-              setSmtpConfig={setSmtpConfig}
-              isConnectingEm={isConnectingEm}
-              isConnectingLi={isConnectingLi}
-              handleConnectEmail={handleConnectEmail}
-              handleDisconnectEmail={handleDisconnectEmail}
-              handleConnectLinkedIn={handleConnectLinkedIn}
-              handleDisconnectLinkedIn={handleDisconnectLinkedIn}
-              generateProjectPDF={generateProjectPDF}
-              leads={leads}
-              handleDisconnectCRM={handleDisconnectCRM}
-              handlePushCRMData={handlePushCRMData}
-              isCrmPushing={isCrmPushing}
-            />
+          {activeView === 'SETTINGS' && (
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="max-w-4xl mx-auto space-y-10"
+            >
+              <div className="space-y-1">
+                <h1 className="text-xl md:text-2xl font-bold tracking-tight">Settings</h1>
+                <p className="text-text-muted text-xs md:text-sm">Manage your personal and system-wide configurations.</p>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-8">
+                {/* Email SMTP Section */}
+                <div id="settings-smtp-card" className="bg-surface/70 backdrop-blur-md border border-border/50 rounded-3xl p-8 space-y-6 shadow-xl shadow-brand/[0.02] transition-all">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3 text-sm font-bold">
+                      <div className="w-8 h-8 rounded-xl bg-email/10 flex items-center justify-center text-email">
+                        <Mail className="w-4 h-4" />
+                      </div>
+                      Email SMTP Setup
+                    </div>
+                    {emAccount?.connected && (
+                      <div className="px-3 py-1 rounded-full bg-brand-alt/10 text-brand-alt text-[9px] font-bold flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-brand-alt animate-pulse" />
+                        ACTIVE
+                      </div>
+                    )}
+                  </div>
+
+                  {!emAccount?.connected ? (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <label className="text-[9px] text-text-muted font-bold uppercase tracking-widest">SMTP Host</label>
+                          <input 
+                            className="w-full bg-surface-alt border border-border rounded-xl p-3 text-xs focus:border-brand outline-none transition-all"
+                            placeholder="smtp.gmail.com"
+                            value={smtpConfig.host}
+                            onChange={e => setSmtpConfig(prev => ({ ...prev, host: e.target.value }))}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[9px] text-text-muted font-bold uppercase tracking-widest">Port</label>
+                          <input 
+                            className="w-full bg-surface-alt border border-border rounded-xl p-3 text-xs focus:border-brand outline-none transition-all"
+                            placeholder="587"
+                            value={smtpConfig.port}
+                            onChange={e => setSmtpConfig(prev => ({ ...prev, port: e.target.value }))}
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <label className="text-[9px] text-text-muted font-bold uppercase tracking-widest">Username</label>
+                          <input 
+                            className="w-full bg-surface-alt border border-border rounded-xl p-3 text-xs focus:border-brand outline-none transition-all"
+                            placeholder="user@example.com"
+                            value={smtpConfig.user}
+                            onChange={e => setSmtpConfig(prev => ({ ...prev, user: e.target.value }))}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[9px] text-text-muted font-bold uppercase tracking-widest">Password</label>
+                          <input 
+                            type="password"
+                            className="w-full bg-surface-alt border border-border rounded-xl p-3 text-xs focus:border-brand outline-none transition-all"
+                            placeholder="••••••••"
+                            value={smtpConfig.pass}
+                            onChange={e => setSmtpConfig(prev => ({ ...prev, pass: e.target.value }))}
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] text-text-muted font-bold uppercase tracking-widest">From Email / Name</label>
+                        <input 
+                          className="w-full bg-surface-alt border border-border rounded-xl p-3 text-xs focus:border-brand outline-none transition-all"
+                          placeholder='"Zyntra AI" <user@example.com>'
+                          value={smtpConfig.from}
+                          onChange={e => setSmtpConfig(prev => ({ ...prev, from: e.target.value }))}
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input 
+                          type="checkbox"
+                          id="smtp-secure-settings"
+                          checked={smtpConfig.secure}
+                          onChange={e => setSmtpConfig(prev => ({ ...prev, secure: e.target.checked }))}
+                          className="w-4 h-4 accent-brand"
+                        />
+                        <label htmlFor="smtp-secure-settings" className="text-[10px] text-text-muted font-bold uppercase tracking-widest cursor-pointer">Use Secure (SSL/TLS)</label>
+                      </div>
+                      <button 
+                        onClick={handleConnectEmail}
+                        disabled={isConnectingEm}
+                        className="w-full bg-email hover:bg-email/90 text-white font-bold py-4 rounded-2xl transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50 shadow-lg shadow-email/20"
+                      >
+                        {isConnectingEm ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+                        Save SMTP Settings
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      <div className="bg-surface-alt border border-border rounded-2xl p-4 flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-email/10 flex items-center justify-center text-email">
+                          <Mail className="w-6 h-6" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="text-sm font-bold flex items-center gap-2">
+                            {emAccount.email}
+                            <CheckCircle2 className="w-3.5 h-3.5 text-brand-alt" />
+                          </div>
+                          <div className="text-[10px] text-text-muted font-medium">{emAccount.provider} Connected</div>
+                        </div>
+                        <button onClick={handleDisconnectEmail} className="p-3 hover:bg-red-500/10 text-text-muted hover:text-red-500 rounded-xl transition-colors">
+                          <Unlink className="w-5 h-5" />
+                        </button>
+                      </div>
+                      <p className="text-[10px] text-text-muted leading-relaxed italic">
+                        Your email is connected and ready for direct outreach. To change settings, disconnect first.
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* LinkedIn Section */}
+                <div id="settings-linkedin-card" className="bg-surface border border-border rounded-3xl p-8 space-y-6 glow-brand/5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3 text-sm font-bold">
+                      <div className="w-8 h-8 rounded-xl bg-linkedin/10 flex items-center justify-center text-linkedin">
+                        <Linkedin className="w-4 h-4" />
+                      </div>
+                      LinkedIn Bridge
+                    </div>
+                    {liAccount?.connected && (
+                      <div className="px-3 py-1 rounded-full bg-brand-alt/10 text-brand-alt text-[9px] font-bold flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-brand-alt animate-pulse" />
+                        CONNECTED
+                      </div>
+                    )}
+                  </div>
+                  
+                  {!liAccount?.connected ? (
+                    <div className="space-y-4">
+                      <p className="text-xs text-text-muted leading-relaxed">
+                        Connect your profile to enable automated background sending through our secure bridge.
+                      </p>
+                      <div className="p-3 rounded-xl bg-brand/5 border border-brand/10 flex items-start gap-3">
+                        <AlertCircle className="w-4 h-4 text-brand shrink-0 mt-0.5" />
+                        <div className="text-[10px] text-text-muted leading-tight">
+                          <strong>Setup Required:</strong> Ensure LinkedIn is enabled in your <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer" className="text-brand hover:underline">Firebase Console</a> under Authentication &gt; Sign-in method.
+                        </div>
+                      </div>
+                      <button 
+                        onClick={handleConnectLinkedIn}
+                        disabled={isConnectingLi}
+                        className="w-full bg-brand hover:bg-brand/90 text-white font-bold py-4 rounded-2xl transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50 shadow-lg shadow-brand/20"
+                      >
+                        {isConnectingLi ? <Loader2 className="w-5 h-5 animate-spin" /> : <Link2 className="w-5 h-5" />}
+                        Connect LinkedIn
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="bg-surface-alt border border-border rounded-2xl p-4 flex items-center gap-4">
+                      <img src={liAccount.avatar} alt={liAccount.name} className="w-12 h-12 rounded-2xl border border-brand/20" referrerPolicy="no-referrer" />
+                      <div className="flex-1">
+                        <div className="text-sm font-bold flex items-center gap-2">
+                          {liAccount.name}
+                          <CheckCircle2 className="w-3.5 h-3.5 text-brand-alt" />
+                        </div>
+                        <div className="text-[10px] text-text-muted font-medium">Automation Bridge Active</div>
+                      </div>
+                      <button onClick={handleDisconnectLinkedIn} className="p-3 hover:bg-red-500/10 text-text-muted hover:text-red-500 rounded-xl transition-colors">
+                        <Unlink className="w-5 h-5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* System Defaults Info */}
+              <div className="bg-surface-alt/50 border border-border border-dashed rounded-3xl p-8">
+                <div className="flex items-start gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-brand/10 flex items-center justify-center text-brand shrink-0">
+                    <AlertCircle className="w-5 h-5" />
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-bold">System Defaults</h3>
+                    <p className="text-xs text-text-muted leading-relaxed">
+                      If you don't provide your own SMTP settings, the platform will use the system-wide default email service configured by the administrator. 
+                      Personal SMTP settings are always prioritized for your outreach.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Project Documentation Export */}
+              <div id="settings-docs-card" className="bg-surface border border-border rounded-3xl p-8 space-y-6 glow-brand/5">
+                <div className="flex items-center gap-3 text-sm font-bold">
+                  <div className="w-8 h-8 rounded-xl bg-brand/10 flex items-center justify-center text-brand">
+                    <FileText className="w-4 h-4" />
+                  </div>
+                  Project Documentation
+                </div>
+                <p className="text-xs text-text-muted leading-relaxed">
+                  Generate a complete PDF report of the project architecture, features, and technical specifications.
+                </p>
+                <button 
+                  onClick={generateProjectPDF}
+                  className="w-full bg-surface-alt border border-border hover:border-brand/30 text-text font-bold py-4 rounded-2xl transition-all flex items-center justify-center gap-2 text-sm shadow-sm"
+                >
+                  <Download className="w-5 h-5" />
+                  Download Project Report (PDF)
+                </button>
+              </div>
+
+              {/* REST API Credentials & Webhook Gateway Hub */}
+              <SettingsApiKeysPanel showToast={showToast} />
+            </motion.div>
           )}
 
           {activeView === 'OUTREACH' && (
@@ -1726,6 +2592,55 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                   onDownloadPDF={downloadCampaignPDF}
                 />
               )}
+
+              {activePanel !== -1 && (
+                <div className="mb-8 space-y-4">
+                  {/* Back button and title */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <button 
+                      onClick={() => { setCurrentCampaign(null); setActivePanel(-1); }}
+                      className="inline-flex items-center gap-2 text-xs font-bold text-text-muted hover:text-white transition-colors cursor-pointer group"
+                    >
+                      <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+                      Back to Campaigns
+                    </button>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-text-muted">Active Campaign:</span>
+                      <span className="text-xs font-mono font-bold bg-brand/10 text-brand px-3 py-1 rounded-full border border-brand/20">
+                        {currentCampaign?.name.toUpperCase()}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Sub-navigation Tabs */}
+                  <div className="bg-surface border border-border rounded-2xl p-1.5 flex flex-wrap gap-1">
+                    {[
+                      { idx: 0, label: "Configure", icon: Settings },
+                      { idx: 1, label: "Import Leads", icon: UserPlus },
+                      { idx: 2, label: "Generate Copy", icon: Sparkles },
+                      { idx: 3, label: "Send Outreach", icon: Send },
+                      { idx: 4, label: "Reports", icon: FileText }
+                    ].map((tab) => {
+                      const isActive = activePanel === tab.idx;
+                      const Icon = tab.icon;
+                      return (
+                        <button
+                          key={tab.idx}
+                          onClick={() => setActivePanel(tab.idx)}
+                          className={`flex-1 min-w-[120px] py-3.5 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 border transition-all cursor-pointer ${
+                            isActive
+                              ? "bg-brand/10 border-brand/30 text-brand shadow-sm font-extrabold"
+                              : "bg-transparent border-transparent text-text-muted hover:bg-white/[0.02] hover:text-text"
+                          }`}
+                        >
+                          <Icon className="w-4 h-4 shrink-0" />
+                          <span>{tab.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
               {/* Panel 0: Configure */}
               <PanelWrapper index={0} activePanel={activePanel}>
                 {/* ... existing configure content ... */}
@@ -1736,18 +2651,54 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
             {[
-              { label: 'Leads Loaded', val: leads.length, color: 'brand' },
-              { label: 'AI Generated', val: Object.keys(messages).length, color: 'brand-alt' },
-              { label: 'Active Channels', val: Object.values(chState).filter(Boolean).length, color: 'f59e0b' },
-              { label: 'Ready to Send', val: Object.keys(messages).length, color: '6c63ff' }
+              { 
+                label: 'Leads Loaded', 
+                val: leads.length, 
+                color: 'brand',
+                onClick: () => {
+                  setActivePanel(1);
+                  setLeadsViewMode('list');
+                }
+              },
+              { 
+                label: 'AI Generated', 
+                val: Object.keys(messages).length, 
+                color: 'brand-alt',
+                onClick: () => {
+                  setActivePanel(2);
+                }
+              },
+              { 
+                label: 'Active Channels', 
+                val: Object.values(chState).filter(Boolean).length, 
+                color: 'f59e0b' 
+              },
+              { 
+                label: 'Ready to Send', 
+                val: Object.keys(messages).length, 
+                color: '6c63ff',
+                onClick: () => {
+                  setActivePanel(3);
+                }
+              }
             ].map((s, i) => (
               <motion.div 
                 key={i} 
-                whileHover={{ y: -5 }}
-                className="bg-surface border border-border rounded-3xl p-6 glow-brand/5 group cursor-default"
+                whileHover={s.onClick ? { y: -5, scale: 1.02, border: '1px solid rgba(0, 212, 170, 0.4)' } : { y: -5 }}
+                onClick={s.onClick}
+                className={`bg-surface border border-border rounded-3xl p-6 glow-brand/5 group transition-all duration-200 ${
+                  s.onClick ? 'cursor-pointer hover:shadow-lg' : 'cursor-default'
+                }`}
               >
                 <div className="text-3xl font-syne font-bold group-hover:text-brand transition-colors">{s.val}</div>
-                <div className="text-[10px] text-text-muted font-bold uppercase tracking-widest mt-1">{s.label}</div>
+                <div className="text-[10px] text-text-muted font-bold uppercase tracking-widest mt-1 flex items-center gap-1">
+                  {s.label}
+                  {s.onClick && (
+                    <span className="text-[9px] text-brand font-medium opacity-0 group-hover:opacity-100 transition-opacity ml-1 bg-brand/5 px-1.5 py-0.5 rounded">
+                      View
+                    </span>
+                  )}
+                </div>
               </motion.div>
             ))}
           </div>
@@ -2032,6 +2983,32 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                 <span className="font-bold">FEATURES:</span> Excel sheet columns detection • Preset templates saving • Custom CRM property creation • Format validations checklist.
               </div>
             </div>
+
+            <div className="bg-surface border border-border rounded-3xl p-8 space-y-6 glow-[#00d4aa]/5 flex flex-col justify-between">
+              <div className="space-y-2">
+                <div className="flex items-center gap-3 text-sm font-bold">
+                  <div className="w-8 h-8 rounded-xl bg-[#00d4aa]/10 flex items-center justify-center text-[#00d4aa]">
+                    <Database className="w-4 h-4" />
+                  </div>
+                  Sync Provided B2B Target List
+                </div>
+                <p className="text-text-muted text-[11px] leading-relaxed">
+                  Instantly load the {providedLeads.length} pre-validated B2B executive lead contacts provided by your campaign partners (TERAWORK, Caret, INGRYD Academy, and more) into this active campaign.
+                </p>
+              </div>
+              
+              <button
+                onClick={handleImportProvidedLeads}
+                className="w-full bg-[#00d4aa]/10 hover:bg-[#00d4aa] hover:text-[#090a0f] text-[#00d4aa] font-extrabold py-5 rounded-2xl border border-[#00d4aa]/30 transition-all flex items-center justify-center gap-2 mt-4 cursor-pointer text-xs shadow-md"
+              >
+                <CheckCircle2 className="w-5 h-5" />
+                Sync {providedLeads.length} Pre-validated Contacts
+              </button>
+              
+              <div className="bg-[#090a0f] rounded-xl p-3 text-[9px] text-[#00d4aa] font-mono leading-relaxed mt-2 border border-border/40">
+                <span className="font-bold">SPECS:</span> {providedLeads.filter(l => l.email).length} Work Emails • {providedLeads.filter(l => l.linkedin_url).length} LinkedIn URLs • 100% Validated schema matching.
+              </div>
+            </div>
           </div>
 
           {leads.length > 0 && (
@@ -2075,15 +3052,44 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                     )}
                   </div>
                 </div>
-                <button 
-                  onClick={() => setSortByScore(!sortByScore)}
-                  className={`px-4 py-2 rounded-xl text-[10px] font-bold transition-all flex items-center gap-2 ${
-                    sortByScore ? 'bg-brand text-white' : 'bg-surface border border-border text-text-muted'
-                  }`}
-                >
-                  <Target className="w-3.5 h-3.5" />
-                  {sortByScore ? 'Sorted by Score' : 'Sort by Score'}
-                </button>
+                <div className="flex items-center gap-4 flex-wrap">
+                  <button 
+                    onClick={() => setSortByScore(!sortByScore)}
+                    className={`px-4 py-2 rounded-xl text-[10px] font-bold transition-all flex items-center gap-2 ${
+                      sortByScore ? 'bg-brand text-white' : 'bg-surface border border-border text-text-muted'
+                    }`}
+                  >
+                    <Target className="w-3.5 h-3.5" />
+                    {sortByScore ? 'Sorted by Score' : 'Sort by Score'}
+                  </button>
+
+                  <div className="flex items-center gap-5 border-b border-border/20 pb-0.5">
+                    <button
+                      onClick={() => setLeadsViewMode('pipeline')}
+                      className={`pb-1 px-1 text-[11px] font-bold transition-all flex items-center gap-1.5 cursor-pointer border-b-2 relative ${
+                        leadsViewMode === 'pipeline' 
+                          ? 'border-brand text-brand font-extrabold' 
+                          : 'border-transparent text-text-muted hover:text-text'
+                      }`}
+                      title="Pipeline Board View"
+                    >
+                      <Kanban className="w-3.5 h-3.5" />
+                      Pipeline Board
+                    </button>
+                    <button
+                      onClick={() => setLeadsViewMode('list')}
+                      className={`pb-1 px-1 text-[11px] font-bold transition-all flex items-center gap-1.5 cursor-pointer border-b-2 relative ${
+                        leadsViewMode === 'list' 
+                          ? 'border-brand text-brand font-extrabold' 
+                          : 'border-transparent text-text-muted hover:text-text'
+                      }`}
+                      title="List Feed View"
+                    >
+                      <List className="w-3.5 h-3.5" />
+                      List View
+                    </button>
+                  </div>
+                </div>
               </div>
 
               {/* Bulk actions and Select All controls */}
@@ -2094,22 +3100,76 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                     const s = calculateLeadScore(l);
                     return s >= scoreFilter.min && s <= scoreFilter.max;
                   })
+                  .filter(l => {
+                    if (!leadsSearch) return true;
+                    const query = leadsSearch.toLowerCase().trim();
+                    return (
+                      (l.name || '').toLowerCase().includes(query) ||
+                      (l.email || '').toLowerCase().includes(query) ||
+                      (l.company || '').toLowerCase().includes(query) ||
+                      (l.role || '').toLowerCase().includes(query) ||
+                      (l.industry || '').toLowerCase().includes(query) ||
+                      (l.country || '').toLowerCase().includes(query)
+                    );
+                  })
                   .sort((a, b) => sortByScore ? calculateLeadScore(b) - calculateLeadScore(a) : 0);
 
-                const allDisplayedSelected = displayedLeads.length > 0 && displayedLeads.every(l => l.id && selectedLeadIds.includes(l.id));
+                const paginatedLeads = leadsViewMode === 'list'
+                  ? displayedLeads.slice((leadsPage - 1) * leadsPerPage, leadsPage * leadsPerPage)
+                  : displayedLeads;
+
+                const allDisplayedSelected = paginatedLeads.length > 0 && paginatedLeads.every(l => l.id && selectedLeadIds.includes(l.id));
 
                 const toggleSelectAll = () => {
                   if (allDisplayedSelected) {
-                    const displayedIds = displayedLeads.map(l => l.id).filter(Boolean) as string[];
+                    const displayedIds = paginatedLeads.map(l => l.id).filter(Boolean) as string[];
                     setSelectedLeadIds(prev => prev.filter(id => !displayedIds.includes(id)));
                   } else {
-                    const displayedIds = displayedLeads.map(l => l.id).filter(Boolean) as string[];
+                    const displayedIds = paginatedLeads.map(l => l.id).filter(Boolean) as string[];
                     setSelectedLeadIds(prev => Array.from(new Set([...prev, ...displayedIds])));
                   }
                 };
 
                 return (
                   <>
+                    {/* Database Lead Search Engine bar */}
+                    <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-[#090a0f] border border-border/80 rounded-3xl p-5 mb-4">
+                      <div className="relative w-full md:max-w-md bg-transparent">
+                        <Search className="w-4 h-4 text-[#00d4aa] absolute left-4 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="text"
+                          value={leadsSearch}
+                          onChange={(e) => {
+                            setLeadsSearch(e.target.value);
+                            setLeadsPage(1);
+                          }}
+                          placeholder="Search database leads (by name, email, company, job role, or industry)..."
+                          className="w-full bg-surface border border-border rounded-2xl pl-11 pr-10 py-3 text-xs outline-none focus:border-brand text-white placeholder-text-muted transition-all"
+                        />
+                        {leadsSearch && (
+                          <button
+                            onClick={() => {
+                              setLeadsSearch('');
+                              setLeadsPage(1);
+                            }}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-white font-extrabold text-xs p-1"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-4 text-[10px] font-mono text-text-muted">
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-2 h-2 bg-[#00d4aa] rounded-full animate-pulse" />
+                          <span>Elite &ge; 60 pts</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-2 h-2 bg-[#6c63ff] rounded-full" />
+                          <span>Standard &lt; 60 pts</span>
+                        </div>
+                      </div>
+                    </div>
+
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-5 bg-surface border border-border rounded-3xl shadow-sm glow-brand/5">
                       <div className="flex items-center gap-3">
                         <input 
@@ -2180,371 +3240,618 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                       </div>
                     </div>
 
-                    <div className="grid gap-3">
-                      {displayedLeads.map((l, i) => {
-                        const lScore = calculateLeadScore(l);
-                        const isElite = lScore >= 60;
-                        const shouldHighlight = highlightElite && isElite;
-
-                        return (
-                          <motion.div 
-                            key={l.id || i} 
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: i * 0.01 }}
-                            className={`border rounded-2xl p-4 flex flex-col group transition-all duration-300 ${
-                              shouldHighlight
-                                ? 'bg-emerald-500/5 border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.12)] scale-[1.01]'
-                                : 'bg-surface border-border hover:border-brand/35'
-                            }`}
-                          >
-                            <div className="flex items-center gap-3">
-                              {/* Selection checkbox */}
-                              <div className="shrink-0 flex items-center pr-1">
-                                <input 
-                                  type="checkbox"
-                                  checked={l.id ? selectedLeadIds.includes(l.id) : false}
-                                  onChange={(e) => {
-                                    if (!l.id) return;
-                                    if (e.target.checked) {
-                                      setSelectedLeadIds(prev => [...prev, l.id!]);
-                                    } else {
-                                      setSelectedLeadIds(prev => prev.filter(id => id !== l.id));
-                                    }
-                                  }}
-                                  className="w-4 h-4 rounded border-border text-brand focus:ring-brand cursor-pointer bg-surface"
-                                />
+                    {leadsViewMode === 'list' ? (
+                      <div className="bg-surface border border-border rounded-3xl overflow-hidden shadow-sm shadow-brand/5">
+                        {/* Table controls */}
+                        <div className="flex border-b border-border/80 p-4 justify-between items-center bg-surface-alt/20">
+                          <span className="text-[10px] text-text-muted font-bold uppercase tracking-wider">Tabular Workplace View</span>
+                          <div className="relative">
+                            <button 
+                              onClick={() => setShowColumnDropdown(!showColumnDropdown)}
+                              className="px-3 py-1.5 rounded-xl border border-border hover:border-brand/40 text-[10px] font-bold text-text-muted hover:text-text flex items-center gap-1.5 bg-surface-alt transition-all cursor-pointer"
+                            >
+                              <Filter className="w-3.5 h-3.5" />
+                              Columns
+                            </button>
+                            {showColumnDropdown && (
+                              <div className="absolute right-0 mt-2 w-48 bg-[#0b0c11] border border-border rounded-2xl p-4 shadow-xl z-50 space-y-2.5">
+                                <div className="text-[10px] uppercase font-bold text-text-muted tracking-wider mb-2">Toggle Columns</div>
+                                {Object.keys(visibleColumns).map((col) => (
+                                  <label key={col} className="flex items-center gap-2.5 text-xs text-text hover:text-white cursor-pointer select-none">
+                                    <input 
+                                      type="checkbox"
+                                      className="w-3.5 h-3.5 rounded border-border text-brand focus:ring-brand cursor-pointer"
+                                      checked={visibleColumns[col]}
+                                      onChange={(e) => setVisibleColumns(prev => ({ ...prev, [col]: e.target.checked }))}
+                                    />
+                                    <span className="capitalize">
+                                      {col === 'nameCompany' ? 'Name & Company' : col}
+                                    </span>
+                                  </label>
+                                ))}
                               </div>
+                            )}
+                          </div>
+                        </div>
 
-                              <div 
-                                onClick={() => {
-                                  const cid = l.id || `lead-${i}`;
-                                  setExpandedLeadId(expandedLeadId === cid ? null : cid);
-                                }}
-                                className="flex-1 flex items-center gap-4 cursor-pointer select-none min-w-0"
-                              >
-                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-white shadow-sm shrink-0 ${
-                                  shouldHighlight
-                                    ? 'bg-gradient-to-br from-emerald-400 via-brand-alt to-emerald-600 animate-pulse'
-                                    : 'bg-gradient-to-br from-brand to-brand-alt'
-                                }`}>
-                                  {(l?.name || '?')[0]}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2">
-                                    <div className="text-sm font-bold group-hover:text-brand transition-colors truncate">
-                                      {l?.name || 'Anonymous Lead'}
-                                    </div>
-                                    {shouldHighlight && (
-                                      <motion.span 
-                                        animate={{ scale: [1, 1.1, 1] }}
-                                        transition={{ repeat: Infinity, duration: 2.2 }}
-                                        className="px-1.5 py-0.5 rounded-md bg-amber-500/20 text-amber-500 border border-amber-500/30 text-[8px] font-extrabold tracking-widest uppercase flex items-center gap-0.5 shadow-sm"
-                                      >
-                                        <Award className="w-2.5 h-2.5" />
-                                        <span>Elite</span>
-                                      </motion.span>
-                                    )}
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <div className="text-[10px] text-text-muted font-medium uppercase tracking-wider truncate">
-                                      {l.role} @ {l.company}
-                                    </div>
-                                    <div className={`px-1.5 py-0.5 rounded text-[8px] font-extrabold ${
-                                      isElite ? 'bg-emerald-500/25 text-emerald-400 border border-emerald-500/20' : 'bg-brand/10 text-brand'
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-left border-collapse">
+                            <thead>
+                              <tr className="border-b border-border/80 bg-surface-alt/50 text-[10px] font-bold text-text-muted uppercase tracking-wider">
+                                <th className="py-4 px-5 w-12 text-center">
+                                  <input 
+                                    type="checkbox"
+                                    id="bulk-select-list-header"
+                                    checked={allDisplayedSelected}
+                                    onChange={toggleSelectAll}
+                                    className="w-4 h-4 rounded border border-border text-brand bg-surface cursor-pointer"
+                                  />
+                                </th>
+                                {visibleColumns.nameCompany && <th className="py-4 px-5">Lead / Company</th>}
+                                {visibleColumns.role && <th className="py-4 px-5">Position</th>}
+                                {visibleColumns.score && <th className="py-4 px-5">Score</th>}
+                                {visibleColumns.contact && <th className="py-4 px-5">Contact</th>}
+                                {visibleColumns.country && <th className="py-4 px-5">Location</th>}
+                                {visibleColumns.industry && <th className="py-4 px-5">Industry</th>}
+                                {visibleColumns.status && <th className="py-4 px-5">Status</th>}
+                                <th className="py-4 px-5 text-right">Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {paginatedLeads.map((l, leadIndex) => {
+                                const lScore = calculateLeadScore(l);
+                                const isElite = lScore >= 60;
+                                const shouldHighlight = highlightElite && isElite;
+                                const cid = l.id || `lead-${leadIndex}`;
+                                const isExpanded = expandedLeadId === cid;
+
+                                // Determine Stage status
+                                let stageName = 'Pending';
+                                let stageColorClass = 'bg-amber-500/15 text-amber-400 border-amber-500/20';
+                                let dotColor = 'bg-amber-400';
+                                if (l.status === 'sent') {
+                                  stageName = 'Sent';
+                                  stageColorClass = 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20';
+                                  dotColor = 'bg-emerald-400';
+                                } else if (l.id && messages[l.id]) {
+                                  stageName = 'Generated';
+                                  stageColorClass = 'bg-blue-500/15 text-blue-400 border-blue-500/20';
+                                  dotColor = 'bg-blue-400';
+                                } else if (l.status === 'failed') {
+                                  stageName = 'Failed';
+                                  stageColorClass = 'bg-red-500/15 text-red-500 border-red-500/20';
+                                  dotColor = 'bg-red-500';
+                                } else if (l.status === 'imported') {
+                                  stageName = 'Imported';
+                                  stageColorClass = 'bg-purple-500/15 text-purple-400 border-purple-500/20';
+                                  dotColor = 'bg-purple-400';
+                                } else {
+                                  stageColorClass = 'bg-slate-500/10 text-text-muted border-border';
+                                  dotColor = 'bg-text-muted';
+                                }
+
+                                return (
+                                  <React.Fragment key={cid}>
+                                    <tr className={`border-b border-border/40 hover:bg-surface-alt/30 transition-all ${
+                                      shouldHighlight ? 'bg-emerald-500/5 hover:bg-emerald-500/10' : ''
                                     }`}>
-                                      SCORE: {lScore}
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-2 shrink-0">
-                                  {l.status === 'sent' && (
-                                    <div className="px-2 py-1 rounded-lg bg-brand-alt/10 border border-brand-alt/20 text-[9px] font-bold text-brand-alt flex items-center gap-1">
-                                      <CheckCircle2 className="w-3 h-3" />
-                                      SENT
-                                    </div>
-                                  )}
-                                  <div className="px-2 py-1 rounded-lg bg-surface-alt border border-border text-[9px] font-bold text-text-muted uppercase">
-                                    {COUNTRY_FLAGS[l.country] || '🌍'} {l.country || 'Global'}
-                                  </div>
+                                      <td className="py-3 px-5 text-center">
+                                        <input 
+                                          type="checkbox"
+                                          checked={l.id ? selectedLeadIds.includes(l.id) : false}
+                                          onChange={(e) => {
+                                            if (!l.id) return;
+                                            if (e.target.checked) {
+                                              setSelectedLeadIds(prev => [...prev, l.id!]);
+                                            } else {
+                                              setSelectedLeadIds(prev => prev.filter(id => id !== l.id));
+                                            }
+                                          }}
+                                          className="w-4 h-4 rounded border-border text-brand focus:ring-brand cursor-pointer bg-surface"
+                                        />
+                                      </td>
+                                      {visibleColumns.nameCompany && (
+                                        <td className="py-3 px-5">
+                                          <div className="flex items-center gap-3">
+                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs text-white shrink-0 ${
+                                              shouldHighlight ? 'bg-gradient-to-br from-emerald-400 to-emerald-600' : 'bg-gradient-to-br from-brand to-brand-alt'
+                                            }`}>
+                                              {(l.name || '?')[0]}
+                                            </div>
+                                            <div className="min-w-0">
+                                              <div className="font-bold text-xs text-white truncate max-w-[180px] flex items-center gap-1.5">
+                                                <span>{l.name}</span>
+                                                {shouldHighlight && (
+                                                  <span className="px-1 py-0.5 rounded-md bg-amber-500/20 text-amber-500 border border-amber-500/30 text-[8px] font-bold">Elite</span>
+                                                )}
+                                              </div>
+                                              <div className="text-[10px] text-text-muted truncate max-w-[180px] font-semibold">
+                                                {l.company}
+                                              </div>
+                                            </div>
+                                          </div>
+                                        </td>
+                                      )}
+                                      {visibleColumns.role && (
+                                        <td className="py-3 px-5 text-xs text-text truncate max-w-[140px]">
+                                          {l.role || 'N/A'}
+                                        </td>
+                                      )}
+                                      {visibleColumns.score && (
+                                        <td className="py-3 px-5">
+                                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                            isElite ? 'bg-emerald-500/15 text-emerald-400' : 'bg-brand/10 text-brand'
+                                          }`}>
+                                            {lScore}
+                                          </span>
+                                        </td>
+                                      )}
+                                      {visibleColumns.contact && (
+                                        <td className="py-3 px-5">
+                                          <div className="flex items-center gap-1.5">
+                                            {l.phone ? (
+                                              <a href={`tel:${l.phone}`} className="p-1 rounded-md bg-surface border border-border text-text-muted hover:text-brand transition-colors" title={l.phone}>
+                                                <Smartphone className="w-3.5 h-3.5" />
+                                              </a>
+                                            ) : (
+                                              <span className="p-1 rounded-md text-text-muted/30"><Smartphone className="w-3.5 h-3.5" /></span>
+                                            )}
+                                            {l.email ? (
+                                              <a href={`mailto:${l.email}`} className="p-1 rounded-md bg-surface border border-border text-text-muted hover:text-brand transition-colors" title={l.email}>
+                                                <Mail className="w-3.5 h-3.5" />
+                                              </a>
+                                            ) : (
+                                              <span className="p-1 rounded-md text-text-muted/30"><Mail className="w-3.5 h-3.5" /></span>
+                                            )}
+                                            {l.linkedin_url ? (
+                                              <a href={l.linkedin_url.startsWith('http') ? l.linkedin_url : `https://${l.linkedin_url}`} target="_blank" rel="noreferrer" className="p-1 rounded-md bg-surface border border-border text-text-muted hover:text-brand transition-colors" title="LinkedIn Profile">
+                                                <Linkedin className="w-3.5 h-3.5" />
+                                              </a>
+                                            ) : (
+                                              <span className="p-1 rounded-md text-text-muted/30"><Linkedin className="w-3.5 h-3.5" /></span>
+                                            )}
+                                          </div>
+                                        </td>
+                                      )}
+                                      {visibleColumns.country && (
+                                        <td className="py-3 px-5 text-xs text-text-muted">
+                                          {COUNTRY_FLAGS[l.country] || '🌍'} {l.country || 'Global'}
+                                        </td>
+                                      )}
+                                      {visibleColumns.industry && (
+                                        <td className="py-3 px-5 text-xs text-text-muted truncate max-w-[120px]">
+                                          {l.industry || 'N/A'}
+                                        </td>
+                                      )}
+                                      {visibleColumns.status && (
+                                        <td className="py-3 px-5">
+                                          <span className={`px-2 py-0.5 rounded-lg border text-[9px] font-bold inline-flex items-center gap-1.5 ${stageColorClass}`}>
+                                            <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
+                                            {stageName}
+                                          </span>
+                                        </td>
+                                      )}
+                                      <td className="py-3 px-5 text-right">
+                                        <div className="flex items-center justify-end gap-1.5">
+                                          <button 
+                                            onClick={() => setExpandedLeadId(isExpanded ? null : cid)}
+                                            className="p-1.5 rounded-lg border border-border text-text-muted hover:text-brand hover:border-brand/35 transition-all bg-surface cursor-pointer"
+                                            title="Expand detail drawer"
+                                          >
+                                            <ChevronDown className={`w-3.5 h-3.5 transform transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                                          </button>
+                                          {l.id && (
+                                            <button 
+                                              onClick={() => {
+                                                if (confirm(`Are you sure you want to delete lead ${l.name}?`)) {
+                                                  handleDeleteLead(l.id!);
+                                                }
+                                              }}
+                                              className="p-1.5 rounded-lg border border-border text-text-muted hover:text-red-500 hover:border-red-500/35 transition-all bg-surface cursor-pointer"
+                                              title="Delete Lead"
+                                            >
+                                              <Trash2 className="w-3.5 h-3.5" />
+                                            </button>
+                                          )}
+                                        </div>
+                                      </td>
+                                    </tr>
+                                    
+                                    {isExpanded && (
+                                      <tr>
+                                        <td colSpan={10} className="bg-[#0b0c11]/40 px-5 py-4 border-b border-border/30">
+                                          {editingLeadId === l.id ? (
+                                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs animate-fadeIn text-left">
+                                              <div>
+                                                <span className="text-[9px] text-text-muted font-bold uppercase block mb-1">Name</span>
+                                                <input 
+                                                  type="text" 
+                                                  value={editedLeadData?.name || ''} 
+                                                  onChange={e => setEditedLeadData(prev => prev ? ({ ...prev, name: e.target.value }) : null)}
+                                                  className="w-full bg-surface-alt border border-border rounded-xl p-2.5 text-xs text-white outline-none focus:border-brand" 
+                                                />
+                                              </div>
+                                              <div>
+                                                <span className="text-[9px] text-text-muted font-bold uppercase block mb-1">Company</span>
+                                                <input 
+                                                  type="text" 
+                                                  value={editedLeadData?.company || ''} 
+                                                  onChange={e => setEditedLeadData(prev => prev ? ({ ...prev, company: e.target.value }) : null)}
+                                                  className="w-full bg-surface-alt border border-border rounded-xl p-2.5 text-xs text-white outline-none focus:border-brand" 
+                                                />
+                                              </div>
+                                              <div>
+                                                <span className="text-[9px] text-text-muted font-bold uppercase block mb-1">Role</span>
+                                                <input 
+                                                  type="text" 
+                                                  value={editedLeadData?.role || ''} 
+                                                  onChange={e => setEditedLeadData(prev => prev ? ({ ...prev, role: e.target.value }) : null)}
+                                                  className="w-full bg-surface-alt border border-border rounded-xl p-2.5 text-xs text-white outline-none focus:border-brand" 
+                                                />
+                                              </div>
+                                              <div>
+                                                <span className="text-[9px] text-text-muted font-bold uppercase block mb-1">Email</span>
+                                                <input 
+                                                  type="text" 
+                                                  value={editedLeadData?.email || ''} 
+                                                  onChange={e => setEditedLeadData(prev => prev ? ({ ...prev, email: e.target.value }) : null)}
+                                                  className="w-full bg-surface-alt border border-border rounded-xl p-2.5 text-xs text-white outline-none focus:border-brand" 
+                                                />
+                                              </div>
+                                              <div>
+                                                <span className="text-[9px] text-text-muted font-bold uppercase block mb-1">Phone</span>
+                                                <input 
+                                                  type="text" 
+                                                  value={editedLeadData?.phone || ''} 
+                                                  onChange={e => setEditedLeadData(prev => prev ? ({ ...prev, phone: e.target.value }) : null)}
+                                                  className="w-full bg-surface-alt border border-border rounded-xl p-2.5 text-xs text-white outline-none focus:border-brand" 
+                                                />
+                                              </div>
+                                              <div>
+                                                <span className="text-[9px] text-text-muted font-bold uppercase block mb-1">LinkedIn</span>
+                                                <input 
+                                                  type="text" 
+                                                  value={editedLeadData?.linkedin_url || ''} 
+                                                  onChange={e => setEditedLeadData(prev => prev ? ({ ...prev, linkedin_url: e.target.value }) : null)}
+                                                  className="w-full bg-surface-alt border border-border rounded-xl p-2.5 text-xs text-white outline-none focus:border-brand" 
+                                                />
+                                              </div>
+                                              <div className="col-span-full flex justify-end gap-2 pt-2 border-t border-border/20">
+                                                <button 
+                                                  onClick={() => { setEditingLeadId(null); setEditedLeadData(null); }}
+                                                  className="px-3 py-1.5 rounded-lg border border-border text-[11px] font-semibold text-text-muted cursor-pointer"
+                                                >
+                                                  Cancel
+                                                </button>
+                                                <button 
+                                                  onClick={async () => {
+                                                    if (!editedLeadData || !l.id) return;
+                                                    await handleUpdateLead(l.id, editedLeadData);
+                                                    setEditingLeadId(null);
+                                                    setEditedLeadData(null);
+                                                  }}
+                                                  className="px-4 py-1.5 bg-brand text-white rounded-lg text-[11px] font-bold cursor-pointer"
+                                                >
+                                                  Save
+                                                </button>
+                                              </div>
+                                            </div>
+                                          ) : (
+                                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs text-left animate-fadeIn">
+                                              <div>
+                                                <span className="text-[9px] text-text-muted font-bold uppercase">Role / Title</span>
+                                                <span className="text-white font-medium block truncate mt-0.5">{l.role || 'N/A'}</span>
+                                              </div>
+                                              <div>
+                                                <span className="text-[9px] text-text-muted font-bold uppercase">Official Email</span>
+                                                <span className="text-white font-medium block truncate mt-0.5">{l.email || 'N/A'}</span>
+                                              </div>
+                                              <div>
+                                                <span className="text-[9px] text-text-muted font-bold uppercase">Direct Phone</span>
+                                                <span className="text-white font-medium block truncate mt-0.5">{l.phone || 'N/A'}</span>
+                                              </div>
+                                              <div>
+                                                <span className="text-[9px] text-text-muted font-bold uppercase">Industry Segment</span>
+                                                <span className="text-white font-medium block truncate mt-0.5">{l.industry || 'N/A'}</span>
+                                              </div>
+                                              <div className="col-span-full pt-2 border-t border-border/20 flex justify-end">
+                                                <button 
+                                                  onClick={() => { setEditingLeadId(l.id || `lead-${leadIndex}`); setEditedLeadData(l); }}
+                                                  className="px-3.5 py-1.5 bg-brand/10 hover:bg-brand hover:text-white text-brand rounded-xl text-[11px] font-bold flex items-center gap-1 cursor-pointer transition-all"
+                                                >
+                                                  <Settings className="w-3.5 h-3.5" />
+                                                  Edit Details
+                                                </button>
+                                              </div>
+                                            </div>
+                                          )}
+                                        </td>
+                                      </tr>
+                                    )}
+                                  </React.Fragment>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                        {/* Pagination Controls */}
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-5 border-t border-border bg-[#090a0f] text-xs text-text-muted">
+                          <div className="flex items-center gap-2">
+                            <span>Show</span>
+                            <select 
+                              className="bg-surface-alt border border-border rounded-lg px-2 py-1 text-white text-xs outline-none focus:border-brand cursor-pointer font-bold"
+                              value={leadsPerPage}
+                              onChange={(e) => {
+                                setLeadsPerPage(Number(e.target.value));
+                                setLeadsPage(1);
+                              }}
+                            >
+                              {[10, 25, 50, 100, 250].map(n => (
+                                <option key={n} value={n}>{n} rows</option>
+                              ))}
+                            </select>
+                            <span>per page</span>
+                          </div>
+                          
+                          <div className="text-center font-medium">
+                            Showing <span className="text-white font-bold">{displayedLeads.length === 0 ? 0 : (leadsPage - 1) * leadsPerPage + 1}</span> to{" "}
+                            <span className="text-white font-bold">{Math.min(displayedLeads.length, leadsPage * leadsPerPage)}</span> of{" "}
+                            <span className="text-brand font-bold">{displayedLeads.length}</span> leads
+                          </div>
 
-                                  {l.id && (
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        if (confirm(`Are you sure you want to delete lead ${l.name}?`)) {
-                                          handleDeleteLead(l.id!);
-                                        }
-                                      }}
-                                      className="p-1.5 rounded-xl border border-border text-text-muted hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/30 transition-all ml-1"
-                                      title="Delete target lead"
-                                    >
-                                      <Trash2 className="w-3.5 h-3.5" />
-                                    </button>
-                                  )}
-
-                                  <div className="text-text-muted group-hover:text-brand p-1 transition-colors">
-                                    <ChevronDown className={`w-4 h-4 transform transition-transform duration-200 ${expandedLeadId === (l.id || `lead-${i}`) ? 'rotate-180' : ''}`} />
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-
-                        {/* Expandable lead details */}
-                        {expandedLeadId === (l.id || `lead-${i}`) && (
-                          editingLeadId === l.id ? (
-                            <div className="w-full mt-4 pt-4 border-t border-border/80 grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs animate-fadeIn select-text">
-                              <div>
-                                <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block mb-0.5">Decision Maker Name</span>
-                                <input 
-                                  type="text" 
-                                  value={editedLeadData?.name || ''} 
-                                  onChange={e => setEditedLeadData(prev => prev ? ({ ...prev, name: e.target.value }) : null)}
-                                  className="w-full bg-surface-alt border border-border rounded-xl p-2.5 text-xs text-white" 
-                                />
-                              </div>
-                              <div>
-                                <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block mb-0.5">Designation (Role)</span>
-                                <input 
-                                  type="text" 
-                                  value={editedLeadData?.role || ''} 
-                                  onChange={e => setEditedLeadData(prev => prev ? ({ ...prev, role: e.target.value }) : null)}
-                                  className="w-full bg-surface-alt border border-border rounded-xl p-2.5 text-xs text-white" 
-                                />
-                              </div>
-                              <div>
-                                <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block mb-0.5">Company Name</span>
-                                <input 
-                                  type="text" 
-                                  value={editedLeadData?.company || ''} 
-                                  onChange={e => setEditedLeadData(prev => prev ? ({ ...prev, company: e.target.value }) : null)}
-                                  className="w-full bg-surface-alt border border-border rounded-xl p-2.5 text-xs text-white" 
-                                />
-                              </div>
-                              <div>
-                                <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block mb-0.5">Verified Email</span>
-                                <input 
-                                  type="email" 
-                                  value={editedLeadData?.email || ''} 
-                                  onChange={e => setEditedLeadData(prev => prev ? ({ ...prev, email: e.target.value }) : null)}
-                                  className="w-full bg-surface-alt border border-border rounded-xl p-2.5 text-xs text-white" 
-                                />
-                              </div>
-                              <div>
-                                <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block mb-0.5">Verified Phone</span>
-                                <input 
-                                  type="text" 
-                                  value={editedLeadData?.phone || ''} 
-                                  onChange={e => setEditedLeadData(prev => prev ? ({ ...prev, phone: e.target.value }) : null)}
-                                  className="w-full bg-surface-alt border border-border rounded-xl p-2.5 text-xs text-white" 
-                                />
-                              </div>
-                              <div>
-                                <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block mb-0.5">LinkedIn Profile Link</span>
-                                <input 
-                                  type="text" 
-                                  value={editedLeadData?.linkedin_url || ''} 
-                                  onChange={e => setEditedLeadData(prev => prev ? ({ ...prev, linkedin_url: e.target.value }) : null)}
-                                  className="w-full bg-surface-alt border border-border rounded-xl p-2.5 text-xs text-white" 
-                                />
-                              </div>
-                              <div>
-                                <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block mb-0.5">Country Code (e.g. US, IN)</span>
-                                <input 
-                                  type="text" 
-                                  value={editedLeadData?.country || ''} 
-                                  onChange={e => setEditedLeadData(prev => prev ? ({ ...prev, country: e.target.value }) : null)}
-                                  className="w-full bg-surface-alt border border-border rounded-xl p-2.5 text-xs text-white" 
-                                />
-                              </div>
-                              <div>
-                                <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block mb-0.5">Industry Segment</span>
-                                <input 
-                                  type="text" 
-                                  value={editedLeadData?.industry || ''} 
-                                  onChange={e => setEditedLeadData(prev => prev ? ({ ...prev, industry: e.target.value }) : null)}
-                                  className="w-full bg-surface-alt border border-border rounded-xl p-2.5 text-xs text-white" 
-                                />
-                              </div>
-                              <div>
-                                <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block mb-0.5">Official Website URL</span>
-                                <input 
-                                  type="text" 
-                                  value={editedLeadData?.website || ''} 
-                                  onChange={e => setEditedLeadData(prev => prev ? ({ ...prev, website: e.target.value }) : null)}
-                                  className="w-full bg-surface-alt border border-border rounded-xl p-2.5 text-xs text-white" 
-                                />
-                              </div>
-                              <div className="col-span-full flex items-center justify-end gap-2 pt-2.5 border-t border-border/40">
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              onClick={() => setLeadsPage(prev => Math.max(1, prev - 1))}
+                              disabled={leadsPage === 1}
+                              className={`px-3 py-1.5 rounded-lg border border-border text-[11px] font-bold transition-all cursor-pointer ${
+                                leadsPage === 1
+                                  ? 'opacity-40 cursor-not-allowed text-text-muted'
+                                  : 'hover:border-brand/40 text-text hover:text-white bg-surface-alt'
+                              }`}
+                            >
+                              Previous
+                            </button>
+                            {Array.from({ length: Math.ceil(displayedLeads.length / leadsPerPage) }).slice(0, 5).map((_, index) => {
+                              const totalPages = Math.ceil(displayedLeads.length / leadsPerPage);
+                              let targetPage = index + 1;
+                              if (totalPages > 5 && leadsPage > 3) {
+                                if (leadsPage + 2 > totalPages) {
+                                  targetPage = totalPages - 4 + index;
+                                } else {
+                                  targetPage = leadsPage - 2 + index;
+                                }
+                              }
+                              if (targetPage > totalPages || targetPage <= 0) return null;
+                              return (
                                 <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setEditingLeadId(null);
-                                    setEditedLeadData(null);
-                                  }}
-                                  className="px-3.5 py-1.5 rounded-xl border border-border hover:bg-surface-alt text-xs font-semibold text-text-muted cursor-pointer"
+                                  key={targetPage}
+                                  onClick={() => setLeadsPage(targetPage)}
+                                  className={`w-8 h-8 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                                    leadsPage === targetPage
+                                      ? 'bg-brand/10 border border-brand/50 text-brand font-extrabold'
+                                      : 'border border-transparent text-text-muted hover:bg-surface-alt hover:text-white'
+                                  }`}
                                 >
-                                  Cancel
+                                  {targetPage}
                                 </button>
-                                <button
-                                  onClick={async (e) => {
-                                    e.stopPropagation();
-                                    if (!editedLeadData || !l.id) return;
-                                    await handleUpdateLead(l.id, editedLeadData);
-                                    setEditingLeadId(null);
-                                    setEditedLeadData(null);
-                                  }}
-                                  className="px-4 py-1.5 bg-brand text-white hover:opacity-90 rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer"
-                                >
-                                  <Save className="w-3.5 h-3.5" />
-                                  Save Details
-                                </button>
-                              </div>
+                              );
+                            })}
+                            <button
+                              onClick={() => setLeadsPage(prev => Math.min(Math.ceil(displayedLeads.length / leadsPerPage), prev + 1))}
+                              disabled={leadsPage >= Math.ceil(displayedLeads.length / leadsPerPage)}
+                              className={`px-3 py-1.5 rounded-lg border border-border text-[11px] font-bold transition-all cursor-pointer ${
+                                leadsPage >= Math.ceil(displayedLeads.length / leadsPerPage)
+                                  ? 'opacity-40 cursor-not-allowed text-text-muted'
+                                  : 'hover:border-brand/40 text-text hover:text-white bg-surface-alt'
+                              }`}
+                            >
+                              Next
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                <div className="grid grid-cols-1 xl:grid-cols-5 gap-4 overflow-x-auto pb-4 pt-2">
+                  {[
+                    { id: 'imported', label: 'Discovered leads', color: 'border-purple-500/20 text-purple-400 bg-purple-500/5', dot: 'bg-purple-400' },
+                    { id: 'pending', label: 'Active engagement', color: 'border-amber-500/20 text-amber-400 bg-amber-500/5', dot: 'bg-amber-400' },
+                    { id: 'generated', label: 'AI drafted messages', color: 'border-blue-500/20 text-blue-400 bg-blue-500/5', dot: 'bg-blue-400' },
+                    { id: 'sent', label: 'Outreach sent', color: 'border-emerald-500/20 text-emerald-400 bg-emerald-500/5', dot: 'bg-emerald-400' },
+                    { id: 'failed', label: 'Failed/Unreachable', color: 'border-red-500/20 text-red-500 bg-red-400/5', dot: 'bg-red-400' }
+                  ].map((col) => {
+                    const colLeads = displayedLeads.filter(l => {
+                      const actualStatus = l.status === 'sent' ? 'sent' :
+                                           (l.id && messages[l.id]) ? 'generated' :
+                                           l.status === 'failed' ? 'failed' :
+                                           l.status === 'imported' ? 'imported' :
+                                           l.status || 'pending';
+                      return actualStatus === col.id;
+                    });
+
+                    const colLimit = pipelineColLimits[col.id] || 20;
+                    const truncatedColLeads = colLeads.slice(0, colLimit);
+
+                    const isDraggedOver = draggedOverColumn === col.id;
+
+                    return (
+                      <div 
+                        key={col.id}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          if (draggedOverColumn !== col.id) {
+                            setDraggedOverColumn(col.id);
+                          }
+                        }}
+                        onDragLeave={() => setDraggedOverColumn(null)}
+                        onDrop={async (e) => {
+                          e.preventDefault();
+                          setDraggedOverColumn(null);
+                          const leadId = e.dataTransfer.getData("text/plain");
+                          if (leadId) {
+                            await handleUpdateLead(leadId, { status: col.id as any });
+                            showToast(`Updated stage for contact to ${col.label}`, "success");
+                          }
+                        }}
+                        className={`flex flex-col rounded-3xl border p-4 transition-all min-h-[480px] duration-300 relative ${
+                          isDraggedOver 
+                            ? 'bg-brand/10 border-brand/50 scale-[1.01] shadow-[0_0_20px_rgba(0,212,170,0.1)]' 
+                            : 'bg-[#0b0c11]/80 border-border'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-4 pb-2.5 border-b border-border/80">
+                          <div className="flex items-center gap-2">
+                            <span className={`w-2 h-2 rounded-full ${col.dot}`} />
+                            <span className="font-syne font-bold text-xs tracking-wider text-white uppercase">{col.label}</span>
+                          </div>
+                          <span className="bg-[#090a0f] border border-border rounded-lg px-2 py-0.5 text-[10px] font-bold text-text-muted">{colLeads.length}</span>
+                        </div>
+
+                        <div className="flex-1 flex flex-col gap-3 overflow-y-auto max-h-[420px] scrollbar-thin font-sans">
+                          {colLeads.length === 0 ? (
+                            <div className="flex-1 border border-dashed border-border/40 rounded-2xl flex flex-col items-center justify-center p-4 text-center text-[11px] text-text-muted hover:border-brand/20 transition-all min-h-[140px]">
+                              <span className="font-semibold block mb-0.5">Drag leads here</span>
+                              <span>to update status</span>
                             </div>
                           ) : (
-                            <div className="w-full mt-4 pt-4 border-t border-border/80 grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs animate-fadeIn">
-                              <div>
-                                <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block mb-0.5">Company Name</span>
-                                <span className="text-white font-medium block truncate">{l.company || 'N/A'}</span>
-                              </div>
-                              <div>
-                                <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block mb-0.5">Official Website</span>
-                                {l.website && l.website !== 'N/A' ? (
-                                  <a href={l.website.startsWith('http') ? l.website : `https://${l.website}`} target="_blank" rel="noreferrer" className="text-brand hover:underline font-medium block truncate flex items-center gap-1">
-                                    {l.website} <ExternalLink className="w-3 h-3 text-brand" />
-                                  </a>
-                                ) : (
-                                  <span className="text-text-muted">N/A</span>
-                                )}
-                              </div>
-                              <div>
-                                <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block mb-0.5">Decision Maker</span>
-                                <span className="text-white font-medium block truncate">{l.name || 'N/A'}</span>
-                              </div>
-                              <div>
-                                <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block mb-0.5">Designation</span>
-                                <span className="text-brand font-medium block truncate">{l.role || 'N/A'}</span>
-                              </div>
-                              <div>
-                                <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block mb-0.5">Verified Phone</span>
-                                <span className="text-white font-mono font-medium block truncate">{l.phone || 'N/A'}</span>
-                              </div>
-                              <div>
-                                <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block mb-0.5">Verified Email</span>
-                                {l.email ? (
-                                  <a href={`mailto:${l.email}`} className="text-brand hover:underline font-mono font-medium block truncate">{l.email}</a>
-                                ) : (
-                                  <span className="text-text-muted">N/A</span>
-                                )}
-                              </div>
-                              <div>
-                                <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block mb-0.5">LinkedIn Profile</span>
-                                {l.linkedin_url ? (
-                                  <a href={l.linkedin_url.startsWith('http') ? l.linkedin_url : `https://${l.linkedin_url}`} target="_blank" rel="noreferrer" className="text-brand hover:underline font-medium block truncate flex items-center gap-1">
-                                    LinkedIn <ExternalLink className="w-3 h-3 text-brand" />
-                                  </a>
-                                ) : (
-                                  <span className="text-text-muted font-medium block truncate">N/A</span>
-                                )}
-                              </div>
-                              <div>
-                                <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block mb-0.5">Employee Size</span>
-                                <span className="text-white font-medium block truncate">{l.employees || 'N/A'}</span>
-                              </div>
-                              <div>
-                                <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block mb-0.5">Location / Country</span>
-                                <span className="text-white font-medium block truncate">{l.country || 'N/A'}</span>
-                              </div>
-                              <div className="col-span-full">
-                                <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block mb-0.5">Industry Segment</span>
-                                <span className="text-white font-medium block truncate">{l.industry || 'N/A'}</span>
-                              </div>
-                              <div className="col-span-full flex items-center justify-end gap-2 pt-2.5 border-t border-border/40">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setEditingLeadId(l.id || `lead-${i}`);
-                                    setEditedLeadData(l);
+                            truncatedColLeads.map((l, leadIdx) => {
+                              const lScore = calculateLeadScore(l);
+                              const isElite = lScore >= 60;
+
+                              return (
+                                <div
+                                  key={l.id || leadIdx}
+                                  draggable={true}
+                                  onDragStart={(e) => {
+                                    if (l.id) {
+                                      e.dataTransfer.setData("text/plain", l.id);
+                                      e.dataTransfer.effectAllowed = "move";
+                                    }
                                   }}
-                                  className="px-4 py-1.5 bg-brand/10 hover:bg-brand text-brand hover:text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                                  onClick={() => {
+                                    const cid = l.id || `lead-${leadIdx}`;
+                                    setExpandedLeadId(expandedLeadId === cid ? null : cid);
+                                  }}
+                                  className={`p-3.5 rounded-2xl border transition-all duration-200 cursor-grab hover:shadow-md active:cursor-grabbing hover:translate-y-[-2px] text-left select-none ${
+                                    isElite 
+                                      ? 'bg-emerald-500/5 border-emerald-500/35 shadow-[0_0_10px_rgba(16,185,129,0.05)]' 
+                                      : 'bg-surface-alt border-border hover:border-brand/40'
+                                  }`}
                                 >
-                                  <Settings className="w-3.5 h-3.5" />
-                                  Edit Details
-                                </button>
-                              </div>
-                            </div>
-                          )
+                                  <div className="flex items-start gap-2.5">
+                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs text-white shrink-0 ${
+                                      isElite 
+                                        ? 'bg-gradient-to-br from-emerald-400 to-emerald-700 animate-pulse'
+                                        : 'bg-gradient-to-br from-brand to-brand-alt'
+                                    }`}>
+                                      {(l.name || '?')[0]}
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                      <div className="font-bold text-xs text-white truncate max-w-[120px] leading-tight flex items-center gap-1.5">
+                                        <span>{l.name}</span>
+                                      </div>
+                                      <div className="text-[10px] text-text-muted truncate mt-0.5 font-semibold">
+                                        {l.role}
+                                      </div>
+                                      <div className="text-[10px] text-brand truncate font-bold">
+                                        {l.company}
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* Recommendation panel */}
+                                  <div className="mt-2 text-[9px] flex flex-col gap-1">
+                                    <span className="text-[8px] uppercase tracking-wider font-extrabold text-text-muted">Recommendation:</span>
+                                    {(() => {
+                                      let label = 'Qualify/generate draft';
+                                      let cls = 'bg-blue-500/10 text-blue-400 border-blue-500/25';
+                                      if (l.status === 'sent') {
+                                        label = 'Follow-up in 3 days';
+                                        cls = 'bg-purple-500/10 text-purple-400 border-purple-500/25';
+                                      } else if (l.status === 'failed') {
+                                        label = 'Verify profile url';
+                                        cls = 'bg-red-500/10 text-red-400 border-red-500/25';
+                                      } else if (l.id && messages[l.id]) {
+                                        label = 'Export and send copy';
+                                        cls = 'bg-[#00d4aa]/15 text-[#00d4aa] border-[#00d4aa]/30';
+                                      } else if (lScore >= 60) {
+                                        label = 'Draft elite AI copy';
+                                        cls = 'bg-amber-500/15 text-amber-400 border-amber-500/30';
+                                      }
+                                      return (
+                                        <span className={`px-2 py-0.5 rounded border text-center font-bold tracking-tight truncate ${cls}`}>
+                                          {label}
+                                        </span>
+                                      );
+                                    })()}
+                                  </div>
+
+                                  <div className="mt-3.5 pt-2.5 border-t border-border/40 flex items-center justify-between">
+                                    <div className="flex items-center gap-1 bg-[#090a0f] border border-border px-1.5 py-0.5 rounded-lg text-[9px] font-mono text-text-muted">
+                                      <Award className="w-3 h-3 text-brand-alt animate-pulse" />
+                                      <span className="font-extrabold text-[#00d4aa]">{lScore}</span>
+                                    </div>
+
+                                    <div className="flex items-center gap-1">
+                                      {l.phone && <span className="w-2 h-2 rounded-full bg-[#25d366]" title="WhatsApp ready" />}
+                                      {l.email && <span className="w-2 h-2 rounded-full bg-blue-400" title="Email channel configured" />}
+                                      {l.linkedin_url && <span className="w-2 h-2 rounded-full bg-[#0077b5]" title="LinkedIn profile mapped" />}
+                                    </div>
+                                  </div>
+
+                                  {expandedLeadId === (l.id || `lead-${leadIdx}`) && (
+                                    <motion.div 
+                                      initial={{ opacity: 0, height: 0 }}
+                                      animate={{ opacity: 1, height: 'auto' }}
+                                      className="mt-3 pt-3 border-t border-border/40 text-[10px] space-y-1.5 text-text-muted"
+                                      onClick={e => e.stopPropagation()}
+                                    >
+                                      <p className="truncate text-[10px] text-[#8e9aa8]"><strong className="text-white">Email:</strong> {l.email || 'N/A'}</p>
+                                      <p className="truncate text-[10px] text-[#8e9aa8]"><strong className="text-white">Phone:</strong> {l.phone || 'N/A'}</p>
+                                      <div className="flex justify-end pt-1.5">
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setEditingLeadId(l.id || `lead-${leadIdx}`);
+                                            setEditedLeadData(l);
+                                          }}
+                                          className="px-2 py-1 bg-brand/10 hover:bg-brand/20 text-brand rounded-lg text-[9px] font-bold cursor-pointer"
+                                        >
+                                          Edit Details
+                                        </button>
+                                      </div>
+                                    </motion.div>
+                                  )}
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+
+                        {/* Pipeline column pagination load more */}
+                        {colLeads.length > colLimit && (
+                          <button
+                            onClick={() => {
+                              setPipelineColLimits(prev => ({
+                                ...prev,
+                                [col.id]: colLimit + 30
+                              }));
+                            }}
+                            className="w-full mt-2 py-2 bg-[#090a0f] hover:bg-brand hover:text-[#090a0f] border border-border hover:border-brand text-brand tracking-wide text-[10px] font-extrabold rounded-xl transition-all cursor-pointer text-center"
+                          >
+                            + Load {colLeads.length - colLimit} More Leads
+                          </button>
                         )}
-                      </motion.div>
+                      </div>
                     );
                   })}
                 </div>
-
-                {/* Floating Bulk Action Toolbar (Task 1 Requirement) */}
-                <AnimatePresence>
-                  {selectedLeadIds.length > 0 && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 30, scale: 0.98 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 30, scale: 0.98 }}
-                      transition={{ type: "spring", duration: 0.4 }}
-                      className="sticky bottom-6 z-50 flex flex-col sm:flex-row items-center justify-between gap-4 p-4 mt-6 bg-[#0f172a]/95 backdrop-blur-md border border-[#00d4aa]/40 rounded-3xl shadow-[0_12px_40px_rgba(0,212,170,0.18)]"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[#00d4aa]/20 border border-[#00d4aa]/40 text-[#00d4aa] text-xs font-black animate-pulse">
-                          {selectedLeadIds.length}
-                        </div>
-                        <div>
-                          <p className="text-xs font-bold text-white flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#00d4aa]" />
-                            Outreach Leads Selected
-                          </p>
-                          <p className="text-[10px] text-text-muted">Batch edit parameters or delete synced client profiles</p>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-wrap items-center gap-2">
-                        <button
-                          onClick={() => {
-                            setEditingLeadId(null);
-                            setEditedLeadData(null);
-                            setBulkEditFields({ role: '', company: '', industry: '', country: '', status: '' });
-                            setShowBulkEditModal(true);
-                          }}
-                          className="px-4 py-2 bg-brand hover:bg-brand/90 hover:scale-[1.02] text-white text-xs font-bold font-sans rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-md"
-                        >
-                          <Settings className="w-3.5 h-3.5" />
-                          Bulk Edit / Update
-                        </button>
-                        
-                        <button
-                          onClick={() => {
-                            handleBulkDeleteLeads(selectedLeadIds);
-                          }}
-                          className="px-4 py-2 bg-rose-500/10 hover:bg-rose-500 hover:text-white text-rose-400 border border-rose-500/20 hover:scale-[1.02] text-xs font-bold font-sans rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          Bulk Delete
-                        </button>
-
-                        <div className="w-[1px] h-6 bg-border mx-1 hidden sm:block" />
-
-                        <button
-                          onClick={() => setSelectedLeadIds([])}
-                          className="px-3 py-2 bg-surface-alt hover:bg-border text-text hover:text-white rounded-xl text-xs font-bold transition-all cursor-pointer border border-border"
-                        >
-                          Clear Selection
-                        </button>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+              )}
               </>
             );
           })()}
               
               {/* Automated Realtime CRM Sync Status Pipelines */}
-              <CrmSyncLogsPanel leads={leads} showToast={showToast} />
+              <CrmSyncLogsPanel leads={leads as any} showToast={showToast} />
               
               <motion.button 
                 whileHover={{ scale: 1.02 }}
@@ -3031,31 +4338,99 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
     )}
 
     {activeView === 'TEAM_ADMIN' && <TeamAdminPanel profile={profile} />}
-    {activeView === 'SUPER_ADMIN' && <SuperAdminPanel showToast={showToast} />}
-    {activeView === 'JOURNEY' && (
-      <CrmPipelineBoard 
+    
+    {/* Dynamic Org Admin views */}
+    {(activeView === 'ORG_DASHBOARD' || activeView === 'ORG_MEMBERS' || activeView === 'ORG_BRANDING' || activeView === 'ORG_DOMAIN' || activeView === 'ORG_BILLING' || activeView === 'ORG_FEATURES' || activeView === 'ORG_SECURITY') && (
+      <OrgAdminPanel 
+        showToast={showToast}
+        profile={profile}
+        users={[]}
+      />
+    )}
+
+    {/* Dynamic Manager views */}
+    {(activeView === 'MGR_DASHBOARD' || activeView === 'MGR_APPROVALS' || activeView === 'MGR_CALLS' || activeView === 'MGR_FORECAST') && (
+      <ManagerWorkspacePanel 
+        showToast={showToast}
         leads={leads}
         campaigns={campaigns}
-        currentCampaign={currentCampaign}
-        setCurrentCampaign={setCurrentCampaign}
-        onCreateCampaign={handleCreateCampaign}
-        onDeleteCampaign={handleDeleteCampaign}
+      />
+    )}
+
+    {/* Dynamic AE views */}
+    {(activeView === 'AE_PIPELINE' || activeView === 'AE_HEALTH' || activeView === 'AE_COPILOT' || activeView === 'AE_BRIEFS') && (
+      <AeWorkspacePanel 
         showToast={showToast}
-        messages={messages}
-        config={config}
-        setConfig={setConfig}
-        chState={chState}
-        setChState={setChState}
-        smtpConfig={smtpConfig}
+        leads={leads}
+      />
+    )}
+
+    {/* Dynamic SDR views */}
+    {(activeView === 'SDR_DAILY' || activeView === 'SDR_STATS') && (
+      <SdrWorkspacePanel 
+        showToast={showToast}
+      />
+    )}
+
+    {/* Dynamic Reader/Viewer views */}
+    {(activeView === 'VIEWER_DASHBOARD' || activeView === 'VIEWER_PIPELINE') && (
+      <div className="bg-surface border border-border rounded-3xl p-8 max-w-4xl mx-auto text-center space-y-4">
+        <div className="text-3xl font-syne font-bold text-purple-400">Read-Only Viewer Analytics Panel</div>
+        <p className="text-sm text-text-muted">You are currently logged in with a read-only seat. Inbound sequence analytics and company pipelines can be viewed but edit actions are restricted by administrative guidelines.</p>
+        <div className="border border-border p-4 bg-[#0c0d12]/60 rounded-xl text-left space-y-2 text-xs">
+          <div className="font-bold text-white uppercase tracking-wider text-[10px]">&bull; Corporate Multi-Tenant Compliance</div>
+          <p className="text-text-muted">Domain settings and members roster configurations are managed by organizational administrators. To acquire edit-seat clearance, please contact your billing coordinator.</p>
+        </div>
+      </div>
+    )}
+
+    {/* Super Admin Billing view */}
+    {activeView === 'SUPER_ADMIN_BILLING' && (
+      <div className="bg-surface border border-border rounded-3xl p-8 max-w-4xl mx-auto space-y-6">
+        <h3 className="text-xl font-bold tracking-tight font-syne">Platform Multi-Tenant Billing Gateway</h3>
+        <p className="text-text-muted text-xs md:text-sm">Manage subscription pricing matrices, super-administrator global MRR graphs, and direct merchant overrides.</p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-4">
+          <div className="bg-[#0c0d12]/60 border border-border p-6 rounded-2xl">
+            <div className="text-3xl font-syne font-bold font-bold text-emerald-400">$38,240</div>
+            <div className="text-[9px] text-text-muted uppercase tracking-widest font-bold mt-1">Platform Run-Rate MRR</div>
+          </div>
+          <div className="bg-[#0c0d12]/60 border border-border p-6 rounded-2xl">
+            <div className="text-3xl font-syne font-bold text-blue-400">42</div>
+            <div className="text-[9px] text-text-muted uppercase tracking-widest font-bold mt-1">Active Enterprise Orgs</div>
+          </div>
+          <div className="bg-[#0c0d12]/60 border border-border p-6 rounded-2xl">
+            <div className="text-3xl font-syne font-bold text-[#a78bfa]">100%</div>
+            <div className="text-[9px] text-text-muted uppercase tracking-widest font-bold mt-1">Stripe Server uptime</div>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {activeView === 'SUPER_ADMIN' && (
+      <SuperAdminPanel 
+        showToast={showToast} 
+        externalActiveTab={superAdminTab}
+        externalSetActiveTab={setSuperAdminTab}
+      />
+    )}
+    {activeView === 'JOURNEY' && (
+      <CrmPipelineBoard 
+        leads={leads as any}
+        onLeadsUpdated={() => {
+          // trigger trigger refresh
+        }}
+        showToast={showToast}
         profile={profile}
-        user={user}
-        handleUpdateLead={handleUpdateLead}
-        handleDeleteLead={handleDeleteLead}
-        saveLeads={saveLeads}
       />
     )}
     {activeView === 'ANALYTICS' && (
-      <LeadJourneyAnalytics showToast={showToast} />
+      <LeadJourneyAnalytics 
+        showToast={showToast} 
+        profile={profile}
+        user={user}
+        db={db}
+        campaigns={campaigns}
+      />
     )}
     {activeView === 'RESEARCH' && (
       <ProspectResearchPanel 
@@ -3203,7 +4578,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
           <SmartCsvImportModal 
             onClose={() => setShowSmartImportModal(false)}
             onImportComplete={handleSmartImportComplete}
-            existingLeads={leads}
+            existingLeads={leads as any}
             showToast={showToast}
           />
         )}
@@ -3294,7 +4669,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                 </button>
                 <button
                   onClick={async () => {
-                    await handleBulkUpdateLeads(selectedLeadIds, bulkEditFields);
+                    await handleBulkUpdateLeads(selectedLeadIds, bulkEditFields as any);
                     setShowBulkEditModal(false);
                   }}
                   className="px-6 py-2 bg-brand text-white hover:opacity-90 rounded-xl text-xs font-bold shadow-lg shadow-brand/20 cursor-pointer transition-all"
@@ -3562,7 +4937,7 @@ function CampaignDashboard({ campaigns, onCreate, onSelect, onDelete, onDownload
             {/* Overlay Glass Panel */}
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 to-transparent p-4 flex flex-col justify-end">
               <h4 className="text-xs font-bold text-white uppercase font-sans">Multi-Agent Lead Scorer</h4>
-              <p className="text-[10px] text-brand font-medium">Model: Gemini 1.5 Flash</p>
+              <p className="text-[10px] text-brand font-medium">Model: Gemini 3.5 Flash</p>
             </div>
           </div>
         </div>

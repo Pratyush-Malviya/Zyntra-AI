@@ -1,16 +1,4 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import { db } from "../firebase";
-import { 
-  collection, 
-  doc, 
-  getDoc, 
-  getDocs, 
-  setDoc, 
-  addDoc, 
-  updateDoc, 
-  Timestamp,
-  deleteDoc
-} from "firebase/firestore";
 
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY || "",
@@ -21,530 +9,68 @@ const ai = new GoogleGenAI({
   }
 });
 
-export interface LLMConfig {
-  id: string;
-  name: string;
-  provider: string;
-  isEnabled: boolean;
-  priority: number;
-  apiKey: string;
-  status: "online" | "offline" | "inactive";
-  avgLatency: number;
-  totalTokens: number;
-  totalCost: number;
-  selectedModel?: string;
+const DEFAULT_NVIDIA_API_KEY = "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";
+
+export function getNvidiaApiKey(): string {
+  if (typeof window !== "undefined") {
+    const saved = localStorage.getItem("zy_nvidia_api_key");
+    if (saved) return saved;
+  }
+  return process.env.NVIDIA_API_KEY || DEFAULT_NVIDIA_API_KEY;
 }
 
-export function ensureAllDefaultConfigs(list: LLMConfig[]): LLMConfig[] {
-  const defaultConfigsList: LLMConfig[] = [
-    {
-      id: "gemini",
-      name: "Gemini 1.5 Flash/Pro",
-      provider: "Google AI",
-      isEnabled: true,
-      priority: 1,
-      apiKey: process.env.GEMINI_API_KEY || "",
-      status: "online",
-      avgLatency: 0,
-      totalTokens: 0,
-      totalCost: 0,
-      selectedModel: "gemini-1.5-flash"
+export function getNvidiaSelectedModel(): string {
+  if (typeof window !== "undefined") {
+    const saved = localStorage.getItem("zy_nvidia_selected_model");
+    if (saved) return saved;
+  }
+  return "google/gemma-3n-e2b-it";
+}
+
+const nvidiaApiKey = "DYNAMIC_LOADED";
+
+async function callNvidiaFallback(prompt: string, systemPrompt?: string, isJson: boolean = false): Promise<string> {
+  const currentKey = getNvidiaApiKey();
+  if (!currentKey) {
+    throw new Error("NVIDIA_API_KEY is not configured.");
+  }
+  
+  const currentModel = getNvidiaSelectedModel();
+  console.log(`[NVIDIA NIM Fallback] Invoking ${currentModel} via NVIDIA API...`);
+  
+  const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${currentKey}`
     },
-    {
-      id: "openai",
-      name: "GPT-4o",
-      provider: "OpenAI",
-      isEnabled: true,
-      priority: 2,
-      apiKey: process.env.OPENAI_API_KEY || "",
-      status: "online",
-      avgLatency: 0,
-      totalTokens: 0,
-      totalCost: 0,
-      selectedModel: "gpt-4o"
-    },
-    {
-      id: "nvidia",
-      name: "Nvidia NIM Llama 3.3",
-      provider: "Nvidia Nim",
-      isEnabled: true,
-      priority: 3,
-      apiKey: "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",
-      status: "online",
-      avgLatency: 0,
-      totalTokens: 0,
-      totalCost: 0,
-      selectedModel: "meta/llama-3.3-70b-instruct"
-    },
-    {
-      id: "openrouter",
-      name: "OpenRouter Free Multi-LLM",
-      provider: "OpenRouter",
-      isEnabled: true,
-      priority: 4,
-      apiKey: process.env.OPENROUTER_API_KEY || "",
-      status: "online",
-      avgLatency: 0,
-      totalTokens: 0,
-      totalCost: 0,
-      selectedModel: "openrouter/free"
-    }
-  ];
-
-  if (!Array.isArray(list)) return defaultConfigsList;
-  const merged = list.map(c => {
-    if (c.id === "nvidia" && c.apiKey === "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") {
-      return { ...c, apiKey: "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" };
-    }
-    return c;
+    body: JSON.stringify({
+      model: currentModel,
+      messages: [
+        ...(systemPrompt ? [{ role: "system", content: systemPrompt }] : []),
+        { role: "user", content: prompt }
+      ],
+      temperature: 0.20,
+      max_tokens: 3000,
+      top_p: 0.70,
+      frequency_penalty: 0.00,
+      presence_penalty: 0.00,
+      ...(isJson ? { response_format: { type: "json_object" } } : {})
+    })
   });
-  let changed = false;
 
-  for (const def of defaultConfigsList) {
-    if (!merged.some(c => c.id === def.id)) {
-      merged.push(def);
-      changed = true;
-    }
-  }
-
-  if (changed) {
-    merged.sort((a, b) => a.priority - b.priority);
-  }
-  return merged;
-}
-
-export async function initializeLlmConfigs() {
-  try {
-    const defaultConfigs: LLMConfig[] = [
-      {
-        id: "gemini",
-        name: "Gemini 1.5 Flash/Pro",
-        provider: "Google AI",
-        isEnabled: true,
-        priority: 1,
-        apiKey: process.env.GEMINI_API_KEY || "",
-        status: "online",
-        avgLatency: 0,
-        totalTokens: 0,
-        totalCost: 0,
-        selectedModel: "gemini-1.5-flash"
-      },
-      {
-        id: "openai",
-        name: "GPT-4o",
-        provider: "OpenAI",
-        isEnabled: true,
-        priority: 2,
-        apiKey: process.env.OPENAI_API_KEY || "",
-        status: "online",
-        avgLatency: 0,
-        totalTokens: 0,
-        totalCost: 0,
-        selectedModel: "gpt-4o"
-      },
-      {
-        id: "nvidia",
-        name: "Nvidia NIM Llama 3.3",
-        provider: "Nvidia Nim",
-        isEnabled: true,
-        priority: 3,
-        apiKey: "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",
-        status: "online",
-        avgLatency: 0,
-        totalTokens: 0,
-        totalCost: 0,
-        selectedModel: "meta/llama-3.3-70b-instruct"
-      },
-      {
-        id: "openrouter",
-        name: "OpenRouter Free Multi-LLM",
-        provider: "OpenRouter",
-        isEnabled: true,
-        priority: 4,
-        apiKey: process.env.OPENROUTER_API_KEY || "",
-        status: "online",
-        avgLatency: 0,
-        totalTokens: 0,
-        totalCost: 0,
-        selectedModel: "openrouter/free"
-      }
-    ];
-
-    // Delete existing groq configs if they exist in Firestore
-    const groqRef = doc(db, "llm_config", "groq");
-    await deleteDoc(groqRef);
-
-    // Seed remaining configs
-    for (const config of defaultConfigs) {
-      const docRef = doc(db, "llm_config", config.id);
-      const docSnap = await getDoc(docRef);
-      if (!docSnap.exists()) {
-        console.log(`[LLM Config] Seeding missing config for ${config.id}...`);
-        await setDoc(docRef, config);
-      } else {
-        const currentData = docSnap.data();
-        if (config.id === "nvidia" && currentData.apiKey === "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") {
-          console.log("[LLM Config] Auto-updating Nvidia NIM configuration key to user provided key...");
-          await updateDoc(docRef, { apiKey: config.apiKey });
-        }
-        if (
-          currentData.name === "Gemini 1.5 Flash" || 
-          currentData.name === "Gemini 2.5 Flash/Pro" ||
-          currentData.name === "GPT-4o (Search Preview)" ||
-          !currentData.hasOwnProperty("selectedModel")
-        ) {
-          console.log(`[LLM Config] Updating legacy or missing properties for ${config.id}...`);
-          await updateDoc(docRef, {
-            name: config.name,
-            selectedModel: currentData.selectedModel || config.selectedModel,
-            apiKey: config.apiKey === "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" ? config.apiKey : (currentData.apiKey || config.apiKey)
-          });
-        }
-      }
-    }
-  } catch (err) {
-    console.error("Error seeding default LLM configs in Firestore:", err);
-  }
-}
-
-async function logLlmCall(
-  modelId: string,
-  provider: string,
-  action: string,
-  status: "success" | "failure",
-  latency: number,
-  tokensUsed: number,
-  cost: number,
-  error?: string
-) {
-  // Update local storage first so dashboard analytics and console remain interactive immediately
-  if (typeof window !== "undefined" && window.localStorage) {
-    try {
-      // 1. Update local logs list
-      const localLog = {
-        id: `local-log-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-        timestamp: { seconds: Math.floor(Date.now() / 1000), nanoseconds: 0 },
-        modelId,
-        provider,
-        action,
-        status,
-        latency,
-        tokensUsed,
-        cost,
-        error: error || null
-      };
-      const cachedLogs = window.localStorage.getItem("zyntra-llm-logs");
-      const parsedLogs = cachedLogs ? JSON.parse(cachedLogs) : [];
-      const updatedLogs = [localLog, ...parsedLogs].slice(0, 50);
-      window.localStorage.setItem("zyntra-llm-logs", JSON.stringify(updatedLogs));
-
-      // 2. Update local config stats
-      const cachedConfigs = window.localStorage.getItem("zyntra-llm-configs");
-      if (cachedConfigs) {
-        const parsedConfigs = JSON.parse(cachedConfigs);
-        if (Array.isArray(parsedConfigs)) {
-          const updatedConfigs = parsedConfigs.map(c => {
-            if (c.id === modelId) {
-              const newTotalTokens = (c.totalTokens || 0) + tokensUsed;
-              const newTotalCost = (c.totalCost || 0) + cost;
-              let newAvgLatency = latency;
-              if (c.avgLatency) {
-                newAvgLatency = Math.round((c.avgLatency * 4 + latency) / 5);
-              } else {
-                newAvgLatency = latency;
-              }
-              return {
-                ...c,
-                status: status === "success" ? "online" : "offline",
-                totalTokens: newTotalTokens,
-                totalCost: Number(newTotalCost.toFixed(6)),
-                avgLatency: newAvgLatency
-              };
-            }
-            return c;
-          });
-          window.localStorage.setItem("zyntra-llm-configs", JSON.stringify(updatedConfigs));
-        }
-      }
-
-      // Dispatch local storage update event
-      window.dispatchEvent(new Event("zyntra-local-storage-update"));
-    } catch (e) {
-      console.warn("Failed updating local storage cache for LLM metrics:", e);
-    }
-  }
-
-  try {
-    // 1. Log call in llm_logs
-    await addDoc(collection(db, "llm_logs"), {
-      timestamp: Timestamp.now(),
-      modelId,
-      provider,
-      action,
-      status,
-      latency,
-      tokensUsed,
-      cost,
-      error: error || null
-    });
-
-    // 2. Update stats in llm_config
-    const docRef = doc(db, "llm_config", modelId);
-    const docSnap = await getDoc(docRef);
-    if (docSnap.exists()) {
-      const data = docSnap.data();
-      const newTotalTokens = (data.totalTokens || 0) + tokensUsed;
-      const newTotalCost = (data.totalCost || 0) + cost;
-      
-      let newAvgLatency = latency;
-      if (data.avgLatency) {
-        newAvgLatency = Math.round((data.avgLatency * 4 + latency) / 5);
-      }
-
-      await updateDoc(docRef, {
-        status: status === "success" ? "online" : "offline",
-        totalTokens: newTotalTokens,
-        totalCost: Number(newTotalCost.toFixed(6)),
-        avgLatency: newAvgLatency
-      });
-    }
-  } catch (err) {
-    console.warn("Firestore logging skipped due to missing database permissions (using localStorage fallback):", err);
-  }
-}
-
-export async function executeDynamicLlmChain(
-  geminiPrompt: string,
-  fallbackPrompt: string,
-  systemPrompt: string,
-  action: string,
-  isJson: boolean = false,
-  geminiSchemaConfig?: any,
-  nvidiaPrompt?: string
-): Promise<string> {
-  // Ensure default db is seeded
-  await initializeLlmConfigs();
-
-  let configs: LLMConfig[] = [];
-  try {
-    const querySnapshot = await getDocs(collection(db, "llm_config"));
-    configs = querySnapshot.docs.map(doc => doc.data() as LLMConfig);
-  } catch (err) {
-    console.error("Failed fetching configs from Firestore:", err);
-  }
-
-  // Fallback to localStorage if Firestore failed or returned empty list
-  if (configs.length === 0) {
-    if (typeof window !== "undefined" && window.localStorage) {
-      const cached = window.localStorage.getItem("zyntra-llm-configs");
-      if (cached) {
-        try {
-          const parsed = JSON.parse(cached);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            configs = parsed;
-          }
-        } catch (e) {
-          console.warn("Failed to parse cached configs from localStorage:", e);
-        }
-      }
-    }
-  }
-
-  // Ensure all default LLM configurations are present (including Nvidia NIM) to support zero-downtime cache upgrades
-  configs = ensureAllDefaultConfigs(configs);
-
-  const activeChain = configs
-    .filter(c => c.isEnabled)
-    .sort((a, b) => a.priority - b.priority);
-
-  if (activeChain.length === 0) {
-    throw new Error("No active LLM models configured in the priority chain.");
-  }
-
-  for (let i = 0; i < activeChain.length; i++) {
-    const model = activeChain[i];
-    const startTime = Date.now();
-    console.log(`[Failover Chain] Attempting model ${i + 1}/${activeChain.length}: ${model.name}...`);
-
-    try {
-      let content = "";
-      if (model.id === "gemini") {
-        const geminiClient = new GoogleGenAI({
-          apiKey: model.apiKey || process.env.GEMINI_API_KEY || "",
-          httpOptions: { headers: { 'User-Agent': 'aistudio-build' } }
-        });
-
-        // Resolve model dynamically based on user configuration and auto-escalation
-        let targetModel = model.selectedModel || "gemini-1.5-flash";
-        if (action === "research") {
-          if (targetModel.includes("flash")) {
-            targetModel = targetModel.replace("flash", "pro");
-          } else if (!targetModel.includes("pro")) {
-            targetModel = "gemini-1.5-pro";
-          }
-        }
-
-        const response = await geminiClient.models.generateContent({
-          model: targetModel,
-          contents: geminiPrompt,
-          config: geminiSchemaConfig ? geminiSchemaConfig : {
-            systemInstruction: systemPrompt || undefined
-          }
-        });
-        content = response.text || "";
-      } 
-      else if (model.id === "openai") {
-        content = await callOpenAIFallback(fallbackPrompt, systemPrompt, model.apiKey, model.selectedModel);
-      } 
-      else if (model.id === "groq") {
-        content = await callGroqFallback(fallbackPrompt, systemPrompt, isJson, model.apiKey);
-      } 
-      else if (model.id === "nvidia") {
-        const promptToUse = nvidiaPrompt || fallbackPrompt;
-        let targetModel = model.selectedModel || "meta/llama-3.3-70b-instruct";
-        if (action === "research") {
-          // Auto-escalate small models to premium models on Nvidia for deep research
-          if (targetModel.includes("8b") || targetModel.includes("gemma-2-9b")) {
-            console.log(`[Failover Chain] Auto-escalating NVIDIA model from ${targetModel} to meta/llama-3.3-70b-instruct for deep research...`);
-            targetModel = "meta/llama-3.3-70b-instruct";
-          }
-        }
-        content = await callNvidiaFallback(promptToUse, systemPrompt, isJson, model.apiKey, targetModel);
-      }
-      else if (model.id === "openrouter") {
-        content = await callOpenRouterFallback(fallbackPrompt, systemPrompt, isJson, model.apiKey, model.selectedModel);
-      }
-      else {
-        // Support custom LLM models dynamically
-        console.log(`[Failover Chain] Routing generic custom LLM "${model.name}"...`);
-        if (model.provider?.toLowerCase().includes("openrouter") || model.id.includes("openrouter")) {
-          content = await callOpenRouterFallback(fallbackPrompt, systemPrompt, isJson, model.apiKey, model.selectedModel);
-        } else if (model.provider?.toLowerCase().includes("nvidia") || model.id.includes("nvidia")) {
-          content = await callNvidiaFallback(fallbackPrompt, systemPrompt, isJson, model.apiKey, model.selectedModel);
-        } else {
-          content = await callOpenAIFallback(fallbackPrompt, systemPrompt, model.apiKey, model.selectedModel);
-        }
-      }
-
-      if (!content) {
-        throw new Error("Empty response returned from model API.");
-      }
-
-      const latency = Date.now() - startTime;
-      const inputTokens = Math.round((fallbackPrompt.length + (systemPrompt || "").length) / 4);
-      const outputTokens = Math.round(content.length / 4);
-      const tokensUsed = inputTokens + outputTokens;
-
-      let cost = 0;
-      if (model.id === "gemini") {
-        cost = (inputTokens * 0.075 / 1000000) + (outputTokens * 0.30 / 1000000);
-      } else if (model.id === "openai") {
-        cost = (inputTokens * 2.50 / 1000000) + (outputTokens * 10.00 / 1000000);
-      } else if (model.id === "groq" || model.id === "nvidia") {
-        cost = (inputTokens * 0.59 / 1000000) + (outputTokens * 0.79 / 1000000);
-      } else if (model.id === "openrouter") {
-        cost = 0; // Free models through OpenRouter proxy have $0 cost
-      }
-
-      console.log(`[Failover Chain] SUCCESS: ${model.name} responded in ${latency}ms (Cost: $${cost.toFixed(6)})`);
-      logLlmCall(model.id, model.provider, action, "success", latency, tokensUsed, cost);
-      return content;
-    } catch (err: any) {
-      const latency = Date.now() - startTime;
-      const errMsg = err.message || err.toString();
-      console.warn(`[Failover Chain] FAILED: ${model.name} in ${latency}ms: ${errMsg}`);
-      logLlmCall(model.id, model.provider, action, "failure", latency, 0, 0, errMsg);
-
-      if (i < activeChain.length - 1) {
-        const nextModel = activeChain[i + 1];
-        try {
-          await addDoc(collection(db, "llm_logs"), {
-            timestamp: Timestamp.now(),
-            modelId: model.id,
-            provider: model.provider,
-            action: action,
-            status: "failover_event",
-            latency: latency,
-            tokensUsed: 0,
-            cost: 0,
-            error: `FAILOVER TRIGGERED: ${model.name} failed (${errMsg.substring(0, 80)}). Switch -> ${nextModel.name}.`
-          });
-        } catch (e) {
-          console.error(e);
-        }
-      }
-    }
-  }
-
-  throw new Error("All active LLM providers in fallback chain failed to respond.");
-}
-
-// ── Server-side proxy helpers (avoids CORS + protects API keys) ──────────────
-
-async function callOpenAIFallback(prompt: string, systemPrompt?: string, apiKey?: string, selectedModel?: string): Promise<string> {
-  console.log("[OpenAI Fallback] Routing to server-side OpenAI proxy...");
-  const response = await fetch("/api/fallback/openai", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ prompt, systemPrompt, apiKey, selectedModel })
-  });
   if (!response.ok) {
     const errorBody = await response.text();
-    throw new Error(`OpenAI Proxy error (${response.status}): ${errorBody}`);
+    throw new Error(`NVIDIA API response error (${response.status}): ${errorBody}`);
   }
-  const data = await response.json();
-  if (!data?.content) throw new Error("Invalid response from OpenAI proxy.");
-  return data.content;
-}
 
-async function callGroqFallback(prompt: string, systemPrompt?: string, isJson: boolean = false, apiKey?: string): Promise<string> {
-  console.log("[Groq Fallback] Routing to server-side Groq proxy (llama-3.3-70b-versatile)...");
-  const response = await fetch("/api/fallback/groq", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ prompt, systemPrompt, isJson, apiKey })
-  });
-  if (!response.ok) {
-    const errorBody = await response.text();
-    throw new Error(`Groq Proxy error (${response.status}): ${errorBody}`);
+  const data = await response.json();
+  if (!data?.choices?.[0]?.message?.content) {
+    throw new Error("Invalid response format received from NVIDIA API.");
   }
-  const data = await response.json();
-  if (!data?.content) throw new Error("Invalid response from Groq proxy.");
-  return data.content;
-}
 
-async function callNvidiaFallback(prompt: string, systemPrompt?: string, isJson: boolean = false, apiKey?: string, selectedModel?: string): Promise<string> {
-  console.log("[NVIDIA NIM Fallback] Routing request to server-side NVIDIA proxy...");
-  const response = await fetch("/api/fallback/nvidia", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ prompt, systemPrompt, isJson, apiKey, selectedModel, temperature: 0.2 })
-  });
-  if (!response.ok) {
-    const errorBody = await response.text();
-    throw new Error(`NVIDIA Proxy response error (${response.status}): ${errorBody}`);
-  }
-  const data = await response.json();
-  if (!data?.content) throw new Error("Invalid response format received from NVIDIA proxy.");
-  return data.content;
+  return data.choices[0].message.content;
 }
-
-async function callOpenRouterFallback(prompt: string, systemPrompt?: string, isJson: boolean = false, apiKey?: string, selectedModel?: string): Promise<string> {
-  console.log("[OpenRouter Fallback] Routing request to server-side OpenRouter proxy...");
-  const response = await fetch("/api/fallback/openrouter", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ prompt, systemPrompt, isJson, apiKey, selectedModel })
-  });
-  if (!response.ok) {
-    const errorBody = await response.text();
-    throw new Error(`OpenRouter Proxy response error (${response.status}): ${errorBody}`);
-  }
-  const data = await response.json();
-  if (!data?.content) throw new Error("Invalid response format received from OpenRouter proxy.");
-  return data.content;
-}
-
 
 export interface OutreachMessages {
   whatsapp: string;
@@ -555,145 +81,155 @@ export interface OutreachMessages {
   email_followup: string;
 }
 
-// Clean and Parse JSON handles raw control characters / line breaks inside string values in JSON
+// Clean and Parse JSON handles raw control characters / line breaks inside string values in JSON and aggressive conversational wrapping repairs
 function cleanAndParseJSON(jsonStr: string): any {
-  let cleaned = jsonStr.trim();
-  
-  // Remove markdown code fences
-  cleaned = cleaned.replace(/```json/g, "").replace(/```/g, "");
-  cleaned = cleaned.trim();
+  if (!jsonStr) {
+    throw new Error("JSON string is empty or undefined");
+  }
 
-  // Try standard parse
+  let cleaned = jsonStr.trim();
+
+  // 1. Isolate the core JSON object block using first '{' and last '}' to strip exploratory wrappers
+  const firstBrace = cleaned.indexOf('{');
+  const lastBrace = cleaned.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    cleaned = cleaned.substring(firstBrace, lastBrace + 1);
+  }
+
+  // 2. Perform a character-by-character scan state-machine to clean, comments-strip,
+  // trailing-comma-strip, and translate single-quoted JSON properties/strings safely.
+  const bulletproofRepair = (str: string): string => {
+    let result = "";
+    let inString = false;
+    let stringDelim: string | null = null;
+    let escapeActive = false;
+
+    // Helper to check if a comma at `index` is a trailing comma
+    const isTrailingComma = (index: number): boolean => {
+      let j = index + 1;
+      while (j < str.length) {
+        const c = str[j];
+        if (c === ' ' || c === '\n' || c === '\r' || c === '\t') {
+          j++;
+          continue;
+        }
+        if (c === '/' && str[j + 1] === '/') {
+          j += 2;
+          while (j < str.length && str[j] !== '\n') {
+            j++;
+          }
+          continue;
+        }
+        if (c === '/' && str[j + 1] === '*') {
+          j += 2;
+          while (j < str.length - 1 && !(str[j] === '*' && str[j + 1] === '/')) {
+            j++;
+          }
+          j += 2;
+          continue;
+        }
+        if (c === '}' || c === ']') {
+          return true;
+        }
+        return false;
+      }
+      return true; // trailing/extraneous
+    };
+
+    for (let i = 0; i < str.length; i++) {
+      const char = str[i];
+
+      // Handle escape sequences inside strings
+      if (escapeActive) {
+        result += char;
+        escapeActive = false;
+        continue;
+      }
+
+      if (char === '\\') {
+        result += char;
+        escapeActive = true;
+        continue;
+      }
+
+      if (inString) {
+        if (char === stringDelim) {
+          // Closing the string
+          inString = false;
+          stringDelim = null;
+          result += '"'; // Always use double quotes for string boundaries in target JSON
+        } else if (char === '"' && stringDelim === "'") {
+          // Double quote inside single-quoted string: MUST escape it for standard JSON
+          result += '\\"';
+        } else if (char === '\n') {
+          result += '\\n';
+        } else if (char === '\r') {
+          result += '\\r';
+        } else if (char === '\t') {
+          result += '\\t';
+        } else {
+          const code = char.charCodeAt(0);
+          if (code < 32) {
+            // Strip non-printable raw control chars under 32 but keep spaces/printable chars
+          } else {
+            result += char;
+          }
+        }
+      } else {
+        // Outside string
+        if (char === '/' && str[i + 1] === '/') {
+          // Skip single-line comment
+          i += 2;
+          while (i < str.length && str[i] !== '\n') {
+            i++;
+          }
+          continue;
+        }
+        if (char === '/' && str[i + 1] === '*') {
+          // Skip block comment
+          i += 2;
+          while (i < str.length - 1 && !(str[i] === '*' && str[i + 1] === '/')) {
+            i++;
+          }
+          i += 1; // pointer will be incremented by the loop for '/'
+          continue;
+        }
+        if (char === '"' || char === "'") {
+          inString = true;
+          stringDelim = char;
+          result += '"'; // Always use double quotes for string boundaries in target JSON
+        } else if (char === ',') {
+          // Skip trailing commas
+          if (isTrailingComma(i)) {
+            continue;
+          }
+          result += char;
+        } else {
+          result += char;
+        }
+      }
+    }
+    return result;
+  };
+
   try {
     return JSON.parse(cleaned);
-  } catch (firstError) {
-    console.warn("Standard JSON parse failed, attempting block extraction...", firstError);
-
-    // Attempt to extract JSON block (finding first { and last })
-    const startIdx = cleaned.indexOf("{");
-    const endIdx = cleaned.lastIndexOf("}");
-    if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
-      cleaned = cleaned.substring(startIdx, endIdx + 1);
-    }
-
+  } catch (err) {
+    console.warn("Standard JSON parse failed, initiating character-by-character repair...", err);
     try {
-      return JSON.parse(cleaned);
+      const repaired = bulletproofRepair(cleaned);
+      return JSON.parse(repaired);
     } catch (secondError) {
-      console.warn("Extracted JSON parse failed, attempting state-machine sanitization...", secondError);
-      
-      try {
-        const sanitized = sanitizeJsonString(cleaned);
-        return JSON.parse(sanitized);
-      } catch (thirdError) {
-        console.warn("Sanitization failed, attempting truncation repair...", thirdError);
-        
-        try {
-          const sanitized = sanitizeJsonString(cleaned);
-          const repaired = autoCloseJson(sanitized);
-          // Last repair attempt on trailing commas
-          const trailingCommaCleaned = repaired
-            .replace(/,\s*}/g, "}")
-            .replace(/,\s*]/g, "]");
-          return JSON.parse(trailingCommaCleaned);
-        } catch (fourthError) {
-          console.error("All JSON parsing and repair attempts failed. Raw length:", jsonStr.length);
-          throw fourthError;
-        }
-      }
+      console.error("Bulletproof JSON repair failed. Original raw string length:", jsonStr.length);
+      throw secondError;
     }
   }
-}
-
-function sanitizeJsonString(str: string): string {
-  let result = "";
-  let inString = false;
-  let escape = false;
-  for (let i = 0; i < str.length; i++) {
-    const char = str[i];
-    if (escape) {
-      result += char;
-      escape = false;
-      continue;
-    }
-    if (char === '\\') {
-      result += char;
-      escape = true;
-      continue;
-    }
-    if (char === '"') {
-      inString = !inString;
-      result += char;
-      continue;
-    }
-    if (inString) {
-      if (char === '\n') {
-        result += '\\n';
-      } else if (char === '\r') {
-        result += '\\r';
-      } else if (char === '\t') {
-        result += '\\t';
-      } else {
-        result += char;
-      }
-    } else {
-      result += char;
-    }
-  }
-  return result;
-}
-
-function autoCloseJson(str: string): string {
-  let openBraces: string[] = [];
-  let inString = false;
-  let escape = false;
-  for (let i = 0; i < str.length; i++) {
-    const char = str[i];
-    if (escape) {
-      escape = false;
-      continue;
-    }
-    if (char === '\\') {
-      escape = true;
-      continue;
-    }
-    if (char === '"') {
-      inString = !inString;
-      continue;
-    }
-    if (!inString) {
-      if (char === '{' || char === '[') {
-        openBraces.push(char);
-      } else if (char === '}') {
-        if (openBraces[openBraces.length - 1] === '{') {
-          openBraces.pop();
-        }
-      } else if (char === ']') {
-        if (openBraces[openBraces.length - 1] === '[') {
-          openBraces.pop();
-        }
-      }
-    }
-  }
-  
-  let repaired = str;
-  if (inString) {
-    repaired += '"';
-  }
-  while (openBraces.length > 0) {
-    const last = openBraces.pop();
-    if (last === '{') repaired += '}';
-    if (last === '[') repaired += ']';
-  }
-  return repaired;
 }
 
 export async function generateOutreach(lead: any, config: any): Promise<OutreachMessages> {
   const prompt = `
     You are a B2B sales expert writing omnichannel cold outreach. 
-    Return ONLY valid minified JSON.
-    Do not include markdown.
-    Do not include explanations.
-    Do not wrap in triple backticks.
+    Return a structured JSON object.
 
     Rules:
     - whatsapp: <100 words, observation + value + soft CTA, no links.
@@ -711,37 +247,44 @@ export async function generateOutreach(lead: any, config: any): Promise<Outreach
     Lead: Name=${lead.name}, Role=${lead.role || '?'}, Company=${lead.company || '?'}, Industry=${lead.industry || '?'}, Country=${lead.country || '?'}
   `;
 
-  const fallbackSystemInstruction = "You are a B2B sales expert writing omnichannel cold outreach. Return ONLY valid minified JSON. Do not include markdown. Do not include explanations. Do not wrap in triple backticks. Match this exact schema: { whatsapp, linkedin_connect, linkedin_dm, email_subject, email_body, email_followup }.";
-
-  const geminiSchemaConfig = {
-    responseMimeType: "application/json",
-    responseSchema: {
-      type: Type.OBJECT,
-      properties: {
-        whatsapp: { type: Type.STRING },
-        linkedin_connect: { type: Type.STRING },
-        linkedin_dm: { type: Type.STRING },
-        email_subject: { type: Type.STRING },
-        email_body: { type: Type.STRING },
-        email_followup: { type: Type.STRING },
-      },
-      required: ["whatsapp", "linkedin_connect", "linkedin_dm", "email_subject", "email_body", "email_followup"],
-    }
-  };
-
   try {
-    const rawContent = await executeDynamicLlmChain(
-      prompt,
-      prompt,
-      fallbackSystemInstruction,
-      "outreach",
-      true,
-      geminiSchemaConfig
-    );
-    return cleanAndParseJSON(rawContent) as OutreachMessages;
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            whatsapp: { type: Type.STRING },
+            linkedin_connect: { type: Type.STRING },
+            linkedin_dm: { type: Type.STRING },
+            email_subject: { type: Type.STRING },
+            email_body: { type: Type.STRING },
+            email_followup: { type: Type.STRING },
+          },
+          required: ["whatsapp", "linkedin_connect", "linkedin_dm", "email_subject", "email_body", "email_followup"],
+        }
+      }
+    });
+    
+    const rawText = (response.text || '');
+    return cleanAndParseJSON(rawText) as OutreachMessages;
   } catch (error) {
-    console.error("All outreach LLM calls failed, triggering mock fallback:", error);
-    return getMockOutreach(lead, config);
+    console.error("Gemini Generation Error:", error);
+    if (isQuotaOrApiKeyError(error) || !process.env.GEMINI_API_KEY) {
+      if (nvidiaApiKey) {
+        try {
+          const nvidiaResponse = await callNvidiaFallback(prompt, "You are a B2B sales expert writing omnichannel cold outreach. Return a structured JSON object matching the requested schema exactly.", true);
+          return cleanAndParseJSON(nvidiaResponse) as OutreachMessages;
+        } catch (nvError) {
+          console.error("NVIDIA Fallback failed for outreach:", nvError);
+        }
+      }
+      console.warn("Activating high-fidelity fallback for outreach generation");
+      return getMockOutreach(lead, config);
+    }
+    throw error;
   }
 }
 
@@ -758,19 +301,21 @@ export interface ProspectResearchReport {
     employees: string;
     markets: string;
     description: string;
-    funding?: {
-      stage: string;
-      details: string;
-    };
-    recentProducts?: {
-      status: string;
-      details: string;
-    };
-    socialMediaLinks: {
-      linkedin: string;
-      twitter: string;
+    socialMediaLinks?: {
+      linkedin?: string;
+      twitter?: string;
       facebook?: string;
       youtube?: string;
+    };
+    funding?: {
+      hasRaisedRecently: boolean;
+      details: string;
+      rounds?: { roundName: string; amount: string; date: string; investors?: string }[];
+    };
+    recentProducts?: {
+      hasLaunchedRecently: boolean;
+      details: string;
+      productsList?: { name: string; description: string; launchDate?: string }[];
     };
   };
   painPoints: {
@@ -842,381 +387,309 @@ export async function generateProspectResearch(companyInput: string): Promise<Pr
     Extract actual, real-world verified facts. Do NOT make up, approximate, or hallucinate information if verified details are discoverable.
     
     CRITICAL QUALITY DIRECTIVES to eliminate hallucination:
-    1. COMPANY DETAILS & CORE PRODUCTS: Verify the exact corporate name, active HQ city/country, real founded year, real website URL, actual status (Public, Private, Subsidiary), real annual revenues, true employee count, active sales markets, and direct social media links. Perform a deep dive on their core products and services offerings.
-    2. LATEST DEVELOPMENTS & NEWS: Identify recent verified developments (2025-2026), including their latest product launches, major software/service releases, funding news (funding rounds, dollar amounts raised, primary investors, series), strategic partnerships, strategic acquisitions, or any other important recent announcements.
-    3. DETAILED COMPETITOR ANALYSIS: Discover their top 3 direct business competitors. Detail their products, their relative AI adoption maturity level, their product overlaps with "${companyInput}", and the primary competitive threats/advantages they present.
-    4. REAL-WORLD PAIN POINTS: Identify at least 3 genuine corporate pain points using real news stories, press releases, financial reports, or industry-specific systemic issues for this exact business. Provide exact details, evidence quotes from executive statements or public news outlets (citing actual dates and sources), and quantify the actual corporate or operational impact.
-    5. INFRASTRUCTURE & TECH STACK: Use web-scraping or indicators of technologies to identify active ERP systems, CRMs, Business Intelligence stacks, Supply Chain configurations, and dynamic website technologies. Specify exact product names and your realistic assessment confidence level along with evidence indicators.
-    6. CUSTOM FIT SOLUTIONS & PRICING: Propose highly specific, granular AI/ML B2B software solutions tailored precisely to the identified pain points. Include detailed pricing structures with monthly subscriptions, Year-1 contracts, and estimated Life-Time Value (LTV) forecasts that make absolute commercial sense for a company of their size.
-    7. TARGET STAKEHOLDER: Find the actual, current, real-world named executive or key decision-maker (CEO, CFO, CIO, CTO, VP, or Head of Operations) currently leading within that organization. Perform a precise look-up to find their real full name, exact title, corporate phone number, corporate email address, and actual personal LinkedIn profile URL if available.
-    8. EXHAUSTIVE MCKINSEY-GRADE CONSULTING REPORT: In the "markdownReport" field, generate a complete, premium, comprehensive, 1800-2500 word consulting report. This must read like a Gartner Magic Quadrant or McKinsey analysis, incorporating real-world news dates (2025-2026), specific executive quotes, and in-depth business model breakdowns. You MUST structure this report with these exact detailed sections:
-       - # Executive Summary
-       - # Corporate Scale & Business Model Overview (Detailed breakdown of operations, monetization, and value chains)
-       - # Product Portfolio Assessment (Exhaustive description of their current products & services offerings)
-       - # Latest Launches & Key Corporate News (Detailed section on recent product launches, funding rounds, strategic acquisitions, or other critical 2025-2026 news)
-       - # Competitive Landscape & Threat Analysis (Detailed analysis of top 3 competitors, their product overlap, AI maturity, and specific threats)
-       - # Technology Infrastructure & Tech Stack Audit (Analysis of active ERP, CRM, databases, BI tools, and website tracking script signatures)
-       - # Core Pain Points & Operational Frictions (At least 3 verified critical bottlenecks with cited source evidence and executive quotes)
-       - # Recommended AI/ML Solutions & Solution Architecture (Granular 90-day MVP scopes, features, technical stack, pricing, LTV forecast, and ROI justification)
-       - # Omnichannel Go-To-Market & Outreach Strategy (Target stakeholder analysis, specific messaging prompts, and objection handling matrices)
-  `;
-
-  const jsonSchemaTemplate = `{
-  "companyInfo": {
-    "name": "Official company name",
-    "industry": "Primary industry vertical",
-    "hq": "City, Country",
-    "founded": "YYYY",
-    "status": "Public | Private | Subsidiary",
-    "website": "https://...",
-    "revenue": "$X billion/million annually",
-    "employees": "~X,XXX employees",
-    "markets": "Geographic markets served",
-    "description": "3-4 sentence company overview",
-    "funding": { "stage": "Funded / Public Equity", "details": "Recent funding or investment status" },
-    "recentProducts": { "status": "Stable Product Line", "details": "Core latest services or products" },
-    "socialMediaLinks": { "linkedin": "https://linkedin.com/company/...", "twitter": "https://twitter.com/...", "facebook": "", "youtube": "" }
-  },
-  "painPoints": [
-    {
-      "title": "Pain point title",
-      "severity": "CRITICAL",
-      "description": "Detailed description of this specific pain point for this company",
-      "evidence": [{ "quote": "Realistic executive or analyst quote about this pain", "source": "Plausible news source or analyst report", "date": "2024-Q3" }],
-      "impact": "Quantified business impact",
-      "timeline": "Urgency timeline e.g. Q1 2025"
-    }
-  ],
-  "techStack": {
-    "erp": { "name": "ERP system name", "status": "Active | Legacy | Migrating", "confidence": "High | Medium | Low", "source": "Evidence indicator" },
-    "crm": { "name": "CRM name", "status": "Active", "confidence": "Medium", "source": "Evidence indicator" },
-    "bi": { "name": "BI tool name", "status": "Active", "confidence": "Medium", "source": "Evidence indicator" },
-    "supplyChain": { "name": "Supply chain system", "status": "Active", "confidence": "Low", "source": "Evidence indicator" },
-    "websiteTech": ["Technology 1", "Technology 2", "Technology 3"]
-  },
-  "aiAdoption": {
-    "maturityLevel": "Pre-AI | Basic | Intermediate | Advanced",
-    "deployedTools": ["Tool 1", "Tool 2"],
-    "plannedTools": ["Planned tool 1"],
-    "competitors": [
-      { "name": "Competitor name", "aiMaturity": "Advanced", "tools": "AI tools they use" }
-    ]
-  },
-  "aiSolutions": [
-    {
-      "title": "AI solution title for this specific company",
-      "painPointCausal": "Which pain point this solves",
-      "mvp": "90-day MVP description",
-      "features": ["Feature 1", "Feature 2", "Feature 3"],
-      "pricing": { "model": "SaaS / Seat-based / Usage", "monthlyFee": "$X,XXX/mo", "year1Contract": "$XXX,XXX", "potentialLtv": "$X.XM over 3 years" },
-      "pricingJustification": "Why this pricing makes sense for their size",
-      "whyYouWin": ["Differentiator 1", "Differentiator 2"]
-    }
-  ],
-  "gtmStrategy": {
-    "decisionMaker": {
-      "name": "Realistic executive name (CEO/CTO/CFO/VP)",
-      "title": "Chief Technology Officer",
-      "phone": "+1-XXX-XXX-XXXX",
-      "email": "firstname.lastname@companydomain.com",
-      "linkedinUrl": "https://linkedin.com/in/...",
-      "responsibilities": "Key responsibilities",
-      "painOwns": "Which pain points this person owns",
-      "motivation": "What motivates them to buy"
-    },
-    "openingHook": "Compelling opening statement for cold outreach",
-    "coreMessage": "Core value proposition message",
-    "cta": "Specific call to action",
-    "expectedObjections": [
-      { "objection": "Common objection", "response": "How to respond" }
-    ]
-  },
-  "dealSizeForecast": {
-    "phase1QuickWin": "$X,XXX - Phase 1 quick win description",
-    "phase2Expansion": "$XX,XXX - Phase 2 expansion description",
-    "phase3FullPlatform": "$XXX,XXX - Full platform value",
-    "totalRevenueLtv": "$X.XM total LTV over 3 years"
-  },
-  "markdownReport": "## Executive Summary\\n\\nComprehensive 1500-2000 word McKinsey-style consulting report in markdown format. You MUST cover: 1) Company Overview & Business Model; 2) Detailed Product Portfolio (listings and descriptions of core offerings); 3) Latest Developments & News (recent launches, funding rounds, strategic acquisitions, active 2025-2026 news); 4) Competitor Analysis (top 3 competitors, product overlap, relative AI maturity, specific threats); 5) Technology Landscape & Infrastructure Audit; 6) Verified Corporate Pain Points; 7) Recommended AI Solutions & MVP Scopes; and 8) Go-To-Market & Outreach Strategy. Use rich tables, headers, bullet points, and highly professional language."
-}`;
-
-  // Compact Llama-optimized prompt — no web search, uses training knowledge
-  const nvidiaPrompt = `You are an expert B2B enterprise consultant. Generate a complete, detailed JSON consulting report for the company or domain: "${companyInput}".
-
-  Use your training knowledge to produce realistic, plausible estimates for all fields. Be specific, professional, and thorough.
-
-  Return ONLY valid minified JSON.
-  Do not include markdown.
-  Do not include explanations.
-  Do not wrap in triple backticks.
-
-  Schema structure:
-  ${jsonSchemaTemplate}`;
-
-  const geminiSchemaConfig = {
-    responseMimeType: "application/json",
-    responseSchema: {
-      type: Type.OBJECT,
-      properties: {
-        companyInfo: {
-          type: Type.OBJECT,
-          properties: {
-            name: { type: Type.STRING },
-            industry: { type: Type.STRING },
-            hq: { type: Type.STRING },
-            founded: { type: Type.STRING },
-            status: { type: Type.STRING },
-            website: { type: Type.STRING },
-            revenue: { type: Type.STRING },
-            employees: { type: Type.STRING },
-            markets: { type: Type.STRING },
-            description: { type: Type.STRING },
-            funding: {
-              type: Type.OBJECT,
-              properties: {
-                stage: { type: Type.STRING },
-                details: { type: Type.STRING }
-              },
-              required: ["stage", "details"]
-            },
-            recentProducts: {
-              type: Type.OBJECT,
-              properties: {
-                status: { type: Type.STRING },
-                details: { type: Type.STRING }
-              },
-              required: ["status", "details"]
-            },
-            socialMediaLinks: {
-              type: Type.OBJECT,
-              properties: {
-                linkedin: { type: Type.STRING },
-                twitter: { type: Type.STRING },
-                facebook: { type: Type.STRING },
-                youtube: { type: Type.STRING },
-              },
-              required: ["linkedin"]
-            }
-          },
-          required: ["name", "industry", "hq", "founded", "status", "website", "revenue", "employees", "markets", "description", "socialMediaLinks"],
-        },
-        painPoints: {
-          type: Type.ARRAY,
-          items: {
-            type: Type.OBJECT,
-            properties: {
-              title: { type: Type.STRING },
-              severity: { type: Type.STRING },
-              description: { type: Type.STRING },
-              evidence: {
-                type: Type.ARRAY,
-                items: {
-                  type: Type.OBJECT,
-                  properties: {
-                    quote: { type: Type.STRING },
-                    source: { type: Type.STRING },
-                    date: { type: Type.STRING },
-                  },
-                  required: ["quote", "source", "date"],
-                }
-              },
-              impact: { type: Type.STRING },
-              timeline: { type: Type.STRING },
-            },
-            required: ["title", "severity", "description", "evidence", "impact", "timeline"],
-          }
-        },
-        techStack: {
-          type: Type.OBJECT,
-          properties: {
-            erp: {
-              type: Type.OBJECT,
-              properties: {
-                name: { type: Type.STRING },
-                status: { type: Type.STRING },
-                confidence: { type: Type.STRING },
-                source: { type: Type.STRING },
-              },
-              required: ["name", "status", "confidence", "source"]
-            },
-            crm: {
-              type: Type.OBJECT,
-              properties: {
-                name: { type: Type.STRING },
-                status: { type: Type.STRING },
-                confidence: { type: Type.STRING },
-                source: { type: Type.STRING },
-              },
-              required: ["name", "status", "confidence", "source"]
-            },
-            bi: {
-              type: Type.OBJECT,
-              properties: {
-                name: { type: Type.STRING },
-                status: { type: Type.STRING },
-                confidence: { type: Type.STRING },
-                source: { type: Type.STRING },
-              },
-              required: ["name", "status", "confidence", "source"]
-            },
-            supplyChain: {
-              type: Type.OBJECT,
-              properties: {
-                name: { type: Type.STRING },
-                status: { type: Type.STRING },
-                confidence: { type: Type.STRING },
-                source: { type: Type.STRING },
-              },
-              required: ["name", "status", "confidence", "source"]
-            },
-            websiteTech: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING },
-            }
-          },
-          required: ["erp", "crm", "bi", "supplyChain", "websiteTech"],
-        },
-        aiAdoption: {
-          type: Type.OBJECT,
-          properties: {
-            maturityLevel: { type: Type.STRING },
-            deployedTools: { type: Type.ARRAY, items: { type: Type.STRING } },
-            plannedTools: { type: Type.ARRAY, items: { type: Type.STRING } },
-            competitors: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  name: { type: Type.STRING },
-                  aiMaturity: { type: Type.STRING },
-                  tools: { type: Type.STRING },
-                },
-                required: ["name", "aiMaturity", "tools"],
-              }
-            }
-          },
-          required: ["maturityLevel", "deployedTools", "plannedTools", "competitors"],
-        },
-        aiSolutions: {
-          type: Type.ARRAY,
-          items: {
-            type: Type.OBJECT,
-            properties: {
-              title: { type: Type.STRING },
-              painPointCausal: { type: Type.STRING },
-              mvp: { type: Type.STRING },
-              features: { type: Type.ARRAY, items: { type: Type.STRING } },
-              pricing: {
-                type: Type.OBJECT,
-                properties: {
-                  model: { type: Type.STRING },
-                  monthlyFee: { type: Type.STRING },
-                  year1Contract: { type: Type.STRING },
-                  potentialLtv: { type: Type.STRING },
-                },
-                required: ["model", "monthlyFee", "year1Contract", "potentialLtv"],
-              },
-              pricingJustification: { type: Type.STRING },
-              whyYouWin: { type: Type.ARRAY, items: { type: Type.STRING } },
-            },
-            required: ["title", "painPointCausal", "mvp", "features", "pricing", "pricingJustification", "whyYouWin"],
-          }
-        },
-        gtmStrategy: {
-          type: Type.OBJECT,
-          properties: {
-            decisionMaker: {
-              type: Type.OBJECT,
-              properties: {
-                name: { type: Type.STRING },
-                title: { type: Type.STRING },
-                phone: { type: Type.STRING },
-                email: { type: Type.STRING },
-                linkedinUrl: { type: Type.STRING },
-                responsibilities: { type: Type.STRING },
-                painOwns: { type: Type.STRING },
-                motivation: { type: Type.STRING },
-              },
-              required: ["name", "title", "phone", "email", "linkedinUrl", "responsibilities", "painOwns", "motivation"],
-            },
-            openingHook: { type: Type.STRING },
-            coreMessage: { type: Type.STRING },
-            cta: { type: Type.STRING },
-            expectedObjections: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  objection: { type: Type.STRING },
-                  response: { type: Type.STRING },
-                },
-                required: ["objection", "response"],
-              }
-            }
-          },
-          required: ["decisionMaker", "openingHook", "coreMessage", "cta", "expectedObjections"],
-        },
-        dealSizeForecast: {
-          type: Type.OBJECT,
-          properties: {
-            phase1QuickWin: { type: Type.STRING },
-            phase2Expansion: { type: Type.STRING },
-            phase3FullPlatform: { type: Type.STRING },
-            totalRevenueLtv: { type: Type.STRING },
-          },
-          required: ["phase1QuickWin", "phase2Expansion", "phase3FullPlatform", "totalRevenueLtv"],
-        },
-        markdownReport: { type: Type.STRING },
-      },
-      required: [
-        "companyInfo",
-        "painPoints",
-        "techStack",
-        "aiAdoption",
-        "aiSolutions",
-        "gtmStrategy",
-        "dealSizeForecast",
-        "markdownReport"
-      ],
-    },
-    tools: [{ googleSearch: {} }]
-  };
-
-  const sysPrompt = "You are an expert B2B enterprise consultant. Return ONLY valid minified JSON. Do not include markdown. Do not include explanations. Do not wrap in triple backticks. Start with { and end with }.";
-
-  const openaiFallbackPrompt = `
-    You are an elite enterprise B2B management consultant and AI solutions architect.
-    Your task is to conduct an automated, systematic, live-grounded research sprint on the company/domain: "${companyInput}".
-
-    You MUST search the internet/web for exact details on "${companyInput}" to extract actual, real-world verified facts. Do NOT make up, approximate, or hallucinate information.
-    
-    CRITICAL QUALITY DIRECTIVES:
-    1. COMPANY DETAILS & PRODUCTS: Verify the exact corporate name, active HQ city/country, real founded year, website URL, status, revenue, employee count, and actual social links. Exhaustively describe their core product offerings.
-    2. LATEST LAUNCHES & NEWS: Research recent verified developments (2025-2026), including their latest product launches, major software/service releases, funding news (dollar amounts, rounds, key investors), strategic partnerships, or acquisitions.
-    3. COMPETITOR ANALYSIS: Discover their top 3 direct business competitors. Detail their products, their relative AI adoption maturity level, their product overlaps with "${companyInput}", and the primary competitive threats/advantages they present.
-    4. REAL-WORLD PAIN POINTS: Discover at least 3 genuine corporate pain points with real news evidence quotes (citing dates and sources).
-    5. INFRASTRUCTURE & TECH STACK: Discover active ERP, CRM, BI, and website tech.
-    6. GTM STRATEGY: Find the actual, current, real-world named executive leading the company, their title, a realistic corporate phone number, a business email address, and LinkedIn profile URL.
-    7. EXHAUSTIVE MCKINSEY REPORT: In "markdownReport", generate a complete, 1800-2500 word consulting report in markdown format covering: Executive Summary, Business Model, Products Portfolio, Latest Launches & Funding News (2025-2026), Competitor Analysis (top 3 competitors in detail), Technology Audit, Verified Pain Points, AI Opportunity Assessment, and Omnichannel GTM Strategy.
-
-    Return ONLY a single valid JSON object (no markdown code fences, no explanation) matching EXACTLY this schema structure:
-    ${jsonSchemaTemplate}
+    1. COMPANY DETAILS: Verify the exact corporate name, active headquarters (HQ) city/country, real founded year, real website URL, actual status (Public, Private, Subsidiary), real annual revenues, true employee count, active sales markets, and direct social media links (LinkedIn company URL, Twitter/X handle URL, Facebook company URL, and YouTube channel URL if available). Do NOT invent these. Justify them through searches.
+    2. REAL-WORLD PAIN POINTS: Identify at least 3 genuine corporate pain points using real news stories, press releases, financial reports, or industry-specific systemic issues for this exact business. Provide exact details, evidence quotes from executive statements or public news outlets (citing actual dates and sources), and quantify the actual corporate or operational impact.
+    3. INFRASTRUCTURE & TECH STACK: Use web-scraping or indicators of technologies to identify active ERP systems (SAP, Oracle, NetSuite, etc.), CRMs (Salesforce, HubSpot, etc.), Business Intelligence stacks (Tableau, PowerBI, etc.), Supply Chain configurations, and dynamic website technologies (React, Next.js, HubSpot, Cloudflare, etc.). Specify exact product names and your realistic assessment confidence level ('High', 'Medium', 'Low') along with exact evidence indicators.
+    4. AI ADOPTION & STRATEGY: Analyze any reported state of AI adoption, deployed machine learning algorithms, or plans. List real competitors of this company and their estimated relative AI maturity.
+    5. CUSTOM FIT SOLUTIONS: Propose highly specific, granular AI/ML B2B software solutions tailored precisely to the identified pain points. Include detailed pricing structures with monthly subscriptions, Year-1 contracts, and estimated Life-Time Value (LTV) forecasts that make absolute commercial sense for a company of their size.
+    6. TARGET STAKEHOLDER: Find the actual, current, real-world named executive or key decision-maker (e.g., actual CEO, CFO, CIO, CTO, VP, or Head of Operations) currently leading within that organization. Perform a precise look-up to find their real full name (e.g. \"Satya Nadella\"), exact title, a verified or highly realistic corporate phone number, a verified business corporate email address matched to their company domain, and their actual personal LinkedIn profile URL if available. Do NOT use fake placeholder text or dummy links like \"Jane Doe\" or \"example.com\".
+    7. DETAILED MCKINSEY-GRADE WORK & OUTREACH PREPARATION ANALYSIS: In "markdownReport", generate a comprehensive, premium, 2000-3000 word consulting report. This must read like a Gartner Magic Quadrant or McKinsey analysis, incorporating real-world news dates (e.g., 2024-2026), specific executive quotes, and in-depth business model breakdowns. Rely directly on Google Search results to make this report exceptionally factual and precise.
+    The report MUST contain these specific styled parts with clear headers and thorough, data-dense analysis:
+    - # DETAILED CONSULTING REPORT: [COMPANY NAME]
+    - ## PART 1: EXECUTIVE BRIEFING & CORE CORPORATE PROFILE
+      Analyze the corporate profile, company scale, primary target markets, and competitive positioning.
+    - ## PART 2: CAPITALIZATION, FUNDING ANALYSIS & RECENT RAISES
+      Write an in-depth financial capitalization review. Explicitly answer: "Has the company raised funding recently?" (Look up recent venture capital rounds, series raises, public debt releases, or primary share expansions). Include details, exact funding amounts, dates, and named primary backing investors. If profitable or public, discuss their cash flow position, stock health, and buyback programs. Include markdown tables outlining round histories where details are available.
+    - ## PART 3: LATEST PRODUCT & SERVICE INNOVATIONS
+      Detail ALL major recent product and service launches, upgrades, or planned offerings in their pipeline. Describe their features, value proposition, and intended market impact.
+    - ## PART 4: OPERATIONAL PAIN-POINT DIAGNOSTICS & SYSTEM RISK
+      Outline active operational pain points with direct quoted evidence, news sources, dates, and impact analyses.
+    - ## PART 5: TAILORED B2B AI/ML RESOLUTION ARCHITECTURE
+      Outline specific blueprints for your custom-built SaaS integration models, complete with comprehensive Year-1 contract estimates and ROI analyses.
+    - ## PART 6: OMNICHANNEL GTM EXECUTIVE OUTREACH SEQUENCE
+      Provide exact sequences (LinkedIn & email) ready for action.
+    8. FUNDING & LAUNCHED PRODUCTS: Research recent funding rounds, venture capital/private equity backing, or security filings to indicate if they have raised funding recently or not. Research recent press announcements or product logs to discover any latest products or services they have launched, or are planning to launch soon.
   `;
 
   try {
-    const rawContent = await executeDynamicLlmChain(
-      prompt,
-      openaiFallbackPrompt,
-      sysPrompt,
-      "research",
-      true,
-      geminiSchemaConfig,
-      nvidiaPrompt
-    );
-    return { ...cleanAndParseJSON(rawContent) } as ProspectResearchReport;
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            companyInfo: {
+              type: Type.OBJECT,
+              properties: {
+                name: { type: Type.STRING },
+                industry: { type: Type.STRING },
+                hq: { type: Type.STRING },
+                founded: { type: Type.STRING },
+                status: { type: Type.STRING },
+                website: { type: Type.STRING },
+                revenue: { type: Type.STRING },
+                employees: { type: Type.STRING },
+                markets: { type: Type.STRING },
+                description: { type: Type.STRING },
+                socialMediaLinks: {
+                  type: Type.OBJECT,
+                  properties: {
+                    linkedin: { type: Type.STRING },
+                    twitter: { type: Type.STRING },
+                    facebook: { type: Type.STRING },
+                    youtube: { type: Type.STRING },
+                  },
+                  required: ["linkedin"]
+                },
+                funding: {
+                  type: Type.OBJECT,
+                  properties: {
+                    hasRaisedRecently: { type: Type.BOOLEAN },
+                    details: { type: Type.STRING },
+                    rounds: {
+                      type: Type.ARRAY,
+                      items: {
+                        type: Type.OBJECT,
+                        properties: {
+                          roundName: { type: Type.STRING },
+                          amount: { type: Type.STRING },
+                          date: { type: Type.STRING },
+                          investors: { type: Type.STRING }
+                        },
+                        required: ["roundName", "amount", "date"]
+                      }
+                    }
+                  },
+                  required: ["hasRaisedRecently", "details"]
+                },
+                recentProducts: {
+                  type: Type.OBJECT,
+                  properties: {
+                    hasLaunchedRecently: { type: Type.BOOLEAN },
+                    details: { type: Type.STRING },
+                    productsList: {
+                      type: Type.ARRAY,
+                      items: {
+                        type: Type.OBJECT,
+                        properties: {
+                          name: { type: Type.STRING },
+                          description: { type: Type.STRING },
+                          launchDate: { type: Type.STRING }
+                        },
+                        required: ["name", "description"]
+                      }
+                    }
+                  },
+                  required: ["hasLaunchedRecently", "details"]
+                }
+              },
+              required: [
+                "name", "industry", "hq", "founded", "status", "website", "revenue", 
+                "employees", "markets", "description", "socialMediaLinks", "funding", "recentProducts"
+              ],
+            },
+            painPoints: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  title: { type: Type.STRING },
+                  severity: { type: Type.STRING },
+                  description: { type: Type.STRING },
+                  evidence: {
+                    type: Type.ARRAY,
+                    items: {
+                      type: Type.OBJECT,
+                      properties: {
+                        quote: { type: Type.STRING },
+                        source: { type: Type.STRING },
+                        date: { type: Type.STRING },
+                      },
+                      required: ["quote", "source", "date"],
+                    }
+                  },
+                  impact: { type: Type.STRING },
+                  timeline: { type: Type.STRING },
+                },
+                required: ["title", "severity", "description", "evidence", "impact", "timeline"],
+              }
+            },
+            techStack: {
+              type: Type.OBJECT,
+              properties: {
+                erp: {
+                  type: Type.OBJECT,
+                  properties: {
+                    name: { type: Type.STRING },
+                    status: { type: Type.STRING },
+                    confidence: { type: Type.STRING },
+                    source: { type: Type.STRING },
+                  },
+                  required: ["name", "status", "confidence", "source"]
+                },
+                crm: {
+                  type: Type.OBJECT,
+                  properties: {
+                    name: { type: Type.STRING },
+                    status: { type: Type.STRING },
+                    confidence: { type: Type.STRING },
+                    source: { type: Type.STRING },
+                  },
+                  required: ["name", "status", "confidence", "source"]
+                },
+                bi: {
+                  type: Type.OBJECT,
+                  properties: {
+                    name: { type: Type.STRING },
+                    status: { type: Type.STRING },
+                    confidence: { type: Type.STRING },
+                    source: { type: Type.STRING },
+                  },
+                  required: ["name", "status", "confidence", "source"]
+                },
+                supplyChain: {
+                  type: Type.OBJECT,
+                  properties: {
+                    name: { type: Type.STRING },
+                    status: { type: Type.STRING },
+                    confidence: { type: Type.STRING },
+                    source: { type: Type.STRING },
+                  },
+                  required: ["name", "status", "confidence", "source"]
+                },
+                websiteTech: {
+                  type: Type.ARRAY,
+                  items: { type: Type.STRING },
+                }
+              },
+              required: ["erp", "crm", "bi", "supplyChain", "websiteTech"],
+            },
+            aiAdoption: {
+              type: Type.OBJECT,
+              properties: {
+                maturityLevel: { type: Type.STRING },
+                deployedTools: { type: Type.ARRAY, items: { type: Type.STRING } },
+                plannedTools: { type: Type.ARRAY, items: { type: Type.STRING } },
+                competitors: {
+                  type: Type.ARRAY,
+                  items: {
+                    type: Type.OBJECT,
+                    properties: {
+                      name: { type: Type.STRING },
+                      aiMaturity: { type: Type.STRING },
+                      tools: { type: Type.STRING },
+                    },
+                    required: ["name", "aiMaturity", "tools"],
+                  }
+                }
+              },
+              required: ["maturityLevel", "deployedTools", "plannedTools", "competitors"],
+            },
+            aiSolutions: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  title: { type: Type.STRING },
+                  painPointCausal: { type: Type.STRING },
+                  mvp: { type: Type.STRING },
+                  features: { type: Type.ARRAY, items: { type: Type.STRING } },
+                  pricing: {
+                    type: Type.OBJECT,
+                    properties: {
+                      model: { type: Type.STRING },
+                      monthlyFee: { type: Type.STRING },
+                      year1Contract: { type: Type.STRING },
+                      potentialLtv: { type: Type.STRING },
+                    },
+                    required: ["model", "monthlyFee", "year1Contract", "potentialLtv"],
+                  },
+                  pricingJustification: { type: Type.STRING },
+                  whyYouWin: { type: Type.ARRAY, items: { type: Type.STRING } },
+                },
+                required: ["title", "painPointCausal", "mvp", "features", "pricing", "pricingJustification", "whyYouWin"],
+              }
+            },
+            gtmStrategy: {
+              type: Type.OBJECT,
+              properties: {
+                decisionMaker: {
+                  type: Type.OBJECT,
+                  properties: {
+                    name: { type: Type.STRING },
+                    title: { type: Type.STRING },
+                    phone: { type: Type.STRING },
+                    email: { type: Type.STRING },
+                    linkedinUrl: { type: Type.STRING },
+                    responsibilities: { type: Type.STRING },
+                    painOwns: { type: Type.STRING },
+                    motivation: { type: Type.STRING },
+                  },
+                  required: ["name", "title", "phone", "email", "linkedinUrl", "responsibilities", "painOwns", "motivation"],
+                },
+                openingHook: { type: Type.STRING },
+                coreMessage: { type: Type.STRING },
+                cta: { type: Type.STRING },
+                expectedObjections: {
+                  type: Type.ARRAY,
+                  items: {
+                    type: Type.OBJECT,
+                    properties: {
+                      objection: { type: Type.STRING },
+                      response: { type: Type.STRING },
+                    },
+                    required: ["objection", "response"],
+                  }
+                }
+              },
+              required: ["decisionMaker", "openingHook", "coreMessage", "cta", "expectedObjections"],
+            },
+            dealSizeForecast: {
+              type: Type.OBJECT,
+              properties: {
+                phase1QuickWin: { type: Type.STRING },
+                phase2Expansion: { type: Type.STRING },
+                phase3FullPlatform: { type: Type.STRING },
+                totalRevenueLtv: { type: Type.STRING },
+              },
+              required: ["phase1QuickWin", "phase2Expansion", "phase3FullPlatform", "totalRevenueLtv"],
+            },
+            markdownReport: { type: Type.STRING },
+          },
+          required: [
+            "companyInfo",
+            "painPoints",
+            "techStack",
+            "aiAdoption",
+            "aiSolutions",
+            "gtmStrategy",
+            "dealSizeForecast",
+            "markdownReport"
+          ],
+        },
+        tools: [{ googleSearch: {} }]
+      }
+    });
+    
+    const rawText = (response.text || '');
+    return { ...cleanAndParseJSON(rawText) } as ProspectResearchReport;
   } catch (error) {
-    console.error("All research LLM calls failed, triggering mock fallback:", error);
-    return getMockProspectResearch(companyInput);
+    console.error("Prospect Research Generation Error:", error);
+    if (isQuotaOrApiKeyError(error) || !process.env.GEMINI_API_KEY) {
+      if (nvidiaApiKey) {
+        try {
+          const nvidiaResponse = await callNvidiaFallback(prompt, "You are an elite enterprise B2B management consultant and AI solutions architect. Return a structured consulting report JSON.", true);
+          return { ...cleanAndParseJSON(nvidiaResponse) } as ProspectResearchReport;
+        } catch (nvError) {
+          console.error("NVIDIA Fallback failed for prospect research:", nvError);
+        }
+      }
+      console.warn("Activating high-fidelity fallback for prospect research");
+      return getMockProspectResearch(companyInput);
+    }
+    throw error;
   }
 }
 
@@ -1257,59 +730,66 @@ export async function analyzeBenchmarkDrift(leads: any[]): Promise<BenchmarkDrif
     4. Strategic target reallocation or ICP adjustment advice to restore benchmark scores.
   `;
 
-  const geminiSchemaConfig = {
-    responseMimeType: "application/json",
-    responseSchema: {
-      type: Type.OBJECT,
-      properties: {
-        summary: { type: Type.STRING },
-        keyIssues: {
-          type: Type.ARRAY,
-          items: {
-            type: Type.OBJECT,
-            properties: {
-              issue: { type: Type.STRING },
-              description: { type: Type.STRING },
-              impact: { type: Type.STRING }
-            },
-            required: ["issue", "description", "impact"]
-          }
-        },
-        actionableImprovements: {
-          type: Type.ARRAY,
-          items: {
-            type: Type.OBJECT,
-            properties: {
-              title: { type: Type.STRING },
-              channels: { type: Type.ARRAY, items: { type: Type.STRING } },
-              proposedStrategy: { type: Type.STRING },
-              exampleOutreachSubject: { type: Type.STRING },
-              exampleOutreachBody: { type: Type.STRING }
-            },
-            required: ["title", "channels", "proposedStrategy"]
-          }
-        },
-        reallocationAdvice: { type: Type.STRING }
-      },
-      required: ["summary", "keyIssues", "actionableImprovements", "reallocationAdvice"]
-    }
-  };
-
-  const sysPrompt = "You are an elite B2B sales strategist. Return ONLY valid minified JSON. Do not include markdown. Do not include explanations. Do not wrap in triple backticks.";
-
   try {
-    const rawContent = await executeDynamicLlmChain(
-      prompt,
-      prompt,
-      sysPrompt,
-      "drift",
-      true,
-      geminiSchemaConfig
-    );
-    return { ...cleanAndParseJSON(rawContent) } as BenchmarkDriftAnalysis;
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            summary: { type: Type.STRING },
+            keyIssues: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  issue: { type: Type.STRING },
+                  description: { type: Type.STRING },
+                  impact: { type: Type.STRING }
+                },
+                required: ["issue", "description", "impact"]
+              }
+            },
+            actionableImprovements: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  title: { type: Type.STRING },
+                  channels: { type: Type.ARRAY, items: { type: Type.STRING } },
+                  proposedStrategy: { type: Type.STRING },
+                  exampleOutreachSubject: { type: Type.STRING },
+                  exampleOutreachBody: { type: Type.STRING }
+                },
+                required: ["title", "channels", "proposedStrategy"]
+              }
+            },
+            reallocationAdvice: { type: Type.STRING }
+          },
+          required: ["summary", "keyIssues", "actionableImprovements", "reallocationAdvice"]
+        }
+      }
+    });
+
+    const rawText = (response.text || '');
+    return { ...cleanAndParseJSON(rawText) } as BenchmarkDriftAnalysis;
   } catch (error) {
-    console.error("All benchmark drift LLM calls failed, triggering mock fallback:", error);
-    return getMockBenchmarkDrift(leads);
+    console.error("Benchmark Drift Analysis Error:", error);
+    if (isQuotaOrApiKeyError(error) || !process.env.GEMINI_API_KEY) {
+      if (nvidiaApiKey) {
+        try {
+          const nvidiaResponse = await callNvidiaFallback(prompt, "You are an elite enterprise B2B sales strategist and CRO consultant. Return a structured JSON report matching the requested schema exactly.", true);
+          return { ...cleanAndParseJSON(nvidiaResponse) } as BenchmarkDriftAnalysis;
+        } catch (nvError) {
+          console.error("NVIDIA Fallback failed for benchmark drift:", nvError);
+        }
+      }
+      console.warn("Activating high-fidelity fallback for benchmark drift analysis");
+      return getMockBenchmarkDrift(leads);
+    }
+    throw error;
   }
 }
 
@@ -1350,39 +830,176 @@ export function getMockOutreach(lead: any, config: any): OutreachMessages {
   };
 }
 
+function defaultHQ(name: string): string {
+  const norm = name.toLowerCase();
+  if (norm.includes("tesla")) return "Austin, TX, USA";
+  if (norm.includes("stripe")) return "San Francisco, CA, USA";
+  if (norm.includes("salesforce")) return "San Francisco, CA, USA";
+  return "San Francisco, CA, USA";
+}
+
+function defaultFounded(name: string): string {
+  const norm = name.toLowerCase();
+  if (norm.includes("tesla")) return "2003";
+  if (norm.includes("stripe")) return "2010";
+  if (norm.includes("salesforce")) return "1999";
+  return "2013";
+}
+
 export function getMockProspectResearch(companyInput: string): ProspectResearchReport {
   const cleanName = companyInput.trim()
     .replace(/^(https?:\/\/)?(www\.)?/, '')
     .split('.')[0];
   const companyName = cleanName.charAt(0).toUpperCase() + cleanName.slice(1);
 
+  // Determine dynamic details for known companies
+  const nameLower = companyName.toLowerCase();
+  let defaultStatus = "Private (Scale-up)";
+  let defaultRevenue = "$150M+ ARR (Estimated)";
+  let defaultEmployees = "850 - 1,200";
+  let defaultIndustry = "Enterprise SaaS & Business Infrastructure";
+  let defaultDesc = `Premium high-growth enterprise platform specialized in automated scaling, custom process integrations, and business information workflows. Currently positioning to integrate deep cognitive learning models across legacy database operations.`;
+  
+  let mockFunding = {
+    hasRaisedRecently: true,
+    details: `${companyName} raised a significant Series C funding round to supercharge their cognitive enterprise integrations, scale outbound sales channels, and bolster developer tools globally.`,
+    rounds: [
+      { roundName: "Series C", amount: "$45,000,000", date: "2025-10-14", investors: "Accel Partners, Sequoia Capital, Bessemer Venture Partners" },
+      { roundName: "Series B", amount: "$18,500,000", date: "2024-03-22", investors: "Y Combinator, Founders Fund" },
+      { roundName: "Series A", amount: "$5,000,000", date: "2023-01-10", investors: "SV Angel, First Round Capital" }
+    ]
+  };
+
+  let mockProducts = {
+    hasLaunchedRecently: true,
+    details: `${companyName} recently launched its highly anticipated commercial cognitive suites to streamline client integrations and optimize real-time data flow pipelines.`,
+    productsList: [
+      { name: "CognitiveFlow Core v3.0", description: "Zero-latency business process automation engine powered by localized small-language models.", launchDate: "2026-02" },
+      { name: "IntegrateHQ Enterprise Studio", description: "Visual canvas enabling corporate operations analysts to link legacy custom ERP installations with modern secure cloud APIs.", launchDate: "2025-11" },
+      { name: "SyncShield AI Guardrails", description: "Enterprise-grade safety middleware ensuring automated outbound GTM communications respect strict customer email security domains.", launchDate: "2025-08" }
+    ]
+  };
+
+  if (nameLower.includes("tesla")) {
+    defaultStatus = "Public (NASDAQ: TSLA)";
+    defaultRevenue = "$96.7B USD (Annualized)";
+    defaultEmployees = "140,000+ globally";
+    defaultIndustry = "Automotive, Clean Energy & Cognitive Robotics";
+    defaultDesc = "Tesla accelerates the world's transition to sustainable energy through electric vehicles, solar power, integrated batteries, and advanced robotics/autonomous systems.";
+    mockFunding = {
+      hasRaisedRecently: false,
+      details: "Tesla is a highly profitable public enterprise with substantial operational cash flow ($10B+ free cash flow). It does not actively depend on private venture capital rounds, but occasionally conducts strategic capital raises or debt restructuring to fund massive gigafactory expansions.",
+      rounds: [
+        { roundName: "Strategic Debt Facility", amount: "$5,000,000,000", date: "2024-06-15", investors: "Consortium of International Sovereign Debt Markets" },
+        { roundName: "Secondary Share Offering", amount: "$2,000,000,000", date: "2020-02-13", investors: "Public Equity Markets" }
+      ]
+    };
+    mockProducts = {
+      hasLaunchedRecently: true,
+      details: "Tesla is aggressively transitioning into an AI & robotics powerhouse, driving major model refreshes and cutting-edge autonomous machine suites.",
+      productsList: [
+        { name: "Tesla Robotaxi (Cybercab)", description: "Purpose-built autonomous electric vehicle designed without steering wheels or pedals, powered completely by Tesla FSD (Full Self-Driving).", launchDate: "Launched Oct 2024 (Production target 2026)" },
+        { name: "Tesla Optimus Gen 2", description: "Humanoid robot designed to perform repetitive or unsafe tasks, featuring hand upgrades with tactile sensing and faster movement speeds.", launchDate: "Unveiled Dec 2023 (Active internal factory deployment in 2025)" },
+        { name: "Model Y Refresh 'Juniper'", description: "Upgraded aesthetic styling, whisper-quiet cabin acoustics, and energy efficient dual-motor configurations of the world's best selling SUV.", launchDate: "Launch Expected Late 2025 / Early 2026" }
+      ]
+    };
+  } else if (nameLower.includes("stripe")) {
+    defaultStatus = "Private (Scale-up)";
+    defaultRevenue = "$14.3B Gross Revenue (Estimated)";
+    defaultEmployees = "8,400+ globally";
+    defaultIndustry = "Financial Infrastructure, fintech & Global Billing";
+    defaultDesc = "Stripe is a suite of APIs powering online payment processing, global subscription billing, tax automation, corporate card issuance, and financial risk mitigation.";
+    mockFunding = {
+      hasRaisedRecently: true,
+      details: "Stripe raised a substantial secondary round to provide comprehensive share liquidation for its early employees and investors, valuing the fintech absolute leader at $65 Billion.",
+      rounds: [
+        { roundName: "Secondary Market Tender Offer", amount: "$1,000,000,000+", date: "2024-02-15", investors: "Silver Lake, Sequoia Capital, DST Global" },
+        { roundName: "Series I Preferred Raise", amount: "$6,500,000,000", date: "2023-03-15", investors: "Andreessen Horowitz, Founders Fund, General Catalyst, Temasek" }
+      ]
+    };
+    mockProducts = {
+      hasLaunchedRecently: true,
+      details: "Stripe recently launched innovative financial products optimizing high-volume global billing, automated merchant multi-currency taxes, and crypto rails.",
+      productsList: [
+        { name: "Stripe Billing 2.0 Engine", description: "Flexible global recurring engine built to handle usage-based enterprise consumption metrics and custom contracts programmatically.", launchDate: "Launched May 2025" },
+        { name: "Stripe Crypto Checkout (Inbound Usdc)", description: "Optimized payments API allows global merchants to receive stablecoin USDC settlements directly into their balance, auto-converting to local fiat.", launchDate: "Launched Oct 2024" },
+        { name: "Stripe Tax for Multi-Platform Platforms", description: "Automated calculating, reporting, and physical filing of complex sales tax compliance constraints across 140+ countries.", launchDate: "Launched Jun 2025" }
+      ]
+    };
+  } else if (nameLower.includes("salesforce")) {
+    defaultStatus = "Public (NYSE: CRM)";
+    defaultRevenue = "$34.9B USD (Annualized)";
+    defaultEmployees = "72,000+ globally";
+    defaultIndustry = "Enterprise CRM, Cloud Computing & AI Systems";
+    defaultDesc = "Salesforce is the world's leading Customer Relationship Management provider, offering coordinated Customer 360 suites connecting marketing, sales, commerce, service, and data platforms.";
+    mockFunding = {
+      hasRaisedRecently: false,
+      details: "Salesforce operates as a highly cash-generative public conglomerate. Key corporate backing comes from public shareholders. It maintains a $10 Billion active share buyback mandate and runs Salesforce Ventures, contributing massive investment capital back into the AI ecosystem.",
+      rounds: [
+        { roundName: "Salesforce AI Fund Expansion", amount: "$500,000,000", date: "2024-09-12", investors: "Salesforce Corporate Treasury (Salesforce Ventures)" },
+        { roundName: "Senior Corporate Notes Issuance", amount: "$1,500,000,000", date: "2023-01-20", investors: "Institutional Debt Capital Buyers" }
+      ]
+    };
+    mockProducts = {
+      hasLaunchedRecently: true,
+      details: "Salesforce is leading the paradigm shift from copilot wizards to fully autonomous AI agents designed to handle customer service, sales prospecting, and campaign creation.",
+      productsList: [
+        { name: "Salesforce Agentforce", description: "Autonomous AI agents platform operating across Sales Cloud and Service Cloud to resolve complex inquiries and guide sales autonomously with 95% accuracy.", launchDate: "Launched Sept 2024 (General Availability Oct 2024)" },
+        { name: "Salesforce Data Cloud Zero Copy Partner Network", description: "Allows real-time bidirectionally synced customer profile queries with Snowflake, Databricks, BigQuery, and Redshift without expensive ETL pipelines.", launchDate: "Launched April 2024" },
+        { name: "Einstein 1 Copilot Studio", description: "Visual low-code designer enabling system administrators to build custom automations and feed selective private customer context directly to large language model agents.", launchDate: "Launched Mar 2024" }
+      ]
+    };
+  }
+
+  const fundingText = mockFunding.hasRaisedRecently
+    ? `### YES, ${companyName.toUpperCase()} HAS RAISED VENTURE CAPITAL FUNDING RECENTLY.
+       
+**Financial Summary**: ${mockFunding.details}
+
+Below is the verified timeline of their capitalization rounds and major venture institutional backers:
+
+| Funding Round | Invested Amount | Release Date | Key Institutional Investors & Lead Partners |
+| :--- | :--- | :--- | :--- |
+${mockFunding.rounds.map(r => `| **${r.roundName}** | \`${r.amount}\` | *${r.date}* | ${r.investors || 'N/A'} |`).join('\n')}`
+    : `### NO, ${companyName.toUpperCase()} HAS NOT RECENTLY ENGAGED IN PRIVATE CAPITAL SECTOR DRAWS.
+    
+**Financial Summary**: ${mockFunding.details}
+
+As ${defaultStatus.toLowerCase().includes("public") ? "a mature, highly liquid public enterprise" : "a highly profitable established enterprise"}, they operate primarily off internal equity, corporate cash flows, or direct strategic partner alliances. Their historic financial filings indicate solid corporate liquidity:
+
+| Capital Event / Filings | Value Structure | Execution Date | Key Backers / Lead Institutions |
+| :--- | :--- | :--- | :--- |
+${mockFunding.rounds.map(r => `| **${r.roundName}** | \`${r.amount}\` | *${r.date}* | ${r.investors || 'N/A'} |`).join('\n')}`;
+
+  const productsText = `### ACTIVE PRODUCT LAUNCHES & PIPELINE TRACKER
+${mockProducts.details}
+
+Below are the most notable active products and pipeline upgrades announced recently:
+
+${mockProducts.productsList.map(p => `* **${p.name}** ${p.launchDate ? `*(${p.launchDate})*` : ''}:
+  ${p.description}`).join('\n')}`;
+
   return {
     isMocked: true,
     companyInfo: {
       name: companyName,
-      industry: "Enterprise SaaS & Business Infrastructure",
-      hq: "San Francisco, CA, USA",
-      founded: "2013",
-      status: "Private (Scale-up)",
+      industry: defaultIndustry,
+      hq: defaultHQ(companyName),
+      founded: defaultFounded(companyName),
+      status: defaultStatus,
       website: companyInput.includes(".") ? (companyInput.startsWith("http") ? companyInput : `https://${companyInput}`) : `https://www.google.com/search?q=${encodeURI(companyInput)}`,
-      revenue: "$150M+ ARR (Estimated)",
-      employees: "850 - 1,200",
+      revenue: defaultRevenue,
+      employees: defaultEmployees,
       markets: "Global (North America, Europe, APAC)",
-      description: `Premium high-growth enterprise platform specialized in automated scaling, custom process integrations, and business information workflows. Currently positioning to integrate deep cognitive learning models across legacy database operations.`,
-      funding: {
-        stage: "Series C",
-        details: `${companyName} secured $45 Million in Series C Funding led by Vanguard Ventures to scale APAC operations.`
-      },
-      recentProducts: {
-        status: "Active Launch Cycle",
-        details: `Officially launched Zyntra Flow v4.5 featuring native local-intelligence agent integration.`
-      },
+      description: defaultDesc,
       socialMediaLinks: {
         linkedin: `https://linkedin.com/company/${cleanName}`,
         twitter: `https://twitter.com/${cleanName}`,
         facebook: `https://facebook.com/${cleanName}`,
         youtube: `https://youtube.com/c/${cleanName}`
-      }
+      },
+      funding: mockFunding,
+      recentProducts: mockProducts
     },
     painPoints: [
       {
@@ -1495,75 +1112,86 @@ export function getMockProspectResearch(companyInput: string): ProspectResearchR
       phase3FullPlatform: "$145,000 (APAC + EMEA global expansion rollouts)",
       totalRevenueLtv: "$252,900"
     },
-    markdownReport: `# GTM INTEL SUMMARY & RESEARCH REPORT: ${companyName.toUpperCase()}
-## McKinsey-Grade GTM Opportunity & Operational Diagnostics
-
-### Executive Overview
-**${companyName}** is operating at the forefront of the modern digital enterprise ecosystem. However, our systemic diagnostics reveal severe revenue operation leakages. This consulting brief isolates exact commercial bottlenecks, evaluates their technology stack, and architectures custom AI-powered programmatic resolutions designed to restore pipeline momentum.
+    markdownReport: `# DETAILED CONSULTING REPORT: ${companyName.toUpperCase()}
+  
+*Prepared by Senior AI Architects and Enterprise Strategy Leads*
 
 ---
 
-### Part 1: Corporate Scale & Business Model Overview
-${companyName} operates on a high-leverage enterprise distribution model, generating predictable ARR through multi-year cloud subscription tiers and specialized operational integration licenses. The core value chain is driven by high-margin software IP design and direct enterprise platform integrations, supported by a specialized client-success engineering group.
+## PART 1: EXECUTIVE BRIEFING & CORE CORPORATE PROFILE
+
+**${companyName}** is operating at the forefront of the modern digital enterprise ecosystem within the **${defaultIndustry}** category. 
+
+Founded in **${defaultFounded(companyName)}** with corporate headquarters situated in **${defaultHQ(companyName)}**, the company manages an estimated headcount of **${defaultEmployees}** professionals. The organization is actively capturing massive business volume across key geolocated markets including **Global (North America, Europe, APAC)**.
+
+### Strategic Market Assessment
+The firm positions its value proposition on offering robust core infrastructures tailored for deep commercial growth. Nevertheless, our structural operational diagnostics reveal measurable friction within their Go-to-Market workflows. Automated pipeline capture and multi-channel signal routing remain key operational targets for optimization to unlock their next layer of revenue productivity.
 
 ---
 
-### Part 2: Product Portfolio Assessment & Offerings
-The company's commercial monetization is sustained by three primary core product divisions:
-1. **Zyntra Platform Core Suite**: An enterprise-grade workflow orchestration layer that manages multi-channel corporate database structures and operational automation.
-2. **Cognitive Analytics Module**: An advanced business intelligence extension that hooks directly into Snowflake repositories to supply real-time tracking dashboards.
-3. **Omnichannel Communication Gateway**: A heavy SMTP and social messaging bridge that powers programmatic partner notifications and employee directory scheduling.
+## PART 2: CAPITALIZATION, FUNDING ANALYSIS & RECENT RAISES
+
+${fundingText}
 
 ---
 
-### Part 3: Latest Product Launches & Funding News (2025-2026)
-- **Latest Product Launch (Q1 2026)**: ${companyName} officially launched **Zyntra Flow v4.5**, featuring fully native local-intelligence agent integration, reducing pipeline latency from days to under 90 seconds.
-- **Funding & Expansion News (Late 2025)**: The target company secured **$45 Million in Series C Funding** led by Vanguard Ventures and Horizon Equity, specifically scoped to accelerate their cognitive automation roadmap and scale APAC customer-enablement offices.
-- **Strategic Partnership**: Announced a joint integration alliance with major public cloud databases to streamline zero-trust authentication protocols across hybrid operations.
+## PART 3: LATEST PRODUCT & SERVICE INNOVATIONS
+
+${productsText}
 
 ---
 
-### Part 4: Competitive Peer Landscape
-${companyName} is actively positioned within a highly aggressive B2B market, facing three major competitors:
-1. **Apex Solutions**: Operating at an **Advanced AI Maturity Level**. Apex utilizes full API-integrated pricing and demand modelers, presenting a high threat of technology disruption to ${companyName}'s mid-market pipeline.
-2. **Zenith Core**: Operating at an **Intermediate AI Maturity Level**. Zenith focuses on automated social networking filters and personalized outbound lists.
-3. **Vortex Systems**: Operating at a **Basic AI Maturity Level**, relying primarily on static trigger rules and generic CRM email templates.
+## PART 4: OPERATIONAL PAIN-POINT DIAGNOSTICS & SYSTEM RISK
+
+Operational diagnostics conducted across their public footprint indicate three primary strategic workflow bottlenecks:
+
+### 1. High Manual intent Signal Lag
+Sales development and lead-management professionals currently spend an average of **14 hours per week** consolidating hot signals manually across disconnected systems. High-intent decision-makers remain unrouted for up to **4.5 days**, during which critical pipeline conversion rates decay significantly.
+* **Quantified Impact**: Cuts active sales representative prospecting bandwidth by 28%.
+* **Quoted Evidence**: *"Operational efficiency is our single largest friction point in scaling mid-market outbound engagement this quarter."* - VP of Global Revenue Operations Internal Audit.
+
+### 2. Standardized Outbound Domain Exhaustion
+Due to a lack of automated sandbox warmup routines and static templated sequencing, standard cold campaign delivery rates have suffered downward drift, dropping open rates to **19.5%**.
+* **Quantified Impact**: Depletes response indices and flags main outbound communication domains.
+
+### 3. Static Social Channel outreach Hooks
+Social prospecting interactions rely primarily on non-personalized, static copies. Standard templates produce a low 4% conversion index due to a lack of buyer-specific situational context.
 
 ---
 
-### Part 5: Technical Architecture & Current Cloud Infrastructure
-An automated pixel scan and technology fingerprint audit was conducted on \`${cleanName || 'company'}.com\` with the following findings:
-- **Core ERP**: NetSuite Cloud ERP (*High Confidence*). Used for general ledger, subscription tracking, and corporate billing consolidation.
-- **Commercial CRM**: Salesforce Core (*High Confidence*). Houses account contacts, lead histories, and active demo calendars.
-- **Analytics & BI**: Tableau with Snowflake (*Medium Confidence*). Handled via centralized business intelligence desks, causing report queues for sales leaders.
+## PART 5: TAILORED B2B AI/ML RESOLUTION ARCHITECTURE
+
+We propose the deployment of an enterprise **Cognitive GTM Signal Personalization Router** designed to link signal sources directly with optimized outbound pipelines:
+
+* **Middle-Tier Webhook Router**: Intercepts hot signals from social APIs and runs lightweight, customized intent calculations under 90 seconds.
+* **Financial Modeling & Projection**:
+  * **Monthly Service Retainer**: \`$2,450 / month\`
+  * **Billed Year-1 Value**: \`$29,400\`
+  * **Potential Customer Lifetime Value (LTV)**: \`$117,600\`
+* **Pricing Justification**: Completely automates manual verification workflows, saving the sales desk up to **55 combined hours per week**. Returns ROI parity within the first fifteen closed contracts.
 
 ---
 
-### Part 6: Recommended AI Solution Architecture & Strategic ROI
-#### 1. Personalization Webhook Signal Router
-**Architecture Proposal**: Install a zero-latency middleware node that captures high-intent LinkedIn/website actions and triggers programmatic, completely customized outbound campaigns over SMTP and WhatsApp.
-* **Monthly Fee**: $2,450
-* **First-Year Return (ROI)**: Over 750% estimated return on investment by automating manual signal collection. Saves SDR desks up to 55 combined hours per week.
+## PART 6: OMNICHANNEL GTM EXECUTIVE OUTREACH SEQUENCE
 
----
+To convert this research into a direct commercial engagement, we suggest executing the following targeted multi-touch funnel for **Marcus Sterling (VP of RevOps)**:
 
-### Part 7: Targeted Executive Outreach Sequence for Marcus Sterling
-To lock in demo commitments from **Marcus Sterling (VP of RevOps)**, use the following high-impact sequence:
+### Touch 1: Short LinkedIn Connection Invitation (Warm Hook)
+> *"Marcus - following your updates on commercial efficiency. Noticed your mid-market sales desks have scaled quickly. Let's exchange terms on automation."*
 
-1. **Warm LinkedIn Connect**: *"Marcus - following your updates on commercial efficiency. Noticed your mid-market sales desks have scaled quickly. Let's exchange terms on automation."*
-2. **Omnichannel Signal Router Hook (Email)**:
-   > **Subject**: SDR intent signal response lag at ${companyName}
-   >
-   > Hi Marcus,
-   >
-   > Noticed that your outbound groups are actively scaling. However, manual consolidation across Salesforce and lists can trigger a 4.5-day response lag. When high-intent decision-makers show interest, standard SDRs miss the critical window.
-   >
-   > We help RevOps teams automate intent capture and route hyper-personalized WhatsApp or email triggers in under 90 seconds. We saved similar software companies up to 14 hours per desk week.
-   >
-   > Would you be open to a brief, 10-minute preview next Tuesday?
-   >
-   > Best regards,
-   > [Your Name]`
+### Touch 2: Omnichannel Strategic Value Proposition (Email Pitch)
+> **Subject**: SDR intent signal response lag at ${companyName}
+>
+> Dear Marcus,
+>
+> Noticed that your outbound groups are actively scaling. However, manual consolidation across Salesforce and lists can trigger a 4.5-day response lag. When high-intent decision-makers show interest, standard SDRs miss the critical window.
+>
+> We help RevOps teams automate intent capture and route hyper-personalized WhatsApp or email triggers in under 90 seconds. We saved similar software companies up to 14 hours per desk week.
+>
+> Would you be open to a brief, 10-minute preview next Tuesday?
+>
+> Best regards,
+> [Your Name]`
   };
 }
 

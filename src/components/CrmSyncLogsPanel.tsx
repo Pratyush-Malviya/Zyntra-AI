@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
 import { Database, RefreshCw, AlertCircle, CheckCircle, Clock } from "lucide-react";
-import { ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 
 interface Lead {
   id: string;
@@ -34,20 +33,39 @@ export const CrmSyncLogsPanel: React.FC<CrmSyncLogsPanelProps> = ({
   const [loading, setLoading] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
 
-  // Fetch initial logs state
-  const fetchSyncLogs = async () => {
-    try {
-      const res = await fetch("/api/crm-sync/logs");
-      if (res.ok) {
-        const data: SyncLog[] = await res.json();
-        const initialMap: Record<string, SyncLog> = {};
-        data.forEach(log => {
-          initialMap[log.lead_id] = log;
+  // Fetch initial logs state with resilient retries
+  const fetchSyncLogs = async (retries = 4, delay = 1500) => {
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        const res = await fetch(`/api/crm-sync/logs?t=${Date.now()}`, {
+          cache: "no-store",
+          headers: {
+            "Accept": "application/json"
+          }
         });
-        setLogs(initialMap);
+        if (res.ok) {
+          const contentType = res.headers.get("content-type");
+          if (contentType && !contentType.includes("application/json")) {
+            throw new Error(`Expected JSON response but received: ${contentType}`);
+          }
+          const data: SyncLog[] = await res.json();
+          const initialMap: Record<string, SyncLog> = {};
+          data.forEach(log => {
+            initialMap[log.lead_id] = log;
+          });
+          setLogs(initialMap);
+          return; // Success
+        } else {
+          throw new Error(`Server returned status code ${res.status}`);
+        }
+      } catch (err) {
+        console.warn(`[CRM Sync Logs] Attempt ${attempt} failed:`, err);
+        if (attempt === retries) {
+          console.error("Failed to fetch initial CRM sync logs", err);
+        } else {
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
       }
-    } catch (err) {
-      console.error("Failed to fetch initial CRM sync logs", err);
     }
   };
 
@@ -200,15 +218,15 @@ export const CrmSyncLogsPanel: React.FC<CrmSyncLogsPanelProps> = ({
         const failAttemptRate = totalAttempts > 0 ? 100 - successAttemptRate : 0;
 
         return (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Success KPI Card */}
             <div className="bg-surface-alt/40 border border-border/60 rounded-2xl p-4 flex flex-col justify-between relative overflow-hidden group">
               <div className="absolute top-0 right-0 p-3 opacity-10 pointer-events-none">
                 <CheckCircle className="w-12 h-12 text-emerald-400" />
               </div>
               <div>
-                <span className="text-[10px] text-text-muted font-bold uppercase tracking-widest block font-mono">Success Rate (Mapped)</span>
-                <span className="text-2xl md:text-3xl font-syne font-extrabold text-emerald-400 mt-1.5 block animate-fade-in">
+                <span className="text-[10px] text-text-muted font-bold uppercase tracking-widest block">Success Rate (Mapped)</span>
+                <span className="text-2xl md:text-3xl font-syne font-extrabold text-emerald-400 mt-1.5 block">
                   {Math.round((mapped / (total || 1)) * 100)}%
                 </span>
                 <p className="text-[10px] text-text-muted mt-1 leading-relaxed">
@@ -232,8 +250,8 @@ export const CrmSyncLogsPanel: React.FC<CrmSyncLogsPanelProps> = ({
                 <AlertCircle className="w-12 h-12 text-rose-400" />
               </div>
               <div>
-                <span className="text-[10px] text-text-muted font-bold uppercase tracking-widest block font-mono">Failure Rate (Failed)</span>
-                <span className="text-2xl md:text-3xl font-syne font-extrabold text-rose-400 mt-1.5 block animate-fade-in">
+                <span className="text-[10px] text-text-muted font-bold uppercase tracking-widest block">Failure Rate (Failed / Unmapped)</span>
+                <span className="text-2xl md:text-3xl font-syne font-extrabold text-rose-400 mt-1.5 block">
                   {Math.round((failed / (total || 1)) * 100)}%
                 </span>
                 <p className="text-[10px] text-text-muted mt-1 leading-relaxed">
@@ -257,7 +275,7 @@ export const CrmSyncLogsPanel: React.FC<CrmSyncLogsPanelProps> = ({
                 <RefreshCw className="w-12 h-12 text-amber-400" />
               </div>
               <div>
-                <span className="text-[10px] text-text-muted font-bold uppercase tracking-widest block font-mono">Mapping Efficiency</span>
+                <span className="text-[10px] text-text-muted font-bold uppercase tracking-widest block text-brand-alt">Mapping Efficiency Ratio</span>
                 <span className="text-2xl md:text-3xl font-syne font-extrabold text-brand-alt mt-1.5 block">
                   {successAttemptRate}% / {failAttemptRate}%
                 </span>
@@ -275,54 +293,6 @@ export const CrmSyncLogsPanel: React.FC<CrmSyncLogsPanelProps> = ({
                   <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" /> {mapped} Succeeded</span>
                   <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-rose-400 inline-block" /> {failed} Failed</span>
                 </div>
-              </div>
-            </div>
-
-            {/* RECHARTS GAUGE CHART CARD: Visualizing matching mapping ratio percentage (Task 2 Requirement) */}
-            <div className="bg-surface-alt/40 border border-border/60 rounded-2xl p-4 flex flex-col justify-between relative overflow-hidden group">
-              <div>
-                <span className="text-[10px] text-text-muted font-bold uppercase tracking-widest block font-mono text-brand">CRM Mapping Gauge</span>
-                <span className="text-xl md:text-2xl font-syne font-extrabold text-[#00d4aa] mt-1 block">
-                  {successAttemptRate}% Success
-                </span>
-                <p className="text-[10px] text-text-muted mt-1 leading-relaxed">
-                  Gauge arc matching successful matches compared to failed attempts.
-                </p>
-              </div>
-
-              {/* Semi-circular Recharts Gauge */}
-              <div className="w-full h-24 flex items-center justify-center relative mt-2 select-none">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
-                    <Pie
-                      data={[
-                        { name: "Successful Mapped", value: successAttemptRate || 0.0001 },
-                        { name: "Failed/Unmapped Attempts", value: failAttemptRate || 0.0001 }
-                      ]}
-                      cx="50%"
-                      cy="100%"
-                      startAngle={180}
-                      endAngle={0}
-                      innerRadius="65%"
-                      outerRadius="85%"
-                      paddingAngle={2}
-                      dataKey="value"
-                    >
-                      <Cell fill="#10b981" />
-                      <Cell fill="#f43f5e" />
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-                {/* Centered label inside the semi-circular gauge */}
-                <div className="absolute bottom-1 text-center">
-                  <span className="text-xs font-bold text-white block">{successAttemptRate}%</span>
-                  <span className="text-[7px] text-text-muted font-bold uppercase tracking-wider font-mono">Sync Ratio</span>
-                </div>
-              </div>
-
-              <div className="flex justify-between items-center text-[8px] text-text-muted font-mono mt-1 border-t border-border/20 pt-2">
-                <span className="flex items-center gap-1"><span className="w-1 h-1 rounded-full bg-emerald-500 inline-block" /> Mapped: {successAttemptRate}%</span>
-                <span className="flex items-center gap-1"><span className="w-1 h-1 rounded-full bg-rose-500 inline-block" /> Failed: {failAttemptRate}%</span>
               </div>
             </div>
 

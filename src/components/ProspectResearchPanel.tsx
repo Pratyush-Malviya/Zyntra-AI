@@ -36,6 +36,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import ReactMarkdown from 'react-markdown';
 import { generateProspectResearch, ProspectResearchReport } from '../services/geminiService';
 import { db, Timestamp } from '../firebase';
 import { collection, addDoc, getDocs, query, where, deleteDoc, doc, updateDoc, writeBatch } from 'firebase/firestore';
@@ -87,11 +88,19 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
     const initial = [...ALL_PRESETS_POOL].sort(() => 0.5 - Math.random()).slice(0, 5);
     setCurrentPresets(initial);
 
-    // Randomize all 5 Demo Presets every 60 seconds using a useEffect timer to keep research examples fresh
+    // Swap an individual preset with a random unused one every 7 seconds to keep it dynamic
     const timer = setInterval(() => {
-      const shuffled = [...ALL_PRESETS_POOL].sort(() => 0.5 - Math.random());
-      setCurrentPresets(shuffled.slice(0, 5));
-    }, 60000);
+      setCurrentPresets(prev => {
+        if (prev.length === 0) return prev;
+        const indexToSwap = Math.floor(Math.random() * prev.length);
+        const unused = ALL_PRESETS_POOL.filter(p => !prev.some(u => u.name === p.name));
+        if (unused.length === 0) return prev;
+        const randomUnused = unused[Math.floor(Math.random() * unused.length)];
+        const next = [...prev];
+        next[indexToSwap] = randomUnused;
+        return next;
+      });
+    }, 7000);
 
     return () => clearInterval(timer);
   }, []);
@@ -300,8 +309,7 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
   };
 
   const downloadPDFReport = (reportToDownload?: ProspectResearchReport | null) => {
-    const isReportObj = reportToDownload && typeof reportToDownload === 'object' && ('companyInfo' in reportToDownload);
-    const report = isReportObj ? reportToDownload : activeResearch;
+    const report = reportToDownload || activeResearch;
     if (!report) return;
     const doc = new jsPDF();
     const info = report.companyInfo || {} as any;
@@ -690,28 +698,17 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
                   </div>
 
                   {/* Live updates ticker */}
-                  <div 
-                    className="pt-2 border-t border-border/60 text-[10px] font-mono text-left space-y-2.5 bg-bg/50 p-3 rounded-xl h-[85px] overflow-y-auto scroll-smooth custom-scrollbar"
-                    ref={(el) => {
-                      if (el) {
-                        const activeIndex = sprintTime >= 61 ? 3 : sprintTime >= 36 ? 2 : sprintTime >= 16 ? 1 : 0;
-                        const children = Array.from(el.children);
-                        if (children[activeIndex]) {
-                          (children[activeIndex] as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                        }
-                      }
-                    }}
-                  >
-                    <div className={`transition-opacity duration-500 ${sprintTime >= 1 ? "text-brand-alt" : "text-text-muted/40"}`}>
+                  <div className="pt-2 border-t border-border/60 text-[10px] font-mono text-left space-y-1 bg-bg/50 p-3 rounded-xl max-h-[80px] overflow-hidden">
+                    <div className={sprintTime >= 1 ? "text-brand-alt" : "text-text-muted/40"}>
                       ✓ [Phase 1] Harvested web profile scale, revenue estimates, and core market verticals
                     </div>
-                    <div className={`transition-opacity duration-500 ${sprintTime >= 16 ? "text-brand-alt" : "text-text-muted/40 opacity-50"}`}>
+                    <div className={sprintTime >= 16 ? "text-brand-alt" : "text-text-muted/40"}>
                       {sprintTime >= 16 ? "✓" : "→"} [Phase 2] HARVESTING pain citations from SEBI filings, earnings transcripts, transcripts
                     </div>
-                    <div className={`transition-opacity duration-500 ${sprintTime >= 36 ? "text-brand-alt" : "text-text-muted/40 opacity-50"}`}>
+                    <div className={sprintTime >= 36 ? "text-brand-alt" : "text-text-muted/40"}>
                       {sprintTime >= 36 ? "✓" : "→"} [Phase 3] AUDITING enterprise indicators matching ERP (SAP/Oracle), CRM databases, and hiring scopes
                     </div>
-                    <div className={`transition-opacity duration-500 ${sprintTime >= 61 ? "text-brand-alt" : "text-text-muted/40 opacity-50"}`}>
+                    <div className={sprintTime >= 61 ? "text-brand-alt" : "text-text-muted/40"}>
                       {sprintTime >= 61 ? "✓" : "→"} [Phase 4] COMPILING 5 custom AI products with ROI contract values and pipeline briefs
                     </div>
                   </div>
@@ -760,7 +757,7 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
                     </div>
 
                     <button
-                      onClick={() => downloadPDFReport()}
+                      onClick={() => downloadPDFReport(activeResearch)}
                       className="w-full bg-surface border border-border hover:border-brand/40 text-text text-xs font-bold p-3.5 rounded-xl transition-all flex items-center justify-center gap-2"
                     >
                       <Download className="w-4 h-4 text-brand-alt" />
@@ -847,23 +844,93 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
                         <p className="text-sm text-text-muted leading-relaxed font-sans">{activeResearch?.companyInfo?.description || 'No description available.'}</p>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Funding & Recent Products Sections */}
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* Funding Card */}
                         <div className="bg-surface-alt border border-border p-6 rounded-2xl space-y-4">
-                           <div className="text-[10px] text-text-muted font-bold uppercase tracking-widest">Funding & Capitalization</div>
-                           <div className="flex justify-between items-start gap-4">
-                               <div className="font-bold">Investment & Funding Status</div>
-                               <span className="text-[9px] font-mono font-bold uppercase tracking-widest bg-white/5 border border-white/10 px-2 py-0.5 rounded">{activeResearch?.companyInfo?.funding?.stage || 'Funded / Public Equity'}</span>
-                           </div>
-                           <p className="text-xs text-text-muted leading-relaxed">{activeResearch?.companyInfo?.funding?.details || `${activeResearch?.companyInfo?.name} is currently funded as ${activeResearch?.companyInfo?.status} with an estimated annual revenue of ${activeResearch?.companyInfo?.revenue}.`}</p>
+                          <div className="flex items-center justify-between border-b border-border/60 pb-3">
+                            <div className="space-y-1">
+                              <span className="text-[10px] text-text-muted font-bold uppercase tracking-widest block">Funding & Capitalization</span>
+                              <h4 className="text-sm font-syne font-bold text-text">Investment & Funding Status</h4>
+                            </div>
+                            <span className={`px-2.5 py-1 rounded-full text-[9px] font-mono font-bold uppercase tracking-widest px-2 py-0.5 rounded ${
+                              activeResearch?.companyInfo?.funding?.hasRaisedRecently 
+                                ? 'bg-[#10b981]/10 text-[#10b981] border border-[#10b981]/20' 
+                                : 'bg-[#6b7280]/10 text-text-muted border border-border'
+                            }`}>
+                              {activeResearch?.companyInfo?.funding?.hasRaisedRecently ? 'Raised Funding Recently' : 'Funded / Public Equity'}
+                            </span>
+                          </div>
+                          
+                          <p className="text-xs text-text-muted leading-relaxed font-sans">
+                            {activeResearch?.companyInfo?.funding?.details || `${activeResearch?.companyInfo?.name || 'This company'} is currently funded as ${activeResearch?.companyInfo?.status || 'Private'} with an estimated annual revenue of ${activeResearch?.companyInfo?.revenue || 'N/A'}.`}
+                          </p>
+
+                          {activeResearch?.companyInfo?.funding?.rounds && activeResearch.companyInfo.funding.rounds.length > 0 && (
+                            <div className="space-y-2 pt-1">
+                              <div className="text-[9px] text-text-muted font-bold uppercase tracking-widest">Rounds History</div>
+                              <div className="relative border-l border-border/80 pl-4 space-y-3 mt-1 ml-1.5">
+                                {activeResearch.companyInfo.funding.rounds.map((round: any, idx: number) => (
+                                  <div key={idx} className="relative space-y-0.5">
+                                    <div className="absolute -left-[21px] top-1.5 w-2 h-2 rounded-full bg-brand" />
+                                    <div className="flex justify-between text-xs font-semibold">
+                                      <span className="text-text font-syne font-bold">{round.roundName}</span>
+                                      <span className="text-brand pr-1">{round.amount}</span>
+                                    </div>
+                                    <div className="text-[10px] text-text-muted font-mono flex items-center gap-1.5">
+                                      <span>{round.date}</span>
+                                      {round.investors && (
+                                        <>
+                                          <span>•</span>
+                                          <span className="truncate max-w-[200px]" title={round.investors}>Inv: {round.investors}</span>
+                                        </>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
-                        
+
+                        {/* Recent Products Card */}
                         <div className="bg-surface-alt border border-border p-6 rounded-2xl space-y-4">
-                           <div className="text-[10px] text-text-muted font-bold uppercase tracking-widest">Innovation Tracker</div>
-                           <div className="flex justify-between items-start gap-4">
-                               <div className="font-bold">Latest Products & Services</div>
-                               <span className="text-[9px] font-mono font-bold uppercase tracking-widest bg-white/5 border border-white/10 px-2 py-0.5 rounded">{activeResearch?.companyInfo?.recentProducts?.status || 'Stable Product Line'}</span>
-                           </div>
-                           <p className="text-xs text-text-muted leading-relaxed">{activeResearch?.companyInfo?.recentProducts?.details || `Core services focus on ${activeResearch?.companyInfo?.industry} enterprise solutions with targeted global deployments.`}</p>
+                          <div className="flex items-center justify-between border-b border-border/60 pb-3">
+                            <div className="space-y-1">
+                              <span className="text-[10px] text-text-muted font-bold uppercase tracking-widest block">Innovation Tracker</span>
+                              <h4 className="text-sm font-syne font-bold text-text">Latest Products & Services</h4>
+                            </div>
+                            <span className={`px-2.5 py-1 rounded-full text-[9px] font-mono font-bold uppercase tracking-widest px-2 py-0.5 rounded ${
+                              activeResearch?.companyInfo?.recentProducts?.hasLaunchedRecently 
+                                ? 'bg-brand/10 text-brand-alt border border-brand/20' 
+                                : 'bg-[#6b7280]/10 text-text-muted border border-border'
+                            }`}>
+                              {activeResearch?.companyInfo?.recentProducts?.hasLaunchedRecently ? 'Active Product Log' : 'Stable Product Line'}
+                            </span>
+                          </div>
+                          
+                          <p className="text-xs text-text-muted leading-relaxed font-sans">
+                            {activeResearch?.companyInfo?.recentProducts?.details || `Core services focus on ${activeResearch?.companyInfo?.industry || 'industry'} enterprise solutions with targeted global deployments.`}
+                          </p>
+
+                          {activeResearch?.companyInfo?.recentProducts?.productsList && activeResearch.companyInfo.recentProducts.productsList.length > 0 && (
+                            <div className="space-y-2.5 pt-1">
+                              <div className="text-[9px] text-text-muted font-bold uppercase tracking-widest">Recent Launches & Pipeline</div>
+                              <div className="space-y-2.5 mt-1">
+                                {activeResearch.companyInfo.recentProducts.productsList.slice(0, 3).map((prod: any, idx: number) => (
+                                  <div key={idx} className="bg-bg/40 border border-border/60 p-2.5 rounded-xl space-y-1 hover:border-brand/30 transition-colors">
+                                    <div className="flex justify-between items-center text-xs">
+                                      <span className="font-bold text-text font-syne">{prod.name}</span>
+                                      {prod.launchDate && (
+                                        <span className="text-[9px] font-mono text-text-muted bg-border/40 px-1.5 py-0.5 rounded-md">{prod.launchDate}</span>
+                                      )}
+                                    </div>
+                                    <p className="text-[10px] text-text-muted leading-relaxed font-sans">{prod.description}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
 
@@ -1323,9 +1390,52 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
                         </button>
                       </div>
 
-                      {/* Display Markdown view with styling */}
-                      <div className="bg-surface-alt border border-border rounded-2xl p-6 md:p-8 font-sans text-xs text-text-muted leading-relaxed space-y-4 select-all max-h-[500px] overflow-y-auto whitespace-pre-wrap">
-                        {activeResearch.markdownReport}
+                      {/* Display Markdown view with premium consulting styling */}
+                      <div className="bg-surface-alt border border-border rounded-2xl p-6 md:p-8 font-sans text-xs text-text-muted leading-relaxed select-all max-h-[600px] overflow-y-auto markdown-body">
+                        <ReactMarkdown
+                          components={{
+                            h1: ({node, ...props}) => <h1 id={props.id} className="text-xl font-syne font-extrabold text-brand mt-6 mb-3 border-b border-border pb-1 tracking-tight text-white uppercase" {...props} />,
+                            h2: ({node, ...props}) => <h2 id={props.id} className="text-base font-syne font-bold text-white mt-5 mb-2 border-l-2 border-brand/60 pl-2 tracking-tight" {...props} />,
+                            h3: ({node, ...props}) => <h3 id={props.id} className="text-sm font-syne font-semibold text-white/90 mt-4 mb-1.5" {...props} />,
+                            h4: ({node, ...props}) => <h4 id={props.id} className="text-xs font-syne font-semibold text-white/80 mt-3 mb-1" {...props} />,
+                            p: ({node, ...props}) => <p className="text-xs text-text-muted mb-3.5 leading-relaxed font-sans" {...props} />,
+                            ul: ({node, ...props}) => <ul className="list-disc pl-5 mb-4 space-y-1.5 text-xs text-text-muted" {...props} />,
+                            ol: ({node, ...props}) => <ol className="list-decimal pl-5 mb-4 space-y-1.5 text-xs text-text-muted" {...props} />,
+                            li: ({node, ...props}) => <li className="text-xs text-text-muted leading-relaxed" {...props} />,
+                            strong: ({node, ...props}) => <strong className="font-bold text-white/95" {...props} />,
+                            em: ({node, ...props}) => <em className="italic text-text-muted/95" {...props} />,
+                            code: ({node, className, children, ...props}: any) => {
+                              const match = /language-(\w+)/.exec(className || '');
+                              const inline = !match;
+                              return inline ? (
+                                <code className="bg-surface/80 border border-border px-1.5 py-0.5 rounded font-mono text-[11px] text-brand-alt" {...props}>
+                                  {children}
+                                </code>
+                              ) : (
+                                <pre className="bg-[#090a0f] border border-border/50 p-4 rounded-xl font-mono text-[11px] text-text-muted overflow-x-auto my-4 whitespace-pre-wrap block">
+                                  <code className={className} {...props}>
+                                    {children}
+                                  </code>
+                                </pre>
+                              );
+                            },
+                            blockquote: ({node, ...props}) => (
+                              <blockquote className="border-l-4 border-brand pl-4 italic text-xs text-text-muted bg-brand/5 py-2.5 my-4 rounded-r-xl font-sans" {...props} />
+                            ),
+                            table: ({node, ...props}) => (
+                              <div className="overflow-x-auto my-4 border border-border rounded-xl">
+                                <table className="min-w-full divide-y divide-border" {...props} />
+                              </div>
+                            ),
+                            thead: ({node, ...props}) => <thead className="bg-[#12131a]" {...props} />,
+                            tbody: ({node, ...props}) => <tbody className="divide-y divide-border/60 bg-[#171822]/40" {...props} />,
+                            th: ({node, ...props}) => <th className="px-3.5 py-2 text-left text-[10px] font-bold uppercase tracking-widest text-[#9ca3af] border-b border-border/60" {...props} />,
+                            td: ({node, ...props}) => <td className="px-3.5 py-2 text-xs text-text-muted font-sans" {...props} />,
+                            hr: ({node, ...props}) => <hr className="border-border/60 my-6" {...props} />
+                          }}
+                        >
+                          {activeResearch.markdownReport}
+                        </ReactMarkdown>
                       </div>
                     </div>
                   )}

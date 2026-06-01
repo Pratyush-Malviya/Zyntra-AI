@@ -41,6 +41,8 @@ interface Deal {
   assignedAgent?: string;
   tags?: string[];
   status?: "hot" | "warm" | "cold" | "lost";
+  summaryNote?: string;
+  syncStatus?: "Synced" | "Syncing" | "Failed";
 }
 
 interface PipelineStage {
@@ -302,7 +304,7 @@ async function processKbFileBackground(file: KbFile) {
         });
         const respText = response.content[0].type === "text" ? response.content[0].text : "";
         const cleanJson = respText.replace(/```json/g, "").replace(/```/g, "").trim();
-        result = cleanAndParseJSON(cleanJson);
+        result = JSON.parse(cleanJson);
       } catch (e: any) {
         console.error("Claude extractor failed, trying Gemini:", e.message);
       }
@@ -318,7 +320,7 @@ async function processKbFileBackground(file: KbFile) {
             contents: `${sysPrompt}\n\n${prompt}`,
             config: { responseMimeType: "application/json" }
           });
-          result = cleanAndParseJSON(response.text || "{}");
+          result = JSON.parse(response.text || "{}");
         } catch (gemError: any) {
           console.error("Gemini extractor fallback failed:", gemError.message);
         }
@@ -351,7 +353,7 @@ async function processKbFileBackground(file: KbFile) {
             const data = await response.json();
             const text = data?.choices?.[0]?.message?.content;
             if (text) {
-              result = cleanAndParseJSON(text);
+              result = JSON.parse(text);
               console.log("[NVIDIA NIM Fallback] Server-side extractor fallback succeeded!");
             }
           } else {
@@ -494,8 +496,8 @@ let leads: Lead[] = [
 ];
 
 let deals: Deal[] = [
-  { id: "deal-1", orgId: "org-default", leadId: "lead-1", title: "Enterprise Outreach Partnership", value: 45000, stage: "stage-discovery", createdAt: new Date().toISOString(), assignedAgent: "sarah@growthco.io", tags: ["B2B"], status: "hot" },
-  { id: "deal-2", orgId: "org-default", leadId: "lead-3", title: "Global Sales Outsourcing Bundle", value: 120000, stage: "stage-negotiation", createdAt: new Date().toISOString(), assignedAgent: "james@nairobistaff.co.ke", tags: ["Recruiting"], status: "warm" }
+  { id: "deal-1", orgId: "org-default", leadId: "lead-1", title: "Enterprise Outreach Partnership", value: 45000, stage: "stage-lead", createdAt: new Date().toISOString(), assignedAgent: "sarah@growthco.io", tags: ["B2B"], status: "hot" },
+  { id: "deal-2", orgId: "org-default", leadId: "lead-3", title: "Global Sales Outsourcing Bundle", value: 120000, stage: "stage-active", createdAt: new Date().toISOString(), assignedAgent: "james@nairobistaff.co.ke", tags: ["Recruiting"], status: "warm" }
 ];
 
 let pipelines: Pipeline[] = [
@@ -504,43 +506,63 @@ let pipelines: Pipeline[] = [
     orgId: "org-default",
     name: "Enterprise Sales Pipeline",
     stages: [
-      { id: "stage-discovery", name: "Imported", color: "#8b5cf6", probability: 20, slaDays: 5, statuses: ["Just imported", "Awaiting Intro"] },
-      { id: "stage-proposal", name: "Pending Action", color: "#f59e0b", probability: 50, slaDays: 10, statuses: ["Needs Action", "Pending Review"] },
-      { id: "stage-negotiation", name: "AI Generated", color: "#3b82f6", probability: 75, slaDays: 7, statuses: ["AI Generated", "Message Ready"] },
-      { id: "stage-won", name: "Outreach Sent", color: "#10b981", probability: 90, slaDays: 0, statuses: ["Outreach Delivered", "Sent"] },
-      { id: "stage-responded", name: "Responded", color: "#00d4aa", probability: 95, slaDays: 0, statuses: ["Lead Replied", "Responded"] },
-      { id: "stage-lost", name: "Failed / Disqualified", color: "#ef4444", probability: 0, slaDays: 0, statuses: ["Delivery Failed", "Bounced"] }
+      { id: "stage-lead", name: "Lead", color: "#ff7043", probability: 25, slaDays: 5, statuses: ["Awaiting Intro", "Discovery Booked"] },
+      { id: "stage-prospect", name: "Prospect", color: "#ffb300", probability: 50, slaDays: 10, statuses: ["Drafting proposal", "Proposal Delivered"] },
+      { id: "stage-active", name: "Active user", color: "#26a69a", probability: 75, slaDays: 7, statuses: ["SLA Review", "Contracting"] },
+      { id: "stage-beta", name: "Beta tester", color: "#42a5f5", probability: 90, slaDays: 15, statuses: ["Initial Feedback", "Awaiting Review"] }
     ]
   },
   {
-    id: "pipe-onboarding",
+    id: "pipe-new-biz",
     orgId: "org-default",
-    name: "Customer Onboarding & Success",
+    name: "New Business Pipeline",
     stages: [
-      { id: "stage-kickoff", name: "Kickoff Meeting", color: "#06b6d4", probability: 15, slaDays: 3, statuses: ["Introduced", "Agenda Prepared"] },
-      { id: "stage-integration", name: "Data Integration", color: "#3b82f6", probability: 40, slaDays: 7, statuses: ["API Configured", "Data Cleansing"] },
-      { id: "stage-training", name: "Team Training", color: "#a855f7", probability: 70, slaDays: 5, statuses: ["Materials Ready", "Training Scheduled"] },
-      { id: "stage-active", name: "Fully Activated", color: "#10b981", probability: 95, slaDays: 14, statuses: ["Adoption Measured", "Live Feedback Loop"] },
-      { id: "stage-success", name: "Complete Handoff", color: "#22c55e", probability: 100, slaDays: 0, statuses: ["Customer Signed Off"] }
+      { id: "nb-imported", name: "Imported Leads", color: "#a855f7", probability: 10, slaDays: 3, statuses: ["Untouched", "Bulk Processed"] },
+      { id: "nb-pending", name: "Pending Action", color: "#f59e0b", probability: 30, slaDays: 5, statuses: ["Qualifying", "Need Approval"] },
+      { id: "nb-ai-gen", name: "AI Generated", color: "#3b82f6", probability: 50, slaDays: 4, statuses: ["Dossier Ready", "Copy Synced"] },
+      { id: "nb-sent", name: "Outreach Sent", color: "#10b981", probability: 75, slaDays: 10, statuses: ["SMTP Dispatched", "Followed Up"] },
+      { id: "nb-failed", name: "Failed Outreach", color: "#ef4444", probability: 5, slaDays: 7, statuses: ["Bounced", "No Contact Info"] }
     ]
   },
   {
-    id: "pipe-support",
+    id: "pipe-renewals",
     orgId: "org-default",
-    name: "Support & Incident Escalation",
+    name: "Renewals Pipeline",
     stages: [
-      { id: "stage-triage", name: "Level 1 Triage", color: "#ec4899", probability: 10, slaDays: 1, statuses: ["Report Received", "Priority Assigned"] },
-      { id: "stage-investigate", name: "Team Investigation", color: "#f97316", probability: 45, slaDays: 3, statuses: ["Reproduced", "Logs Analyzed"] },
-      { id: "stage-hotfix", name: "Hotfix Development", color: "#a855f7", probability: 80, slaDays: 2, statuses: ["Pull Request Open", "Unit Tested"] },
-      { id: "stage-qa", name: "QA Verification", color: "#06b6d4", probability: 90, slaDays: 2, statuses: ["Staging Verified", "Peer Reviewed"] },
-      { id: "stage-resolved", name: "Ticket Resolved", color: "#10b981", probability: 100, slaDays: 0, statuses: ["Released", "Client Confirmed"] }
+      { id: "ren-approaching", name: "Approaching (90d)", color: "#14b8a6", probability: 90, slaDays: 15, statuses: ["Audit Initiated"] },
+      { id: "ren-review", name: "Contract Review", color: "#6366f1", probability: 95, slaDays: 10, statuses: ["Feedback Collected"] },
+      { id: "ren-proposed", name: "Renewal Proposed", color: "#3b82f6", probability: 98, slaDays: 12, statuses: ["E-Sign Pending"] },
+      { id: "ren-signed", name: "Renewal Signed", color: "#22c55e", probability: 100, slaDays: 5, statuses: ["Success Complete"] },
+      { id: "ren-churned", name: "Account Churned", color: "#ef4444", probability: 0, slaDays: 10, statuses: ["Feedback Logged"] }
+    ]
+  },
+  {
+    id: "pipe-upsells",
+    orgId: "org-default",
+    name: "Upsells Pipeline",
+    stages: [
+      { id: "up-id", name: "Identification", color: "#ec4899", probability: 20, slaDays: 5, statuses: ["Trigger Active", "Scoring High"] },
+      { id: "up-pitch", name: "Expansion Pitch", color: "#f97316", probability: 40, slaDays: 10, statuses: ["Demo Scheduled", "Materials Sent"] },
+      { id: "up-contracting", name: "Contracting", color: "#3b82f6", probability: 80, slaDays: 8, statuses: ["Pricing Finalized", "Legal Review"] },
+      { id: "up-closed", name: "Upsell Closed", color: "#10b981", probability: 100, slaDays: 5, statuses: ["Expansion Added"] }
+    ]
+  },
+  {
+    id: "pipe-partnerships",
+    orgId: "org-default",
+    name: "Partnerships Pipeline",
+    stages: [
+      { id: "part-outreach", name: "Initial Outreach", color: "#8b5cf6", probability: 15, slaDays: 10, statuses: ["Cold Email", "LinkedIn Connect"] },
+      { id: "part-eval", name: "Evaluation", color: "#f59e0b", probability: 45, slaDays: 14, statuses: ["Strategic Fit", "Value Prop Sync"] },
+      { id: "part-proposal", name: "Proposal Draft", color: "#06b6d4", probability: 70, slaDays: 10, statuses: ["Joint Blueprint", "Revenue Share Spec"] },
+      { id: "part-agreement", name: "Agreement Signed", color: "#10b981", probability: 100, slaDays: 5, statuses: ["Press Release Ready"] }
     ]
   }
 ];
 
 let dealMovementHistory: DealMovement[] = [
-  { id: "move-1", dealId: "deal-1", fromStage: "", toStage: "stage-discovery", timestamp: new Date(Date.now() - 5 * 24 * 3600 * 1000).toISOString(), agentName: "Sarah Mitchell" },
-  { id: "move-2", dealId: "deal-2", fromStage: "stage-discovery", toStage: "stage-negotiation", timestamp: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(), agentName: "James Ochieng" }
+  { id: "move-1", dealId: "deal-1", fromStage: "", toStage: "stage-lead", timestamp: new Date(Date.now() - 5 * 24 * 3600 * 1000).toISOString(), agentName: "Sarah Mitchell" },
+  { id: "move-2", dealId: "deal-2", fromStage: "stage-lead", toStage: "stage-active", timestamp: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(), agentName: "James Ochieng" }
 ];
 
 let activityTimeline: ActivityLog[] = [
@@ -612,140 +634,8 @@ const hashApiKey = (key: string) => {
   return `hash_${hash}`;
 };
 
-// Clean and Parse JSON handles raw control characters / line breaks inside string values in JSON
-function cleanAndParseJSON(jsonStr: string): any {
-  let cleaned = jsonStr.trim();
-  
-  // Remove markdown code fences
-  cleaned = cleaned.replace(/```json/g, "").replace(/```/g, "");
-  cleaned = cleaned.trim();
-
-  // Try standard parse
-  try {
-    return JSON.parse(cleaned);
-  } catch (firstError) {
-    console.warn("[Server] Standard JSON parse failed, attempting block extraction...", firstError);
-
-    // Attempt to extract JSON block (finding first { and last })
-    const startIdx = cleaned.indexOf("{");
-    const endIdx = cleaned.lastIndexOf("}");
-    if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
-      cleaned = cleaned.substring(startIdx, endIdx + 1);
-    }
-
-    try {
-      return JSON.parse(cleaned);
-    } catch (secondError) {
-      console.warn("[Server] Extracted JSON parse failed, attempting state-machine sanitization...", secondError);
-      
-      try {
-        const sanitized = sanitizeJsonString(cleaned);
-        return JSON.parse(sanitized);
-      } catch (thirdError) {
-        console.warn("[Server] Sanitization failed, attempting truncation repair...", thirdError);
-        
-        try {
-          const sanitized = sanitizeJsonString(cleaned);
-          const repaired = autoCloseJson(sanitized);
-          // Last repair attempt on trailing commas
-          const trailingCommaCleaned = repaired
-            .replace(/,\s*}/g, "}")
-            .replace(/,\s*]/g, "]");
-          return JSON.parse(trailingCommaCleaned);
-        } catch (fourthError) {
-          console.error("[Server] All JSON parsing and repair attempts failed. Raw length:", jsonStr.length);
-          throw fourthError;
-        }
-      }
-    }
-  }
-}
-
-function sanitizeJsonString(str: string): string {
-  let result = "";
-  let inString = false;
-  let escape = false;
-  for (let i = 0; i < str.length; i++) {
-    const char = str[i];
-    if (escape) {
-      result += char;
-      escape = false;
-      continue;
-    }
-    if (char === '\\') {
-      result += char;
-      escape = true;
-      continue;
-    }
-    if (char === '"') {
-      inString = !inString;
-      result += char;
-      continue;
-    }
-    if (inString) {
-      if (char === '\n') {
-        result += '\\n';
-      } else if (char === '\r') {
-        result += '\\r';
-      } else if (char === '\t') {
-        result += '\\t';
-      } else {
-        result += char;
-      }
-    } else {
-      result += char;
-    }
-  }
-  return result;
-}
-
-function autoCloseJson(str: string): string {
-  let openBraces: string[] = [];
-  let inString = false;
-  let escape = false;
-  for (let i = 0; i < str.length; i++) {
-    const char = str[i];
-    if (escape) {
-      escape = false;
-      continue;
-    }
-    if (char === '\\') {
-      escape = true;
-      continue;
-    }
-    if (char === '"') {
-      inString = !inString;
-      continue;
-    }
-    if (!inString) {
-      if (char === '{' || char === '[') {
-        openBraces.push(char);
-      } else if (char === '}') {
-        if (openBraces[openBraces.length - 1] === '{') {
-          openBraces.pop();
-        }
-      } else if (char === ']') {
-        if (openBraces[openBraces.length - 1] === '[') {
-          openBraces.pop();
-        }
-      }
-    }
-  }
-  
-  let repaired = str;
-  if (inString) {
-    repaired += '"';
-  }
-  while (openBraces.length > 0) {
-    const last = openBraces.pop();
-    if (last === '{') repaired += '}';
-    if (last === '[') repaired += ']';
-  }
-  return repaired;
-}
-
 // Real B2B Sales intelligence background simulator and provider (Task 3 Close Analysis)
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
 
 async function runAiDealAnalysis(deal: Deal, lead: Lead | undefined, activities: ActivityLog[]): Promise<any> {
   const contextText = JSON.stringify({
@@ -787,7 +677,7 @@ async function runAiDealAnalysis(deal: Deal, lead: Lead | undefined, activities:
 
       const text = response.content[0].type === "text" ? response.content[0].text : "";
       const cleanJson = text.replace(/```json/g, "").replace(/```/g, "").trim();
-      return cleanAndParseJSON(cleanJson);
+      return JSON.parse(cleanJson);
     } catch (err: any) {
       console.error("[Claude Close Analyzer] Claude invocation failed, using fallback:", err.message);
     }
@@ -807,7 +697,7 @@ async function runAiDealAnalysis(deal: Deal, lead: Lead | undefined, activities:
         }
       });
       const text = response.text || "";
-      return cleanAndParseJSON(text);
+      return JSON.parse(text);
     } catch (err: any) {
       console.error("[Claude Close Analyzer] Gemini fallback failed:", err.message);
     }
@@ -840,7 +730,7 @@ async function runAiDealAnalysis(deal: Deal, lead: Lead | undefined, activities:
         const text = data?.choices?.[0]?.message?.content;
         if (text) {
           console.log("[NVIDIA NIM Fallback] Deal Analysis fallback succeeded!");
-          return cleanAndParseJSON(text);
+          return JSON.parse(text);
         }
       } else {
         console.warn("NVIDIA NIM deal analysis API responded with code", response.status);
@@ -853,11 +743,10 @@ async function runAiDealAnalysis(deal: Deal, lead: Lead | undefined, activities:
   // 3. Fallback to heuristics if no keys are defined
   console.warn("[Claude Close Analyzer] Running heuristic calculations...");
   const statusToProb: Record<string, number> = {
-    "stage-discovery": 20,
-    "stage-proposal": 50,
-    "stage-negotiation": 75,
-    "stage-won": 90,
-    "stage-responded": 95,
+    "stage-discovery": 25,
+    "stage-proposal": 55,
+    "stage-negotiation": 80,
+    "stage-won": 100,
     "stage-lost": 0
   };
   const prob = statusToProb[deal.stage] || 35;
@@ -1005,15 +894,6 @@ async function startServer() {
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
-  // Set relaxed Content-Security-Policy header to support HMR, inline script preambles, and Firebase/Google APIs
-  app.use((req, res, next) => {
-    res.setHeader(
-      "Content-Security-Policy",
-      "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://*.googleapis.com; connect-src 'self' ws://localhost:24678 ws://127.0.0.1:24678 ws://localhost:3000 ws://127.0.0.1:3000 wss://*.firebaseio.com https://securetoken.googleapis.com https://*.googleapis.com https://*.firebase.com https://*.firestore.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://*; frame-src 'self' https://*.firebaseapp.com https://*.googleapis.com;"
-    );
-    next();
-  });
-
   // API Authentication Middleware supporting standard API keys, session roles and impersonation
   const authenticateApiKey = (req: express.Request, res: express.Response, next: express.NextFunction) => {
     const authHeader = req.header("Authorization");
@@ -1062,247 +942,6 @@ async function startServer() {
   // Health endpoint
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok" });
-  });
-
-  // Server-side NVIDIA Fallback Proxy to bypass CORS policies and protect private API keys
-  app.post("/api/fallback/nvidia", async (req, res) => {
-    const { prompt, systemPrompt, isJson, apiKey, selectedModel, temperature, max_tokens } = req.body;
-    const nvidiaKey = apiKey || process.env.NVIDIA_API_KEY;
-    if (!nvidiaKey) {
-      return res.status(500).json({ error: "NVIDIA_API_KEY is not configured on the server." });
-    }
-
-    try {
-      const modelToUse = selectedModel || "meta/llama-3.3-70b-instruct";
-      console.log(`[Server NVIDIA Fallback] Proxying ${modelToUse} request...`);
-      const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${nvidiaKey}`
-        },
-        body: JSON.stringify({
-          model: modelToUse,
-          messages: [
-            ...(systemPrompt ? [{ role: "system", content: systemPrompt }] : []),
-            { role: "user", content: prompt }
-          ],
-          temperature: typeof temperature === "number" ? temperature : 0.2,
-          max_tokens: typeof max_tokens === "number" ? max_tokens : 8192,
-          ...(isJson ? { response_format: { type: "json_object" } } : {})
-        })
-      });
-
-      if (!response.ok) {
-        const errorBody = await response.text();
-        return res.status(response.status).json({ error: `NVIDIA API response error: ${errorBody}` });
-      }
-
-      const data = await response.json();
-      if (!data?.choices?.[0]?.message?.content) {
-        return res.status(502).json({ error: "Invalid response format received from NVIDIA API." });
-      }
-
-      res.json({ content: data.choices[0].message.content });
-    } catch (err: any) {
-      console.error("[Server NVIDIA Fallback] Failed proxying request:", err);
-      res.status(500).json({ error: err.message || "Failed to contact NVIDIA API" });
-    }
-  });
-
-  // Server-side GET endpoint to fetch all real-time models available from OpenRouter API
-  app.get("/api/fallback/openrouter/models", async (req, res) => {
-    const openrouterKey = req.query.apiKey as string || process.env.OPENROUTER_API_KEY;
-    if (!openrouterKey) {
-      return res.status(500).json({ error: "OPENROUTER_API_KEY is not configured on the server." });
-    }
-
-    try {
-      console.log("[Server OpenRouter Models] Querying real-time models directory...");
-      const response = await fetch("https://openrouter.ai/api/v1/models", {
-        method: "GET",
-        headers: {
-          "Authorization": `Bearer ${openrouterKey}`
-        }
-      });
-
-      if (!response.ok) {
-        const errorBody = await response.text();
-        return res.status(response.status).json({ error: `Failed fetching OpenRouter catalog: ${errorBody}` });
-      }
-
-      const data = await response.json();
-      res.json(data);
-    } catch (err: any) {
-      console.error("[Server OpenRouter Models] Exception thrown:", err);
-      res.status(500).json({ error: err.message || "Failed to contact OpenRouter catalog API" });
-    }
-  });
-
-  // Server-side OpenRouter Fallback Proxy with dynamic multi-model free tier fallbacks
-  app.post("/api/fallback/openrouter", async (req, res) => {
-    const { prompt, systemPrompt, isJson, apiKey, selectedModel } = req.body;
-    const openrouterKey = apiKey || process.env.OPENROUTER_API_KEY;
-    if (!openrouterKey) {
-      return res.status(500).json({ error: "OPENROUTER_API_KEY is not configured on the server." });
-    }
-
-    const freeModels = [
-      "deepseek/deepseek-r1:free",
-      "meta-llama/llama-3.3-70b-instruct:free",
-      "qwen/qwen-2.5-7b-instruct:free"
-    ];
-
-    // If admin has selected a specific custom model, try it first, otherwise fallback to the free catalog loop
-    const modelsToTry = selectedModel && selectedModel !== "openrouter/free"
-      ? [selectedModel, ...freeModels]
-      : freeModels;
-
-    let lastError: any = null;
-    for (const model of modelsToTry) {
-      try {
-        console.log(`[Server OpenRouter Fallback] Attempting model: ${model}...`);
-        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${openrouterKey}`,
-            "HTTP-Referer": "http://localhost:3000",
-            "X-Title": "Zyntra AI"
-          },
-          body: JSON.stringify({
-            model: model,
-            messages: [
-              ...(systemPrompt ? [{ role: "system", content: systemPrompt }] : []),
-              { role: "user", content: prompt }
-            ],
-            temperature: 0.15,
-            max_tokens: 8192,
-            ...(isJson ? { response_format: { type: "json_object" } } : {})
-          })
-        });
-
-        if (!response.ok) {
-          const errorBody = await response.text();
-          console.warn(`[Server OpenRouter Fallback] Model ${model} failed with status ${response.status}: ${errorBody}`);
-          lastError = new Error(`OpenRouter API response error for ${model} (${response.status}): ${errorBody}`);
-          continue;
-        }
-
-        const data = await response.json();
-        if (!data?.choices?.[0]?.message?.content) {
-          console.warn(`[Server OpenRouter Fallback] Model ${model} returned invalid response format.`);
-          lastError = new Error(`Invalid response format received from OpenRouter API for ${model}`);
-          continue;
-        }
-
-        console.log(`[Server OpenRouter Fallback] SUCCESS: Model ${model} responded.`);
-        return res.json({ content: data.choices[0].message.content, modelUsed: model });
-      } catch (err: any) {
-        console.warn(`[Server OpenRouter Fallback] Model ${model} threw error:`, err);
-        lastError = err;
-      }
-    }
-
-    const errMsg = lastError?.message || "All OpenRouter models failed to respond.";
-    res.status(502).json({ error: errMsg });
-  });
-
-  // Server-side OpenAI Proxy — gpt-4o-search-preview with live web search (primary paid fallback)
-  app.post("/api/fallback/openai", async (req, res) => {
-    const { prompt, systemPrompt, apiKey, selectedModel } = req.body;
-    const openaiKey = apiKey || process.env.OPENAI_API_KEY;
-    if (!openaiKey) {
-      return res.status(500).json({ error: "OPENAI_API_KEY is not configured on the server." });
-    }
-
-    try {
-      const modelToUse = selectedModel || "gpt-4o";
-      console.log(`[Server OpenAI Fallback] Proxying ${modelToUse} request...`);
-      const response = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${openaiKey}`
-        },
-        body: JSON.stringify({
-          model: modelToUse,
-          messages: [
-            {
-              role: "system",
-              content: (systemPrompt || "") + "\n\nIMPORTANT: You MUST return ONLY a raw JSON object. Do NOT wrap it in markdown code fences. Do NOT include any explanation. Start your response with { and end with }."
-            },
-            { role: "user", content: prompt }
-          ],
-          max_tokens: 8000
-        })
-      });
-
-      if (!response.ok) {
-        const errorBody = await response.text();
-        console.error("[Server OpenAI Fallback] Error:", errorBody);
-        return res.status(response.status).json({ error: `OpenAI API error: ${errorBody}` });
-      }
-
-      const data = await response.json();
-      const content = data?.choices?.[0]?.message?.content;
-      if (!content) {
-        return res.status(502).json({ error: "Invalid response format from OpenAI API." });
-      }
-
-      console.log("[Server OpenAI Fallback] Success. Model:", data?.model, "| Tokens:", data?.usage?.total_tokens);
-      res.json({ content });
-    } catch (err: any) {
-      console.error("[Server OpenAI Fallback] Failed proxying request:", err);
-      res.status(500).json({ error: err.message || "Failed to contact OpenAI API" });
-    }
-  });
-
-  // Server-side Groq Proxy — fast free fallback
-  app.post("/api/fallback/groq", async (req, res) => {
-    const { prompt, systemPrompt, isJson, apiKey } = req.body;
-    const groqKey = apiKey || process.env.GROQ_API_KEY;
-    if (!groqKey) {
-      return res.status(500).json({ error: "GROQ_API_KEY is not configured on the server." });
-    }
-
-    try {
-      console.log("[Server Groq Fallback] Proxying llama-3.3-70b-versatile request...");
-      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${groqKey}`
-        },
-        body: JSON.stringify({
-          model: "llama-3.3-70b-versatile",
-          messages: [
-            ...(systemPrompt ? [{ role: "system", content: systemPrompt }] : []),
-            { role: "user", content: prompt }
-          ],
-          temperature: 0.15,
-          max_tokens: 8192,
-          ...(isJson ? { response_format: { type: "json_object" } } : {})
-        })
-      });
-
-      if (!response.ok) {
-        const errorBody = await response.text();
-        console.error("[Server Groq Fallback] Error:", errorBody);
-        return res.status(response.status).json({ error: `Groq API response error: ${errorBody}` });
-      }
-
-      const data = await response.json();
-      if (!data?.choices?.[0]?.message?.content) {
-        return res.status(502).json({ error: "Invalid response format from Groq API." });
-      }
-
-      console.log("[Server Groq Fallback] Success. Tokens used:", data?.usage?.total_tokens);
-      res.json({ content: data.choices[0].message.content });
-    } catch (err: any) {
-      console.error("[Server Groq Fallback] Failed proxying request:", err);
-      res.status(500).json({ error: err.message || "Failed to contact Groq API" });
-    }
   });
 
   // REST API: Lead CRUD (Task 3)
@@ -1548,6 +1187,20 @@ async function startServer() {
     };
     pipelines.push(newPipe);
     res.status(201).json(newPipe);
+  });
+
+  app.put("/api/pipelines/:id", (req, res) => {
+    const idx = pipelines.findIndex(p => p.id === req.params.id);
+    if (idx === -1) {
+      return res.status(404).json({ error: "Pipeline not found." });
+    }
+    if (req.body.stages) {
+      pipelines[idx].stages = req.body.stages;
+    }
+    if (req.body.name) {
+      pipelines[idx].name = req.body.name;
+    }
+    res.json(pipelines[idx]);
   });
 
   // REST API: User preferences configurations
@@ -1877,6 +1530,277 @@ async function startServer() {
     }, 2000);
 
     return res.json({ success: true, message: "CRM Sync operation initialized in background.", log: activeSyncLog });
+  });
+
+  // REST API: Heuristic and AI column alignment & clutter correction helper functions
+  function healCleanedRow(mappedRow: any, rawRow: any) {
+    const allRowValues: string[] = Object.values(rawRow)
+      .map(v => v !== null && v !== undefined ? String(v).trim() : "")
+      .filter(v => v !== "");
+
+    let emailVal = mappedRow.email || "";
+    let phoneVal = mappedRow.phone || "";
+    let nameVal = mappedRow.name || "";
+    let companyVal = mappedRow.company || "";
+    let roleVal = mappedRow.role || "";
+    const scoreVal = Number(mappedRow.score) || 60;
+
+    const isValidEmail = (v: string) => typeof v === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
+    const isValidPhone = (v: string) => typeof v === "string" && /^[+\d\s\-\(\)\.]{7,25}$/.test(v.trim()) && !v.includes("@");
+
+    // Case 1: Swapped email and phone exactly
+    if (isValidPhone(emailVal) && isValidEmail(phoneVal)) {
+      const temp = emailVal;
+      emailVal = phoneVal;
+      phoneVal = temp;
+    }
+
+    // Case 2: Email is invalid/empty, search other cells for a valid email
+    if (!isValidEmail(emailVal)) {
+      const foundEmail = allRowValues.find(v => isValidEmail(v));
+      if (foundEmail) {
+        emailVal = foundEmail;
+      }
+    }
+
+    // Case 3: Phone is invalid/empty, search other cells for a valid phone
+    if (!phoneVal || !isValidPhone(phoneVal)) {
+      const foundPhone = allRowValues.find(v => isValidPhone(v) && v !== emailVal);
+      if (foundPhone) {
+        phoneVal = foundPhone;
+      }
+    }
+
+    // Case 4: Name is empty or is an email/phone, search cells for a non-numeric, non-email string
+    if (!nameVal || isValidEmail(nameVal) || isValidPhone(nameVal)) {
+      const foundName = allRowValues.find(v => {
+        return v.length > 2 && v.length < 50 && !v.includes("@") && !/^\d+$/.test(v) && v !== companyVal && v !== roleVal;
+      });
+      if (foundName) {
+        nameVal = foundName;
+      }
+    }
+
+    // Safeguards
+    if (!nameVal) {
+      nameVal = "Unknown Lead";
+    }
+    if (!isValidEmail(emailVal)) {
+      emailVal = "no-email@unmapped.io";
+    }
+
+    return {
+      name: nameVal,
+      email: emailVal,
+      phone: phoneVal,
+      company: companyVal,
+      role: roleVal || "Executive Target",
+      score: scoreVal
+    };
+  }
+
+  function cleanClutterHeuristically(headers: string[], rows: any[]) {
+    const mapping: Record<string, string> = {};
+    const lowerHeaders = headers.map(h => h.toLowerCase().trim());
+
+    headers.forEach((header, idx) => {
+      const lh = lowerHeaders[idx];
+      if (lh.includes("name") || lh === "fullname" || lh === "lead_name" || lh === "person") {
+        mapping[header] = "name";
+      } else if (lh.includes("mail") || lh === "email" || lh === "work_email" || lh === "email_address") {
+        mapping[header] = "email";
+      } else if (lh.includes("phone") || lh === "mobile" || lh === "telephone" || lh === "cell") {
+        mapping[header] = "phone";
+      } else if (lh.includes("company") || lh === "org" || lh === "organization" || lh === "firm" || lh === "account") {
+        mapping[header] = "company";
+      } else if (lh.includes("role") || lh.includes("title") || lh === "position" || lh === "job") {
+        mapping[header] = "role";
+      } else if (lh === "score" || lh.includes("intent") || lh.includes("points") || lh.includes("icp")) {
+        mapping[header] = "score";
+      } else {
+        mapping[header] = "";
+      }
+    });
+
+    const cleanedRows = rows.map((row) => {
+      const mappedRow: any = {
+        name: "",
+        email: "",
+        phone: "",
+        company: "",
+        role: "Executive Target",
+        score: 60
+      };
+
+      // Find headers that are mapped to standard fields
+      headers.forEach(h => {
+        const field = mapping[h];
+        if (field) {
+          mappedRow[field] = row[h] !== undefined ? String(row[h]).trim() : "";
+        }
+      });
+
+      return healCleanedRow(mappedRow, row);
+    });
+
+    return { mapping, cleanedRows };
+  }
+
+  app.post("/api/import/ai-align", async (req, res) => {
+    const { headers, rows } = req.body;
+    if (!headers || !rows || !Array.isArray(rows)) {
+      return res.status(400).json({ error: "Headers and rows list are required for AI alignment modeling." });
+    }
+
+    // Default heuristic result to merge/fallback
+    const heuristicResult = cleanClutterHeuristically(headers, rows);
+
+    const geminiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
+    if (!geminiKey) {
+      console.warn("[AI Align] No GEMINI_API_KEY configured. Falling back to high-fidelity heuristics.");
+      return res.json({
+        success: true,
+        method: "heuristics",
+        mapping: heuristicResult.mapping,
+        cleanedRows: heuristicResult.cleanedRows,
+        clutterReport: "Automatic heuristic column matching executed. Scanned and corrected any shuffled contact phone/email values."
+      });
+    }
+
+    try {
+      console.log(`[AI Align] Processing ${rows.length} rows using Gemini AI with smart self-healing alignment...`);
+      const ai = new GoogleGenAI({
+        apiKey: geminiKey,
+        httpOptions: {
+          headers: {
+            'User-Agent': 'aistudio-build',
+          }
+        }
+      });
+
+      const sysPrompt = `You are an intelligent data cleaner for a modern CRM.
+Analyze the user-uploaded spreadsheet column headers and data rows. Your job is to:
+1. Automatically map the Excel/CSV column headers to the correct standard CRM fields:
+   - "name" (Prospect's Full Name)
+   - "email" (Work email containing @)
+   - "phone" (Phone number containing numbers/dashes/pluses)
+   - "company" (Company Name)
+   - "role" (Job title/role)
+   - "score" (Numeric rating 0-100)
+
+2. Perform clutter cleaning of the values. Some cells might be swapped (e.g. Phone number in Email column and Email in Phone column, or name in company and vice-versa).
+   Your output MUST place the correctly classified value into its corresponding target field in the 'cleanedRows', self-healing any column mix-ups. There should never be an email in phone, or phone in email.
+
+Provide the response in the requested strictly valid JSON schema format.`;
+
+      const prompt = `Spreadsheet Column Headers: ${JSON.stringify(headers)}
+Raw Rows Data: ${JSON.stringify(rows.slice(0, 50))} (Analyze and clean up to the first 50 rows)`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3.5-flash",
+        contents: prompt,
+        config: {
+          systemInstruction: sysPrompt,
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              mapping: {
+                type: Type.OBJECT,
+                description: "Map of Spreadsheet Header -> Target CRM Field (name, email, phone, company, role, score)"
+              },
+              cleanedRows: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    name: { type: Type.STRING },
+                    email: { type: Type.STRING },
+                    phone: { type: Type.STRING },
+                    company: { type: Type.STRING },
+                    role: { type: Type.STRING },
+                    score: { type: Type.INTEGER }
+                  }
+                }
+              },
+              clutterReport: {
+                type: Type.STRING,
+                description: "Summary of errors/clutter solved (e.g. 'Swapped email and phone columns; corrected company column mix-up')"
+              }
+            },
+            required: ["mapping", "cleanedRows", "clutterReport"]
+          }
+        }
+      });
+
+      const text = response.text || "";
+      const resultObj = JSON.parse(text);
+
+      let finalCleanedRows: any[] = [];
+      const aiCleanedPart = resultObj.cleanedRows || [];
+
+      // Run healCleanedRow for safety on AI-returned results for first 50 lines
+      for (let i = 0; i < Math.min(50, rows.length); i++) {
+        const rawRow = rows[i];
+        const aiRow = aiCleanedPart[i] || {};
+        const healed = healCleanedRow({
+          name: aiRow.name,
+          email: aiRow.email,
+          phone: aiRow.phone,
+          company: aiRow.company,
+          role: aiRow.role,
+          score: aiRow.score
+        }, rawRow);
+        finalCleanedRows.push(healed);
+      }
+
+      if (rows.length > 50) {
+        console.log(`[AI Align] Extrapolating AI mapping for remaining ${rows.length - 50} rows...`);
+        const learnedMapping = resultObj.mapping || heuristicResult.mapping;
+        
+        const remainingRows = rows.slice(50);
+        const extrapolatedCleaned = remainingRows.map((row) => {
+          const mappedRow: any = {
+            name: "",
+            email: "",
+            phone: "",
+            company: "",
+            role: "Executive Target",
+            score: 60
+          };
+
+          // Apply mapping
+          headers.forEach(h => {
+            const field = learnedMapping[h];
+            if (field !== undefined && field !== "") {
+              mappedRow[field] = row[h] !== undefined ? String(row[h]).trim() : "";
+            }
+          });
+
+          return healCleanedRow(mappedRow, row);
+        });
+
+        finalCleanedRows = [...finalCleanedRows, ...extrapolatedCleaned];
+      }
+
+      return res.json({
+        success: true,
+        method: "gemini-3.5-flash",
+        mapping: resultObj.mapping || heuristicResult.mapping,
+        cleanedRows: finalCleanedRows,
+        clutterReport: resultObj.clutterReport || "Pristine alignment maps synchronized cleanly."
+      });
+
+    } catch (err: any) {
+      console.error("[AI Align] Gemini error: ", err.message);
+      return res.json({
+        success: true,
+        method: "heuristics-fallback",
+        mapping: heuristicResult.mapping,
+        cleanedRows: heuristicResult.cleanedRows,
+        clutterReport: `Heuristics fallback: Mapped headers and resolved cluttered cells. (AI temporary bypass error: ${err.message})`
+      });
+    }
   });
 
   // REST API: Named Mapping Templates (Task 2 Configuration templates)
@@ -2436,7 +2360,7 @@ async function startServer() {
           });
           const respText = response.content[0].type === "text" ? response.content[0].text : "";
           const cleanJson = respText.replace(/```json/g, "").replace(/```/g, "").trim();
-          outreachPayload = cleanAndParseJSON(cleanJson);
+          outreachPayload = JSON.parse(cleanJson);
           generatedVia = "Anthropic Claude API";
         } catch (e: any) {
           console.error("Claude client error, falling back to Gemini:", e.message);
@@ -2451,7 +2375,7 @@ async function startServer() {
             contents: prompt,
             config: { responseMimeType: "application/json" }
           });
-          outreachPayload = cleanAndParseJSON(response.text || "{}");
+          outreachPayload = JSON.parse(response.text || "{}");
           generatedVia = "Gemini Flash Model";
         } catch (e: any) {
           console.error("Gemini model error:", e);
@@ -2481,7 +2405,7 @@ async function startServer() {
             const data = await response.json();
             const text = data?.choices?.[0]?.message?.content;
             if (text) {
-              outreachPayload = cleanAndParseJSON(text);
+              outreachPayload = JSON.parse(text);
               generatedVia = "NVIDIA Llama Model";
               console.log("[NVIDIA NIM Fallback] Server-driven outreach generation succeeded!");
             }

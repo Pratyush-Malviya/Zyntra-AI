@@ -63,22 +63,18 @@ interface Lead {
 }
 
 const calculateLeadScore = (lead: Lead): number => {
-  if (!lead) return 0;
   let score = 0;
   const highValueRoles = ['ceo', 'founder', 'vp', 'director', 'head', 'manager', 'owner', 'cto', 'cmo', 'coo'];
-  const role = String(lead.role || '').toLowerCase();
+  const role = (lead.role || '').toLowerCase();
   if (highValueRoles.some(r => role.includes(r))) score += 40;
   
   const techIndustries = ['software', 'tech', 'it', 'saas', 'digital', 'ai', 'cloud'];
-  const industry = String(lead.industry || '').toLowerCase();
+  const industry = (lead.industry || '').toLowerCase();
   if (techIndustries.some(i => industry.includes(i))) score += 20;
   
-  const linkedin = String(lead.linkedin_url || '');
-  if (linkedin && linkedin.length > 10) score += 10;
-  const phone = String(lead.phone || '');
-  if (phone && phone.length > 5) score += 10;
-  const email = String(lead.email || '');
-  if (email && email.includes('@')) score += 10;
+  if (lead.linkedin_url && lead.linkedin_url.length > 10) score += 10;
+  if (lead.phone && lead.phone.length > 5) score += 10;
+  if (lead.email && lead.email.includes('@')) score += 10;
   return score;
 };
 

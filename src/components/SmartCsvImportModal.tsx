@@ -17,10 +17,9 @@ interface Lead {
 
 interface SmartCsvImportModalProps {
   onClose: () => void;
-  onImportComplete: (importedRows: any[], summary: any, campaignOption?: { type: 'existing' | 'new', id?: string, name?: string }) => void;
+  onImportComplete: (importedRows: any[], summary: any) => void;
   existingLeads: Lead[];
   showToast: (msg: string, type: "success" | "error" | "info") => void;
-  campaigns?: any[];
 }
 
 const CRM_FIELDS = [
@@ -36,8 +35,7 @@ export const SmartCsvImportModal: React.FC<SmartCsvImportModalProps> = ({
   onClose,
   onImportComplete,
   existingLeads,
-  showToast,
-  campaigns = []
+  showToast
 }) => {
   const [step, setStep] = useState(1);
   const [fileName, setFileName] = useState("");
@@ -59,6 +57,7 @@ export const SmartCsvImportModal: React.FC<SmartCsvImportModalProps> = ({
   const [validationErrors, setValidationErrors] = useState<any[]>([]);
   const [duplicateConflicts, setDuplicateConflicts] = useState<any[]>([]);
   const [mappedRows, setMappedRows] = useState<any[]>([]);
+  const [finalImportedLeads, setFinalImportedLeads] = useState<any[]>([]);
   
   // Progress & Stream Execution
   const [progress, setProgress] = useState(0);
@@ -66,10 +65,46 @@ export const SmartCsvImportModal: React.FC<SmartCsvImportModalProps> = ({
   const [isImporting, setIsImporting] = useState(false);
   const [importSummary, setImportSummary] = useState<any | null>(null);
 
-  // Campaign Selection
-  const [campaignOptionType, setCampaignOptionType] = useState<'existing' | 'new'>('existing');
-  const [selectedCampaignId, setSelectedCampaignId] = useState<string>(campaigns.length > 0 ? campaigns[0].id : "");
-  const [newCampaignName, setNewCampaignName] = useState<string>("");
+  // Zyntra AI Advanced Smart alignment & clutter corrections states
+  const [isAiAligning, setIsAiAligning] = useState(false);
+  const [aiClutterReport, setAiClutterReport] = useState("");
+  const [aiRunSuccess, setAiRunSuccess] = useState(false);
+  const [aiCleanedRows, setAiCleanedRows] = useState<any[] | null>(null);
+
+  const triggerAiAlignment = async (headers: string[], rows: any[]) => {
+    setIsAiAligning(true);
+    setAiRunSuccess(false);
+    setAiClutterReport("");
+    setAiCleanedRows(null);
+
+    try {
+      const response = await fetch("/api/import/ai-align", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ headers, rows })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          setMapping(result.mapping);
+          setAiCleanedRows(result.cleanedRows);
+          setAiClutterReport(result.clutterReport);
+          setAiRunSuccess(true);
+          showToast("Zyntra AI mapped columns and auto-corrected data clutter successfully!", "success");
+        } else {
+          showToast("AI mapping complete with standard defaults.", "info");
+        }
+      } else {
+        showToast("AI data alignment offline. Utilizing fallback heuristics.", "info");
+      }
+    } catch (err) {
+      console.error("AI Alignment failed", err);
+      showToast("Triggered heuristic rule-based alignment fallback.", "info");
+    } finally {
+      setIsAiAligning(false);
+    }
+  };
 
   // Fetch saved templates on mounting
   useEffect(() => {
@@ -131,6 +166,9 @@ export const SmartCsvImportModal: React.FC<SmartCsvImportModalProps> = ({
     // Run fuzzy mapping config suggestions (Task 2 Step 2)
     suggestMappings(headers);
     setStep(2);
+
+    // Trigger neural alignment and clutter cleaning on file load
+    triggerAiAlignment(headers, allRows);
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -282,15 +320,24 @@ export const SmartCsvImportModal: React.FC<SmartCsvImportModalProps> = ({
     const errors: any[] = [];
     const duplicates: any[] = [];
 
+    const sourceRows = (aiCleanedRows && aiCleanedRows.length === rawRows.length) ? aiCleanedRows : null;
+
     rawRows.forEach((row, i) => {
       // Maps row headers to CRM field keys
       const mappedRow: any = {};
       
-      // Default mapper fields
-      CRM_FIELDS.forEach(field => {
-        const matchingHeader = Object.keys(mapping).find(hdr => mapping[hdr] === field.key);
-        mappedRow[field.key] = matchingHeader ? row[matchingHeader] : "";
-      });
+      if (sourceRows) {
+        // AI already aligned and cleaned standard fields
+        const cleanedRow = sourceRows[i];
+        CRM_FIELDS.forEach(field => {
+          mappedRow[field.key] = cleanedRow[field.key] !== undefined ? cleanedRow[field.key] : "";
+        });
+      } else {
+        CRM_FIELDS.forEach(field => {
+          const matchingHeader = Object.keys(mapping).find(hdr => mapping[hdr] === field.key);
+          mappedRow[field.key] = matchingHeader ? row[matchingHeader] : "";
+        });
+      }
 
       // Map dynamic custom fields
       customFields.forEach(cust => {
@@ -298,17 +345,72 @@ export const SmartCsvImportModal: React.FC<SmartCsvImportModalProps> = ({
         mappedRow[cust] = matchingHeader ? row[matchingHeader] : "";
       });
 
+      // --- Client-side Automated Self-Healing of Clutter Data ---
+      const allRowValues: string[] = Object.values(row)
+        .map(v => v !== null && v !== undefined ? String(v).trim() : "")
+        .filter(v => v !== "");
+
+      let emailVal = (mappedRow.email || "").toString().trim();
+      let phoneVal = (mappedRow.phone || "").toString().trim();
+      let nameVal = (mappedRow.name || "").toString().trim();
+      let companyVal = (mappedRow.company || "").toString().trim();
+      let roleVal = (mappedRow.role || "").toString().trim();
+      const scoreVal = parseFloat(mappedRow.score);
+
+      const isValidEmail = (v: string) => typeof v === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
+      const isValidPhone = (v: string) => typeof v === "string" && /^[+\d\s\-\(\)\.]{7,25}$/.test(v.trim()) && !v.includes("@");
+
+      // Case 1: Swapped email and phone exactly
+      if (isValidPhone(emailVal) && isValidEmail(phoneVal)) {
+        const temp = emailVal;
+        emailVal = phoneVal;
+        phoneVal = temp;
+      }
+
+      // Case 2: Email is invalid/empty, search other cells for a valid email
+      if (!isValidEmail(emailVal)) {
+        const foundEmail = allRowValues.find(v => isValidEmail(v));
+        if (foundEmail) {
+          emailVal = foundEmail;
+        }
+      }
+
+      // Case 3: Phone is invalid/empty, search other cells for a valid phone
+      if (!phoneVal || !isValidPhone(phoneVal)) {
+        const foundPhone = allRowValues.find(v => isValidPhone(v) && v !== emailVal);
+        if (foundPhone) {
+          phoneVal = foundPhone;
+        }
+      }
+
+      // Case 4: Name is empty or is an email/phone, search cells for a non-numeric, non-email string
+      if (!nameVal || isValidEmail(nameVal) || isValidPhone(nameVal)) {
+        const foundName = allRowValues.find(v => {
+          return v.length > 2 && v.length < 50 && !v.includes("@") && !/^\d+$/.test(v) && v !== companyVal && v !== roleVal;
+        });
+        if (foundName) {
+          nameVal = foundName;
+        }
+      }
+
+      // Safeguards
+      if (!nameVal || nameVal === "Unnamed Target") {
+        nameVal = "Unknown Lead";
+      }
+      if (!isValidEmail(emailVal)) {
+        emailVal = "no-email@unmapped.io";
+      }
+
+      // Update mapped row with healed values
+      mappedRow.name = nameVal;
+      mappedRow.email = emailVal;
+      mappedRow.phone = phoneVal;
+
       // Save mapped data
       tempMapped.push(mappedRow);
 
-      const emailVal = (mappedRow.email || "").toString().trim();
-      const phoneVal = (mappedRow.phone || "").toString().trim();
-      const companyVal = (mappedRow.company || "").toString().trim();
-      const nameVal = (mappedRow.name || "").toString().trim();
-      const scoreVal = parseFloat(mappedRow.score);
-
       // Step 5: Bulk Validation Check
-      if (!nameVal || !emailVal) {
+      if (!nameVal || !emailVal || emailVal === "no-email@unmapped.io") {
         errors.push({
           row: i + 1,
           name: nameVal || "Unnamed Target",
@@ -317,7 +419,7 @@ export const SmartCsvImportModal: React.FC<SmartCsvImportModalProps> = ({
         });
       }
 
-      if (emailVal && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
+      if (emailVal && emailVal !== "no-email@unmapped.io" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
         errors.push({
           row: i + 1,
           name: nameVal || "Target Row",
@@ -336,14 +438,10 @@ export const SmartCsvImportModal: React.FC<SmartCsvImportModalProps> = ({
       }
 
       // Duplicate Check (Task 2 - Check email, phone, and company matching existing)
-      const duplicateMatch = existingLeads.some(ex => {
-        if (!ex) return false;
-        const exEmail = String(ex.email || '').toLowerCase().trim();
-        const exPhone = String(ex.phone || '').trim();
-        const exCompany = String(ex.company || '').toLowerCase().trim();
-        return (emailVal !== "" && exEmail === emailVal.toLowerCase()) || 
-               (phoneVal !== "" && companyVal !== "" && exPhone === phoneVal && exCompany === companyVal.toLowerCase());
-      });
+      const duplicateMatch = existingLeads.some(ex => 
+        (emailVal !== "" && ex.email.toLowerCase().trim() === emailVal.toLowerCase()) || 
+        (phoneVal !== "" && companyVal !== "" && ex.phone === phoneVal && ex.company.toLowerCase().trim() === companyVal.toLowerCase())
+      );
 
       if (duplicateMatch) {
         duplicates.push({
@@ -364,7 +462,23 @@ export const SmartCsvImportModal: React.FC<SmartCsvImportModalProps> = ({
 
   // Confirmation import and progress stream execution (Task 2 Step 6)
   const handleConfirmImport = async () => {
+    // Determine rows to import first
+    const finalRowsToImport = mappedRows.filter((_, idx) => {
+      const email = (mappedRows[idx].email || "").toString().trim().toLowerCase();
+      const phone = (mappedRows[idx].phone || "").toString().trim();
+      const company = (mappedRows[idx].company || "").toString().trim().toLowerCase();
+      
+      const isDupe = existingLeads.some(ex => 
+        (email !== "" && ex.email.toLowerCase().trim() === email) ||
+        (phone !== "" && company !== "" && ex.phone === phone && ex.company.toLowerCase().trim() === company)
+      );
+      
+      return !isDupe; // Automatically filter conflicts to prevent dirtying outreach
+    });
+
+    setFinalImportedLeads(finalRowsToImport);
     setIsImporting(true);
+    setStep(4);
     setProgress(5);
     setImportLogs(["[SYSTEM] Initializing secure transactional multi-row data import thread..."]);
     
@@ -381,24 +495,6 @@ export const SmartCsvImportModal: React.FC<SmartCsvImportModalProps> = ({
         setImportLogs(prev => [...prev, `[WARNING] Failed to persist template configuration settings.`]);
       }
     }
-
-    // Prepare actual rows (exclude duplicates or include, for safety we prompt but proceed, standard duplicate filter can skip duplicates)
-    const finalRowsToImport = mappedRows.filter((_, idx) => {
-      const email = (mappedRows[idx].email || "").toString().trim().toLowerCase();
-      const phone = (mappedRows[idx].phone || "").toString().trim();
-      const company = (mappedRows[idx].company || "").toString().trim().toLowerCase();
-      
-      const isDupe = existingLeads.some(ex => {
-        if (!ex) return false;
-        const exEmail = String(ex.email || '').toLowerCase().trim();
-        const exPhone = String(ex.phone || '').trim();
-        const exCompany = String(ex.company || '').toLowerCase().trim();
-        return (email !== "" && exEmail === email) ||
-               (phone !== "" && company !== "" && exPhone === phone && exCompany === company);
-      });
-      
-      return !isDupe; // Automatically filter conflicts to prevent dirtying outreach
-    });
 
     setImportLogs(prev => [
       ...prev,
@@ -439,11 +535,7 @@ export const SmartCsvImportModal: React.FC<SmartCsvImportModalProps> = ({
               `[FINISHED] Sync summary - Total: ${rawRows.length} | Imported: ${sumData.success_count} | Skipped Conflicts: ${sumData.failed_count}.`
             ]);
             showToast(`Merged ${sumData.success_count} leads cleanly. Resolved ${sumData.failed_count} duplicate conflicts.`, "success");
-            onImportComplete(finalRowsToImport, sumData, { 
-              type: campaignOptionType, 
-              id: selectedCampaignId, 
-              name: newCampaignName 
-            });
+            onImportComplete(finalRowsToImport, sumData);
           } else {
             setImportLogs(prev => [...prev, `[ERROR] Failed to save entries securely to CRM databases.`]);
             showToast("Server side bulk save failed.", "error");
@@ -585,6 +677,50 @@ export const SmartCsvImportModal: React.FC<SmartCsvImportModalProps> = ({
           {/* STEP 2: Fuzzy Suggested Map or Custom field mapper (Task 2 Steps 2 & 3) */}
           {step === 2 && (
             <div className="space-y-6">
+              {/* AI Auto-Map & Clean Clutter Banner */}
+              <div id="ai-import-autoclean-banner" className="bg-gradient-to-r from-blue-950/20 via-surface to-[#0d0e12] border border-brand/20 p-5 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-brand/10 border border-brand/20 flex items-center justify-center text-brand shrink-0">
+                    <Database className="w-5 h-5 text-brand animate-pulse" />
+                  </div>
+                  <div className="space-y-1">
+                    <h4 className="text-white font-extrabold text-[11px] uppercase tracking-wider flex items-center gap-2">
+                      Zyntra AI Intelligent Clean & Auto-Map
+                      {isAiAligning && <span className="text-[8px] bg-brand/20 text-brand px-1.5 py-0.5 rounded font-mono animate-pulse">CLEANSING ACTIVE</span>}
+                      {aiRunSuccess && <span className="text-[8px] bg-[#00d4aa]/20 text-[#00d4aa] px-1.5 py-0.5 rounded font-sans font-bold">Healed & Column-Mapped</span>}
+                    </h4>
+                    <p className="text-[10px] text-text-muted leading-relaxed max-w-2xl">
+                      Advanced neural alignment analyzes incoming cells, auto-matches target fields, and automatically repairs cluttered data (e.g., swapped phone numbers in email column and email addresses in phone column).
+                    </p>
+                    {aiClutterReport && (
+                      <div className="mt-2 text-[10px] font-mono text-[#00d4aa] bg-[#00d4aa]/5 border border-[#00d4aa]/20 p-2.5 rounded-lg">
+                        <strong>AI Alignment Report:</strong> {aiClutterReport}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="shrink-0 ml-auto md:ml-0">
+                  <button
+                    onClick={() => triggerAiAlignment(fileHeaders, rawRows)}
+                    disabled={isAiAligning}
+                    className="px-4 py-2 bg-gradient-to-r from-blue-600 via-teal-500 to-emerald-500 hover:opacity-90 disabled:opacity-50 text-white font-bold text-[10px] uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-md shadow-blue-500/10 hover:scale-[1.02]"
+                  >
+                    {isAiAligning ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+                        Analyzing...
+                      </>
+                    ) : (
+                      <>
+                        <Database className="w-3.5 h-3.5" />
+                        Inspect & De-Clutter rows
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
               <div className="flex items-center justify-between text-[11px] bg-brand/5 border border-brand/20 p-4 rounded-xl text-brand font-semibold">
                 <span className="flex items-center gap-1.5">
                   <CheckCircle2 className="w-4 h-4 text-brand" />
@@ -893,10 +1029,11 @@ export const SmartCsvImportModal: React.FC<SmartCsvImportModalProps> = ({
                     </div>
                   )}
                   <button
-                    onClick={() => setStep(4)}
+                    onClick={handleConfirmImport}
                     className="px-6 py-2.5 bg-[#00d4aa] text-[#090a0f] hover:scale-[1.01] rounded-xl font-extrabold flex items-center gap-2 transition-all shadow-md shadow-[#00d4aa]/15 cursor-pointer"
                   >
-                    Continue to Campaign
+                    <Play className="w-4.5 h-4.5 fill-current" />
+                    Confirm Bulk Sync
                   </button>
                 </div>
               </div>
@@ -904,104 +1041,8 @@ export const SmartCsvImportModal: React.FC<SmartCsvImportModalProps> = ({
             </div>
           )}
 
-          {/* STEP 4: Campaign Selection */}
+          {/* STEP 4: Live progress stream and log readout (Task 2 Step 6) */}
           {step === 4 && (
-            <div className="space-y-6">
-              <h4 className="font-bold flex items-center gap-1.5 mb-1.5 text-white">
-                Assign to Campaign
-              </h4>
-              <p className="text-[11px] text-text-muted mb-4">
-                Choose an existing campaign to inject these leads into, or create a brand new campaign to target them separately.
-              </p>
-
-              <div className="space-y-4">
-                <label className="flex items-start gap-3 p-4 bg-[#090a0f] border border-border rounded-xl cursor-pointer hover:border-brand transition-colors">
-                  <input 
-                    type="radio" 
-                    name="campaignType" 
-                    value="existing"
-                    checked={campaignOptionType === 'existing'} 
-                    onChange={() => setCampaignOptionType('existing')}
-                    className="mt-1"
-                  />
-                  <div className="flex-1">
-                    <span className="font-bold text-white block text-sm">Add to Existing Campaign</span>
-                    <span className="text-[10px] text-text-muted block mt-1">Append new leads directly to an active workflow.</span>
-                    {campaignOptionType === 'existing' && (
-                      <div className="mt-3">
-                        <select 
-                          className="w-full bg-surface-alt border border-border rounded-lg p-2.5 text-xs focus:border-brand outline-none"
-                          value={selectedCampaignId}
-                          onChange={(e) => setSelectedCampaignId(e.target.value)}
-                        >
-                          <option value="" disabled>Select a campaign...</option>
-                          {campaigns?.map(c => (
-                            <option key={c.id} value={c.id}>{c.name}</option>
-                          ))}
-                        </select>
-                      </div>
-                    )}
-                  </div>
-                </label>
-
-                <label className="flex items-start gap-3 p-4 bg-[#090a0f] border border-border rounded-xl cursor-pointer hover:border-brand transition-colors">
-                  <input 
-                    type="radio" 
-                    name="campaignType" 
-                    value="new"
-                    checked={campaignOptionType === 'new'} 
-                    onChange={() => setCampaignOptionType('new')}
-                    className="mt-1"
-                  />
-                  <div className="flex-1">
-                    <span className="font-bold text-white block text-sm">Create New Campaign</span>
-                    <span className="text-[10px] text-text-muted block mt-1">Start a fresh outreach campaign for this specific list.</span>
-                    {campaignOptionType === 'new' && (
-                      <div className="mt-3">
-                        <input 
-                          type="text" 
-                          placeholder="e.g. Q3 Healthcare Founders..."
-                          className="w-full bg-surface-alt border border-border rounded-lg p-2.5 text-xs focus:border-brand outline-none"
-                          value={newCampaignName}
-                          onChange={(e) => setNewCampaignName(e.target.value)}
-                        />
-                      </div>
-                    )}
-                  </div>
-                </label>
-              </div>
-
-              <div className="flex items-center justify-between border-t border-border/40 pt-5">
-                <button
-                  onClick={() => setStep(3)}
-                  className="px-4 py-2 border border-border hover:bg-border text-text-muted hover:text-text rounded-xl font-bold transition-all cursor-pointer"
-                >
-                  Back to Validation
-                </button>
-                <button
-                  onClick={() => {
-                    if (campaignOptionType === 'existing' && !selectedCampaignId) {
-                      showToast("Please select an existing campaign.", "error");
-                      return;
-                    }
-                    if (campaignOptionType === 'new' && !newCampaignName.trim()) {
-                      showToast("Please enter a new campaign name.", "error");
-                      return;
-                    }
-                    setStep(5);
-                    handleConfirmImport();
-                  }}
-                  className="px-6 py-2.5 bg-[#00d4aa] text-[#090a0f] hover:scale-[1.01] rounded-xl font-extrabold flex items-center gap-2 transition-all shadow-md shadow-[#00d4aa]/15 cursor-pointer"
-                >
-                  <Play className="w-4.5 h-4.5 fill-current" />
-                  Confirm & Sync Data
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* STEP 5: Live progress stream and log readout (Task 2 Step 6) */}
-          {step === 5 && (
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <h4 className="text-[10px] font-bold uppercase tracking-widest text-brand flex items-center gap-1.5">
@@ -1063,6 +1104,49 @@ export const SmartCsvImportModal: React.FC<SmartCsvImportModalProps> = ({
                   <div>
                     <span className="text-[9px] text-rose-400 font-bold uppercase tracking-widest block">Duplicates Skipped</span>
                     <span className="font-mono text-xs font-extrabold text-rose-400">{importSummary.failed_count} skipped_logs</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Successfully Uploaded Prospects List (Visible when completed) */}
+              {importSummary && finalImportedLeads.length > 0 && (
+                <div className="space-y-3 bg-[#090a0f] border border-border/80 rounded-2xl p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 font-bold text-[10px] text-white uppercase tracking-wider">
+                      <span className="w-1.5 h-1.5 bg-[#00d4aa] rounded-full animate-pulse" />
+                      Uploaded Lead Database List ({finalImportedLeads.length})
+                    </div>
+                    <span className="text-[9px] text-text-muted font-bold">Targeted B2B Directory Rows Saved</span>
+                  </div>
+
+                  <div className="max-h-56 overflow-y-auto border border-border/40 rounded-xl overflow-hidden custom-scrollbar">
+                    <table className="w-full text-left text-[10px] border-collapse">
+                      <thead>
+                        <tr className="bg-surface border-b border-border/60 text-text-muted font-bold uppercase tracking-wider text-[9px]">
+                          <th className="py-2 px-3">#</th>
+                          <th className="py-2 px-3">Lead Name</th>
+                          <th className="py-2 px-3">Work Email</th>
+                          <th className="py-2 px-3">Phone Number</th>
+                          <th className="py-2 px-3">Company & Role</th>
+                          <th className="py-2 px-3">Score</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border/20">
+                        {finalImportedLeads.map((row, idx) => (
+                          <tr key={idx} className="hover:bg-white/[0.01] transition-colors">
+                            <td className="py-1.5 px-3 text-text-muted font-mono">{idx + 1}</td>
+                            <td className="py-1.5 px-3 font-semibold text-white">{row.name || "—"}</td>
+                            <td className="py-1.5 px-3 font-mono text-[9px] text-brand-alt">{row.email || "—"}</td>
+                            <td className="py-1.5 px-3 text-text-muted font-mono">{row.phone || "—"}</td>
+                            <td className="py-1.5 px-3 text-text-muted">
+                              <span className="text-white font-medium">{row.company || "—"}</span>
+                              {row.role && <span className="block text-[8px] opacity-60 font-semibold">{row.role}</span>}
+                            </td>
+                            <td className="py-1.5 px-3 font-mono font-bold text-brand">{row.score || 60}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               )}
