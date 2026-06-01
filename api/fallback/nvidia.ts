@@ -10,8 +10,13 @@ export default async function handler(req: any, res: any) {
     return res.status(500).json({ error: "NVIDIA_API_KEY is not configured on the server." });
   }
 
+  const controller = new AbortController();
+  const timeout = setTimeout(() => {
+    controller.abort();
+  }, 25000);
+
   try {
-    const modelToUse = selectedModel || "meta/llama-3.3-70b-instruct";
+    const modelToUse = "meta/llama-3.1-8b-instruct";
     const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -24,11 +29,14 @@ export default async function handler(req: any, res: any) {
           ...(systemPrompt ? [{ role: "system", content: systemPrompt }] : []),
           { role: "user", content: prompt }
         ],
-        temperature: 0.15,
-        max_tokens: 8192,
+        temperature: 0.7,
+        max_tokens: 512,
         ...(isJson ? { response_format: { type: "json_object" } } : {})
-      })
+      }),
+      signal: controller.signal
     });
+
+    clearTimeout(timeout);
 
     if (!response.ok) {
       const errorBody = await response.text();
@@ -42,6 +50,10 @@ export default async function handler(req: any, res: any) {
 
     return res.status(200).json({ content: data.choices[0].message.content });
   } catch (err: any) {
+    clearTimeout(timeout);
+    if (err.name === 'AbortError') {
+      return res.status(504).json({ error: "NVIDIA API request timed out after 25 seconds." });
+    }
     return res.status(500).json({ error: err.message || "Failed to contact NVIDIA API" });
   }
 }

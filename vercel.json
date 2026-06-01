@@ -1,4 +1,9 @@
 {
+  "functions": {
+    "api/fallback/*.ts": {
+      "maxDuration": 30
+    }
+  },
   "rewrites": [
     {
       "source": "/api/(.*)",

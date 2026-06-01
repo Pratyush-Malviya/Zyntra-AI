@@ -671,7 +671,7 @@ Per the `PROSPECT_INTEL_ALGO_GUIDE.md` specifications, we will completely overha
 
 #### 1. Implement Dual-Tier Fallback Resiliency
 - Refactor `generateProspectResearch` to wrap the dynamic chain in the custom `isQuotaOrApiKeyError` sniffer.
-- **Tier 1**: Google Gemini 3.5 with strict schema and `tools: [{ googleSearch: {} }]`.
+- **Tier 1**: Google Gemini 1.5 with strict schema and `tools: [{ googleSearch: {} }]`.
 - **Tier 2**: Llama 3.3 via NVIDIA NIM, invoked if a `429 RESOURCE_EXHAUSTED` or API error occurs.
 - **Tier 3**: High-Fidelity Local Knowledge Sandbox Engine (`generateLocalResearchFallback`), triggered if both cloud APIs fail.
 

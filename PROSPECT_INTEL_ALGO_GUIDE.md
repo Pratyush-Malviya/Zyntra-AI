@@ -24,7 +24,7 @@ The Prospect Intelligence Engine operates as a **live-grounded, multi-channel B2
          | [Status OK]        | [Quota/Key Fail]   | (429 / Rate Limit)
          v                    v                    v
 +------------------+ +------------------+ +--------------------+
-|  Gemini 3.5 API  | |  NVIDIA Llama3   | |  Local Knowledge  |
+|  Gemini 1.5 API  | |  NVIDIA Llama3   | |  Local Knowledge  |
 | (Search Ground)  | |  NIM Cloud Node  | |   Sandbox Engine   |
 +--------+---------+ +--------+---------+ +---------+----------+
          |                    |                     |

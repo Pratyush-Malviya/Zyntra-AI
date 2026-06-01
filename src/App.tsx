@@ -3562,7 +3562,7 @@ function CampaignDashboard({ campaigns, onCreate, onSelect, onDelete, onDownload
             {/* Overlay Glass Panel */}
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 to-transparent p-4 flex flex-col justify-end">
               <h4 className="text-xs font-bold text-white uppercase font-sans">Multi-Agent Lead Scorer</h4>
-              <p className="text-[10px] text-brand font-medium">Model: Gemini 3.5 Flash</p>
+              <p className="text-[10px] text-brand font-medium">Model: Gemini 1.5 Flash</p>
             </div>
           </div>
         </div>

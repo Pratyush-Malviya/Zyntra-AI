@@ -39,7 +39,7 @@ export function ensureAllDefaultConfigs(list: LLMConfig[]): LLMConfig[] {
   const defaultConfigsList: LLMConfig[] = [
     {
       id: "gemini",
-      name: "Gemini 3.5 Flash/Pro",
+      name: "Gemini 1.5 Flash/Pro",
       provider: "Google AI",
       isEnabled: true,
       priority: 1,
@@ -118,7 +118,7 @@ export async function initializeLlmConfigs() {
     const defaultConfigs: LLMConfig[] = [
       {
         id: "gemini",
-        name: "Gemini 3.5 Flash/Pro",
+        name: "Gemini 1.5 Flash/Pro",
         provider: "Google AI",
         isEnabled: true,
         priority: 1,
@@ -188,7 +188,7 @@ export async function initializeLlmConfigs() {
           await updateDoc(docRef, { apiKey: config.apiKey });
         }
         if (
-          currentData.name === "Gemini 3.5 Flash" || 
+          currentData.name === "Gemini 1.5 Flash" || 
           currentData.name === "Gemini 2.5 Flash/Pro" ||
           currentData.name === "GPT-4o (Search Preview)" ||
           !currentData.hasOwnProperty("selectedModel")

@@ -207,7 +207,7 @@ export function SuperAdminDashboard({
 
     // 5. Subscribe to LLM Configurations
     const defaultConfigsList = [
-      { id: "gemini", name: "Gemini 3.5 Flash/Pro", provider: "Google AI", isEnabled: true, priority: 1, apiKey: process.env.GEMINI_API_KEY || "", status: "online", avgLatency: 0, totalTokens: 0, totalCost: 0, selectedModel: "gemini-3.5-flash" },
+      { id: "gemini", name: "Gemini 1.5 Flash/Pro", provider: "Google AI", isEnabled: true, priority: 1, apiKey: process.env.GEMINI_API_KEY || "", status: "online", avgLatency: 0, totalTokens: 0, totalCost: 0, selectedModel: "gemini-1.5-flash" },
       { id: "openai", name: "GPT-4o", provider: "OpenAI", isEnabled: true, priority: 2, apiKey: process.env.OPENAI_API_KEY || "", status: "online", avgLatency: 0, totalTokens: 0, totalCost: 0, selectedModel: "gpt-4o" },
       { id: "nvidia", name: "Nvidia NIM Llama 3.3", provider: "Nvidia Nim", isEnabled: true, priority: 3, apiKey: "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", status: "online", avgLatency: 0, totalTokens: 0, totalCost: 0, selectedModel: "meta/llama-3.3-70b-instruct" },
       { id: "openrouter", name: "OpenRouter Free Multi-LLM", provider: "OpenRouter", isEnabled: true, priority: 4, apiKey: process.env.OPENROUTER_API_KEY || "", status: "online", avgLatency: 0, totalTokens: 0, totalCost: 0, selectedModel: "openrouter/free" }
@@ -2314,7 +2314,7 @@ export function SuperAdminDashboard({
         const primaryConfig = llmConfigs.find(c => c.priority === 1) || llmConfigs.find(c => c.isEnabled) || llmConfigs[0];
         const activeLiveModel = primaryConfig 
           ? `${primaryConfig.name} (${primaryConfig.selectedModel || 'Auto'})`
-          : 'Gemini 3.5 Flash';
+          : 'Gemini 1.5 Flash';
 
         return (
           <div className="space-y-6">
@@ -2716,12 +2716,12 @@ export function SuperAdminDashboard({
                                       </div>
                                     ) : model.id === 'gemini' ? (
                                       <select
-                                        value={model.selectedModel || "gemini-3.5-flash"}
+                                        value={model.selectedModel || "gemini-1.5-flash"}
                                         onChange={(e) => handleUpdateLlmConfig(model.id, { selectedModel: e.target.value })}
                                         className="bg-zinc-900 border border-border/80 text-[9.5px] font-bold px-1 py-0.5 rounded focus:outline-none cursor-pointer text-white max-w-[140px] truncate"
                                       >
-                                        <option value="gemini-3.5-flash">Gemini 3.5 Flash</option>
-                                        <option value="gemini-3.5-pro">Gemini 3.5 Pro</option>
+                                        <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+                                        <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
                                         <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
                                         <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
                                         <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
@@ -2937,12 +2937,12 @@ export function SuperAdminDashboard({
                               </div>
                             ) : model.id === 'gemini' ? (
                               <select
-                                value={model.selectedModel || "gemini-3.5-flash"}
+                                value={model.selectedModel || "gemini-1.5-flash"}
                                 onChange={(e) => handleUpdateLlmConfig(model.id, { selectedModel: e.target.value })}
                                 className="w-full max-w-full min-w-0 bg-[#0a0b10] border border-border/80 text-[10.5px] font-bold px-2 py-1.5 rounded-lg focus:outline-none cursor-pointer text-white truncate"
                               >
-                                <option value="gemini-3.5-flash">Gemini 3.5 Flash</option>
-                                <option value="gemini-3.5-pro">Gemini 3.5 Pro</option>
+                                <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+                                <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
                                 <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
                                 <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
                                 <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
