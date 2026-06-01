@@ -1,13 +1,46 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY || "",
-  httpOptions: {
-    headers: {
-      'User-Agent': 'aistudio-build',
-    }
+export function getGeminiApiKey(): string {
+  if (typeof window !== "undefined") {
+    const saved = localStorage.getItem("zy_gemini_api_key");
+    if (saved) return saved;
   }
-});
+  return process.env.GEMINI_API_KEY || "";
+}
+
+export function getGeminiSelectedModel(): string {
+  if (typeof window !== "undefined") {
+    const saved = localStorage.getItem("zy_gemini_selected_model");
+    if (saved) return saved;
+  }
+  return "Gemini 1.5 Flash";
+}
+
+export function resolveGeminiModelId(name: string): string {
+  const clean = name.trim().toLowerCase();
+  if (clean.includes("1.5") && clean.includes("pro")) return "gemini-1.5-pro";
+  if (clean.includes("1.5") && clean.includes("flash")) return "gemini-1.5-flash";
+  if (clean.includes("2.0") && clean.includes("pro")) return "gemini-2.0-pro-exp-02-05";
+  if (clean.includes("2.0") && clean.includes("flash")) return "gemini-2.0-flash";
+  if (clean.includes("2.5") && clean.includes("pro")) return "gemini-2.5-pro";
+  if (clean.includes("2.5") && clean.includes("flash")) return "gemini-2.5-flash";
+  if (clean.includes("3.5") && clean.includes("pro")) return "gemini-3.5-pro";
+  if (clean.includes("3.5") && clean.includes("flash")) return "gemini-3.5-flash";
+  
+  if (name.startsWith("gemini-")) return name;
+  return "gemini-1.5-flash";
+}
+
+function getAiClient(): GoogleGenAI {
+  return new GoogleGenAI({
+    apiKey: getGeminiApiKey(),
+    httpOptions: {
+      headers: {
+        'User-Agent': 'aistudio-build',
+      }
+    }
+  });
+}
 
 const DEFAULT_NVIDIA_API_KEY = "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";
 
@@ -248,8 +281,10 @@ export async function generateOutreach(lead: any, config: any): Promise<Outreach
   `;
 
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
+    const aiClient = getAiClient();
+    const activeModel = resolveGeminiModelId(getGeminiSelectedModel());
+    const response = await aiClient.models.generateContent({
+      model: activeModel,
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -412,8 +447,10 @@ export async function generateProspectResearch(companyInput: string): Promise<Pr
   `;
 
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
+    const aiClient = getAiClient();
+    const activeModel = resolveGeminiModelId(getGeminiSelectedModel());
+    const response = await aiClient.models.generateContent({
+      model: activeModel,
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -731,8 +768,10 @@ export async function analyzeBenchmarkDrift(leads: any[]): Promise<BenchmarkDrif
   `;
 
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
+    const aiClient = getAiClient();
+    const activeModel = resolveGeminiModelId(getGeminiSelectedModel());
+    const response = await aiClient.models.generateContent({
+      model: activeModel,
       contents: prompt,
       config: {
         responseMimeType: "application/json",

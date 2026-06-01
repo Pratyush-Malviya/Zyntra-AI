@@ -33,7 +33,7 @@ import {
   Flame
 } from 'lucide-react';
 import { db, auth } from '../firebase';
-import { getNvidiaApiKey, getNvidiaSelectedModel } from '../services/geminiService';
+import { getNvidiaApiKey, getNvidiaSelectedModel, getGeminiApiKey, getGeminiSelectedModel } from '../services/geminiService';
 import { 
   collection, 
   query, 
@@ -99,11 +99,20 @@ export function SuperAdminDashboard({
   const [llmConfigsState, setLlmConfigsState] = useState([
     {
       id: 'gemini',
-      name: 'Gemini 3.5 Flash/Pro',
-      selectedModel: 'Gemini 3.5 Flash',
-      modelOptions: ['Gemini 3.5 Flash', 'Gemini 3.5 Pro'],
+      name: 'Google Gemini Workspace',
+      selectedModel: getGeminiSelectedModel(),
+      modelOptions: [
+        'Gemini 1.5 Flash',
+        'Gemini 1.5 Pro',
+        'Gemini 2.0 Flash',
+        'Gemini 2.0 Pro Exp',
+        'Gemini 2.5 Flash',
+        'Gemini 2.5 Pro',
+        'Gemini 3.5 Flash',
+        'Gemini 3.5 Pro'
+      ],
       priority: '1st (Primary)',
-      apiKey: 'AIzaSyBtFoPWUBGA7gWALo1!',
+      apiKey: getGeminiApiKey() || 'AIzaSyBtFoPWUBGA7gWALo1!',
       showKey: false,
       enabled: true,
       healthStatus: 'OFFLINE', // Can be ONLINE, OFFLINE, DISABLED
@@ -172,7 +181,7 @@ export function SuperAdminDashboard({
       status: 'warning',
       provider: 'AUTOMATIC FAILOVER SWEEP',
       action: '',
-      message: 'FAILOVER TRIGGERED: Gemini 3.5 Flash/Pro failed. Switch -> NVIDIA NIM Google Gemma-3N.'
+      message: 'FAILOVER TRIGGERED: Google Gemini Workspace failed. Switch -> NVIDIA NIM Google Gemma-3N.'
     },
     {
       id: 'log-3',
@@ -750,7 +759,7 @@ export function SuperAdminDashboard({
     const openrouter = llmConfigsState.find(c => c.id === 'openrouter');
 
     if (gemini?.enabled && gemini?.healthStatus === 'ONLINE') {
-      return { name: 'Gemini 3.5 Flash/Pro', selected: gemini.selectedModel, isFallback: false };
+      return { name: 'Google Gemini Workspace', selected: gemini.selectedModel, isFallback: false };
     }
     if (nvidia?.enabled && nvidia?.healthStatus === 'ONLINE') {
       return { name: 'NVIDIA NIM (Gemma-3N / Llama)', selected: nvidia.selectedModel, isFallback: true };
@@ -817,7 +826,7 @@ export function SuperAdminDashboard({
             status: 'warning',
             provider: 'AUTOMATIC FAILOVER SWEEP',
             action: '',
-            message: `FAILOVER TRIGGERED: Gemini 3.5 Flash/Pro failed. Switch -> NVIDIA NIM ${config.selectedModel}.`
+            message: `FAILOVER TRIGGERED: Google Gemini Workspace failed. Switch -> NVIDIA NIM ${config.selectedModel}.`
           };
 
           const nvidiaNimSuccess = {
@@ -922,6 +931,9 @@ export function SuperAdminDashboard({
         if (id === 'nvidia') {
           localStorage.setItem('zy_nvidia_selected_model', value);
         }
+        if (id === 'gemini') {
+          localStorage.setItem('zy_gemini_selected_model', value);
+        }
         return { ...cfg, selectedModel: value };
       }
       return cfg;
@@ -933,6 +945,9 @@ export function SuperAdminDashboard({
       if (cfg.id === id) {
         if (id === 'nvidia') {
           localStorage.setItem('zy_nvidia_api_key', value);
+        }
+        if (id === 'gemini') {
+          localStorage.setItem('zy_gemini_api_key', value);
         }
         return { ...cfg, apiKey: value };
       }
