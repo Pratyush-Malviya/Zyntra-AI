@@ -690,17 +690,28 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
                   </div>
 
                   {/* Live updates ticker */}
-                  <div className="pt-2 border-t border-border/60 text-[10px] font-mono text-left space-y-1 bg-bg/50 p-3 rounded-xl max-h-[80px] overflow-hidden">
-                    <div className={sprintTime >= 1 ? "text-brand-alt" : "text-text-muted/40"}>
+                  <div 
+                    className="pt-2 border-t border-border/60 text-[10px] font-mono text-left space-y-2.5 bg-bg/50 p-3 rounded-xl h-[85px] overflow-y-auto scroll-smooth custom-scrollbar"
+                    ref={(el) => {
+                      if (el) {
+                        const activeIndex = sprintTime >= 61 ? 3 : sprintTime >= 36 ? 2 : sprintTime >= 16 ? 1 : 0;
+                        const children = Array.from(el.children);
+                        if (children[activeIndex]) {
+                          (children[activeIndex] as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                        }
+                      }
+                    }}
+                  >
+                    <div className={`transition-opacity duration-500 ${sprintTime >= 1 ? "text-brand-alt" : "text-text-muted/40"}`}>
                       ✓ [Phase 1] Harvested web profile scale, revenue estimates, and core market verticals
                     </div>
-                    <div className={sprintTime >= 16 ? "text-brand-alt" : "text-text-muted/40"}>
+                    <div className={`transition-opacity duration-500 ${sprintTime >= 16 ? "text-brand-alt" : "text-text-muted/40 opacity-50"}`}>
                       {sprintTime >= 16 ? "✓" : "→"} [Phase 2] HARVESTING pain citations from SEBI filings, earnings transcripts, transcripts
                     </div>
-                    <div className={sprintTime >= 36 ? "text-brand-alt" : "text-text-muted/40"}>
+                    <div className={`transition-opacity duration-500 ${sprintTime >= 36 ? "text-brand-alt" : "text-text-muted/40 opacity-50"}`}>
                       {sprintTime >= 36 ? "✓" : "→"} [Phase 3] AUDITING enterprise indicators matching ERP (SAP/Oracle), CRM databases, and hiring scopes
                     </div>
-                    <div className={sprintTime >= 61 ? "text-brand-alt" : "text-text-muted/40"}>
+                    <div className={`transition-opacity duration-500 ${sprintTime >= 61 ? "text-brand-alt" : "text-text-muted/40 opacity-50"}`}>
                       {sprintTime >= 61 ? "✓" : "→"} [Phase 4] COMPILING 5 custom AI products with ROI contract values and pipeline briefs
                     </div>
                   </div>
@@ -834,6 +845,26 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
                       <div className="bg-surface-alt border border-border p-6 rounded-2xl space-y-2">
                         <div className="text-[10px] text-text-muted font-bold uppercase tracking-widest">Business Model Description</div>
                         <p className="text-sm text-text-muted leading-relaxed font-sans">{activeResearch?.companyInfo?.description || 'No description available.'}</p>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="bg-surface-alt border border-border p-6 rounded-2xl space-y-4">
+                           <div className="text-[10px] text-text-muted font-bold uppercase tracking-widest">Funding & Capitalization</div>
+                           <div className="flex justify-between items-start gap-4">
+                               <div className="font-bold">Investment & Funding Status</div>
+                               <span className="text-[9px] font-mono font-bold uppercase tracking-widest bg-white/5 border border-white/10 px-2 py-0.5 rounded">{activeResearch?.companyInfo?.funding?.stage || 'Funded / Public Equity'}</span>
+                           </div>
+                           <p className="text-xs text-text-muted leading-relaxed">{activeResearch?.companyInfo?.funding?.details || `${activeResearch?.companyInfo?.name} is currently funded as ${activeResearch?.companyInfo?.status} with an estimated annual revenue of ${activeResearch?.companyInfo?.revenue}.`}</p>
+                        </div>
+                        
+                        <div className="bg-surface-alt border border-border p-6 rounded-2xl space-y-4">
+                           <div className="text-[10px] text-text-muted font-bold uppercase tracking-widest">Innovation Tracker</div>
+                           <div className="flex justify-between items-start gap-4">
+                               <div className="font-bold">Latest Products & Services</div>
+                               <span className="text-[9px] font-mono font-bold uppercase tracking-widest bg-white/5 border border-white/10 px-2 py-0.5 rounded">{activeResearch?.companyInfo?.recentProducts?.status || 'Stable Product Line'}</span>
+                           </div>
+                           <p className="text-xs text-text-muted leading-relaxed">{activeResearch?.companyInfo?.recentProducts?.details || `Core services focus on ${activeResearch?.companyInfo?.industry} enterprise solutions with targeted global deployments.`}</p>
+                        </div>
                       </div>
 
                       {/* Social Media & Digital Footprint Section */}

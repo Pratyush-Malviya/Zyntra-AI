@@ -1,267 +1,270 @@
 import React, { useState, useEffect } from "react";
 import { 
-  Kanban, List, Plus, Search, Filter, RefreshCw, Sparkles, AlertCircle, 
+  Kanban, List, Plus, PlusCircle, Search, Filter, RefreshCw, Sparkles, AlertCircle, 
   MapPin, Clock, Calendar, Briefcase, User, UserCheck, Tag, Trash2, 
   CheckCircle, ChevronRight, Activity, FileText, Check, MoreVertical, 
-  ArrowRight, ShieldAlert, BarChart3, Mail, Phone, Users, History, TrendingUp, X
+  ArrowRight, ShieldAlert, Mail, Phone, Users, History, TrendingUp, X, Linkedin,
+  Send, ExternalLink, Globe, Smartphone, Download, MessageSquare, Info,
+  ChevronDown, Save, FileSpreadsheet, Settings, Eye, Target
 } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { motion, AnimatePresence } from "motion/react";
+import { doc, updateDoc, db, collection, addDoc, setDoc, deleteDoc, Timestamp } from "../firebase";
+import { generateOutreach, OutreachMessages, generateProspectResearch, ProspectResearchReport } from "../services/geminiService";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
+import { SmartCsvImportModal } from "./SmartCsvImportModal";
 
-interface Lead {
-  id: string;
-  name: string;
-  role: string;
-  company: string;
-  email: string;
-  phone: string;
-  status: "imported" | "generated" | "sent";
-  score: number;
-  tags?: string[];
-  assignedAgent?: string;
-  industry?: string;
-  country?: string;
-  linkedin_url?: string;
-}
-
-interface Deal {
-  id: string;
-  leadId: string;
-  title: string;
-  value: number;
-  stage: string;
-  createdAt: string;
-  assignedAgent?: string;
-  tags?: string[];
-  status?: "hot" | "warm" | "cold" | "lost";
-}
-
-interface PipelineStage {
+// Define 6 salesperson-first stages
+export interface Stage {
   id: string;
   name: string;
   color: string;
   probability: number;
-  slaDays: number;
-  statuses: string[];
 }
 
-interface Pipeline {
-  id: string;
-  name: string;
-  stages: PipelineStage[];
-}
+export const PIPELINE_STAGES: Stage[] = [
+  { id: 'Imported', name: 'Imported', color: '#8b5cf6', probability: 20 },
+  { id: 'Pending Action', name: 'Pending Action', color: '#f59e0b', probability: 50 },
+  { id: 'AI Generated', name: 'AI Generated', color: '#3b82f6', probability: 75 },
+  { id: 'Outreach Sent', name: 'Outreach Sent', color: '#10b981', probability: 90 },
+  { id: 'Responded', name: 'Responded', color: '#00d4aa', probability: 95 },
+  { id: 'Failed / Disqualified', name: 'Failed / Disqualified', color: '#ef4444', probability: 0 }
+];
 
-interface Task {
-  id: string;
-  leadId?: string;
-  dealId?: string;
-  title: string;
-  dueDate: string;
-  completed: boolean;
-  assignedAgent: string;
-}
-
-interface ActivityLog {
-  id: string;
-  dealId?: string;
-  leadId?: string;
-  type: string;
-  title: string;
-  description: string;
-  timestamp: string;
-  agentName: string;
-}
-
-interface DealMovement {
-  id: string;
-  dealId: string;
-  fromStage: string;
-  toStage: string;
-  timestamp: string;
-  agentName: string;
-}
+const COUNTRY_FLAGS: Record<string, string> = {
+  Kenya: '🇰🇪',
+  India: '🇮🇳',
+  UK: '🇬🇧',
+  Australia: '🇦🇺',
+  UAE: '🇦🇪',
+  USA: '🇺🇸',
+  Global: '🌍'
+};
 
 interface CrmPipelineBoardProps {
-  leads: Lead[];
-  onLeadsUpdated?: () => void;
-  showToast: (msg: string, type: "success" | "error" | "info") => void;
+  leads: any[];
+  campaigns: any[];
+  currentCampaign: any | null;
+  setCurrentCampaign: (c: any | null) => void;
+  onCreateCampaign: (name: string) => Promise<any>;
+  onDeleteCampaign: (id: string) => Promise<void>;
+  showToast: (msg: string, type: "success" | "error" | "info" | "warning") => void;
+  messages: Record<string, OutreachMessages>;
+  config: any;
+  setConfig: React.Dispatch<React.SetStateAction<any>>;
+  chState: { wa: boolean; li: boolean; em: boolean };
+  setChState: React.Dispatch<React.SetStateAction<{ wa: boolean; li: boolean; em: boolean }>>;
+  smtpConfig?: any;
+  profile: any;
+  user: any;
+  handleUpdateLead: (leadId: string, updatedFields: Partial<any>) => Promise<void>;
+  handleDeleteLead: (leadId: string) => Promise<void>;
+  saveLeads: (parsed: any[]) => Promise<void>;
 }
 
-export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({ 
-  leads: initialLeads, 
-  onLeadsUpdated, 
-  showToast 
+export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
+  leads,
+  campaigns,
+  currentCampaign,
+  setCurrentCampaign,
+  onCreateCampaign,
+  onDeleteCampaign,
+  showToast,
+  messages,
+  config,
+  setConfig,
+  chState,
+  setChState,
+  smtpConfig,
+  profile,
+  user,
+  handleUpdateLead,
+  handleDeleteLead,
+  saveLeads
 }) => {
-  // States
+  // Navigation & filter states
   const [viewType, setViewType] = useState<"kanban" | "list">("kanban");
-  const [deals, setDeals] = useState<Deal[]>([]);
-  const [pipelinesList, setPipelinesList] = useState<Pipeline[]>([]);
-  const [activePipeline, setActivePipeline] = useState<Pipeline | null>(null);
-  const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
-  const [aiReport, setAiReport] = useState<any | null>(null);
-  const [aiHistory, setAiHistory] = useState<any[]>([]);
-  const [dealTasks, setDealTasks] = useState<Task[]>([]);
-  const [dealActivities, setDealActivities] = useState<ActivityLog[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedTagFilter, setSelectedTagFilter] = useState("all");
-  const [selectedAgentFilter, setSelectedAgentFilter] = useState("all");
+  const [selectedLead, setSelectedLead] = useState<any | null>(null);
+  const [selectedTab, setSelectedTab] = useState<'overview' | 'outreach' | 'history' | 'intelligence'>('overview');
   
-  // SLA, Movements, Swimlane & Stats Widget states
-  const [movements, setMovements] = useState<DealMovement[]>([]);
-  const [allActivities, setAllActivities] = useState<ActivityLog[]>([]);
-  const [swimlaneMode, setSwimlaneMode] = useState<boolean>(true);
-  const [showTeamActivityWidget, setShowTeamActivityWidget] = useState<boolean>(false);
-  
-  // UI Panels
-  const [showAddDealModal, setShowAddDealModal] = useState(false);
-  const [showMergeModal, setShowMergeModal] = useState(false);
-  const [showBulkImportModal, setShowBulkImportModal] = useState(false);
-  const [selectedLeadsForBulk, setSelectedLeadsForBulk] = useState<string[]>([]);
-  const [bulkDealValue, setBulkDealValue] = useState<number>(35000);
-  const [bulkStage, setBulkStage] = useState<string>("stage-discovery");
-  const [bulkAgent, setBulkAgent] = useState<string>("Sarah Mitchell");
-  const [bulkStatus, setBulkStatus] = useState<"hot" | "warm" | "cold">("warm");
-  const [bulkTags, setBulkTags] = useState<string>("Bulk, Core Prospect");
-  const [isBulkImporting, setIsBulkImporting] = useState<boolean>(false);
-  
-  // Creation Forms
-  const [newDealTitle, setNewDealTitle] = useState("");
-  const [newDealValue, setNewDealValue] = useState(25000);
-  const [newDealLeadId, setNewDealLeadId] = useState("");
-  const [newDealAgent, setNewDealAgent] = useState("Sarah Mitchell");
-  const [newDealStage, setNewDealStage] = useState("");
-  const [newDealTags, setNewDealTags] = useState("");
+  // Intelligence execution state
+  const [isExecutingIntelligence, setIsExecutingIntelligence] = useState(false);
+  const [executedIntelligenceMap, setExecutedIntelligenceMap] = useState<Record<string, ProspectResearchReport>>({});
 
-  // Quick Action State
-  const [hoveredCardId, setHoveredCardId] = useState<string | null>(null);
-  const [draggingDealId, setDraggingDealId] = useState<string | null>(null);
-  const [dragOverStageId, setDragOverStageId] = useState<string | null>(null);
-  const [isRefreshingAi, setIsRefreshingAi] = useState(false);
-  const [newTaskTitle, setNewTaskTitle] = useState("");
-  const [newTaskDueDate, setNewTaskDueDate] = useState("");
-  const [newNoteText, setNewNoteText] = useState("");
-
-  // Deduplication Duplicate Matches List
-  const [duplicateConflicts, setDuplicateConflicts] = useState<{ leadA: Lead; leadB: Lead; fieldConflicts: string[] } | null>(null);
-
-  // Load preferences, pipelines, and deals
-  const refreshDbState = async () => {
+  const handleExecuteIntelligence = async () => {
+    if (!selectedLead) return;
+    setIsExecutingIntelligence(true);
     try {
-      // 1. Fetch preferred views
-      const prefRes = await fetch("/api/user-preferences");
-      if (prefRes.ok) {
-        const prefs = await prefRes.json();
-        const defaultView = prefs.find((p: any) => p.key === "default_lead_view")?.value;
-        if (defaultView === "list" || defaultView === "kanban") {
-          setViewType(defaultView);
-        }
+      const query = selectedLead.company || selectedLead.email?.split('@')[1] || selectedLead.name;
+      const report = await generateProspectResearch(query);
+      setExecutedIntelligenceMap(prev => ({ ...prev, [selectedLead.id]: report }));
+      showToast("Prospect Intelligence generated successfully", "success");
+    } catch (err: any) {
+      console.error(err);
+      showToast("Failed to generate intelligence: " + (err.message || ""), "error");
+    } finally {
+      setIsExecutingIntelligence(false);
+    }
+  };
+  
+  // Modal states
+  const [showSmartImportModal, setShowSmartImportModal] = useState(false);
+  const [showBulkAddModal, setShowBulkAddModal] = useState(false);
+  const [showSingleLeadModal, setShowSingleLeadModal] = useState(false);
+  const [showCampaignModal, setShowCampaignModal] = useState(false);
+  const [newCampaignName, setNewCampaignName] = useState("");
+  const [bulkAddRowsText, setBulkAddRowsText] = useState("");
+  const [rawLeads, setRawLeads] = useState("");
+  const [newLeadStage, setNewLeadStage] = useState("Imported");
+  const [newLeadForm, setNewLeadForm] = useState({
+    name: "",
+    role: "",
+    company: "",
+    email: "",
+    phone: "",
+    linkedin_url: ""
+  });
+
+  // Product DNA accordion panel
+  const [showDnaPanel, setShowDnaPanel] = useState(false);
+
+  // Lead editing state
+  const [isEditingLead, setIsEditingLead] = useState(false);
+  const [editedLeadData, setEditedLeadData] = useState<any>({});
+  const [leadNotes, setLeadNotes] = useState("");
+
+  // AI Generation state per lead
+  const [isGeneratingLeadOutreach, setIsGeneratingLeadOutreach] = useState(false);
+
+  // Active channel states
+  const [selectedTone, setSelectedTone] = useState<Record<string, string>>({
+    wa: "Conversational",
+    li: "Professional B2B",
+    em: "Professional B2B"
+  });
+
+  // Expandable summary lists
+  const [expandedLeadId, setExpandedLeadId] = useState<string | null>(null);
+  const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
+  const [dragOverStageId, setDragOverStageId] = useState<string | null>(null);
+
+  // Heuristic lead status mappings
+  const getLeadStage = (lead: any): string => {
+    if (lead.stage) {
+      if (lead.stage === 'stage-discovery') return 'Imported';
+      if (lead.stage === 'stage-proposal') return 'Pending Action';
+      if (lead.stage === 'stage-negotiation') return 'AI Generated';
+      if (lead.stage === 'stage-won') return 'Outreach Sent';
+      if (lead.stage === 'stage-responded') return 'Responded';
+      if (lead.stage === 'stage-lost') return 'Failed / Disqualified';
+      return lead.stage;
+    }
+    // Fallback to old status
+    if (lead.status === 'sent') return 'Outreach Sent';
+    if (lead.status === 'failed') return 'Failed / Disqualified';
+    if (lead.status === 'generated') return 'AI Generated';
+    if (lead.status === 'pending') return 'Pending Action';
+    return 'Imported';
+  };
+
+  const getStageColor = (stageId: string): string => {
+    return PIPELINE_STAGES.find(s => s.id === stageId)?.color || "#8b5cf6";
+  };
+
+  const calculateLeadScore = (lead: any): number => {
+    if (!lead) return 0;
+    let score = 0;
+    const highValueRoles = ['ceo', 'founder', 'vp', 'director', 'head', 'manager', 'owner', 'cto', 'cmo', 'coo'];
+    const role = String(lead.role || '').toLowerCase();
+    if (highValueRoles.some(r => role.includes(r))) score += 40;
+    const techIndustries = ['software', 'tech', 'it', 'saas', 'digital', 'ai', 'cloud'];
+    const industry = String(lead.industry || '').toLowerCase();
+    if (techIndustries.some(i => industry.includes(i))) score += 20;
+    const linkedin = String(lead.linkedin_url || '');
+    if (linkedin && linkedin.length > 10) score += 10;
+    const phone = String(lead.phone || '');
+    if (phone && phone.length > 5) score += 10;
+    const email = String(lead.email || '');
+    if (email && email.includes('@')) score += 10;
+    return score;
+  };
+
+  const getScoreColor = (score: number) => {
+    if (score >= 70) return "text-emerald-400 bg-emerald-500/10 border-emerald-500/20";
+    if (score >= 40) return "text-amber-400 bg-amber-500/10 border-amber-500/20";
+    return "text-rose-400 bg-rose-500/10 border-rose-500/20";
+  };
+
+  // PDF Report Downloader
+  const downloadCampaignPDF = async (campaign: any) => {
+    try {
+      const doc = new jsPDF();
+      doc.setFont("Helvetica", "bold");
+      doc.setFontSize(22);
+      doc.setTextColor(139, 92, 246); // Purple brand
+      doc.text("ZYNTRA CRM CAMPAIGN REPORT", 20, 25);
+      
+      doc.setFontSize(14);
+      doc.setTextColor(15, 23, 42);
+      doc.text(`Campaign: ${campaign.name}`, 20, 35);
+      
+      doc.setDrawColor(226, 232, 240);
+      doc.line(20, 40, 190, 40);
+
+      // Metadata Table
+      const createdStr = campaign.createdAt?.toDate ? campaign.createdAt.toDate().toLocaleDateString() : 'N/A';
+      const metaData = [
+        ["Campaign Name", campaign.name],
+        ["Current Status", campaign.status?.toUpperCase() || 'DRAFT'],
+        ["Total Enrolled Leads", `${leads.length} Profiles`],
+        ["Created At", createdStr]
+      ];
+
+      autoTable(doc, {
+        startY: 45,
+        head: [['Specification', 'Details']],
+        body: metaData,
+        theme: 'striped',
+        headStyles: { fillColor: [139, 92, 246] }
+      });
+
+      let currentY = (doc as any).lastAutoTable.finalY + 15;
+
+      if (leads.length > 0) {
+        doc.setFontSize(12);
+        doc.text("Enrolled Leads List:", 20, currentY);
+
+        const leadsBody = leads.map(l => [
+          l.name || 'N/A',
+          l.company || 'N/A',
+          l.role || 'N/A',
+          l.email || 'N/A',
+          getLeadStage(l)
+        ]);
+
+        autoTable(doc, {
+          startY: currentY + 5,
+          head: [['Full Name', 'Company', 'Role', 'Email', 'Current Pipeline Stage']],
+          body: leadsBody,
+          theme: 'grid',
+          headStyles: { fillColor: [71, 85, 105] }
+        });
       }
 
-      // 2. Fetch pipelines
-      const pipeRes = await fetch("/api/pipelines");
-      if (pipeRes.ok) {
-        const pipes = await pipeRes.json();
-        setPipelinesList(pipes);
-        if (pipes.length > 0) {
-          setActivePipeline(pipes[0]);
-        }
-      }
-
-      // 3. Fetch deals
-      const dealsRes = await fetch("/api/deals");
-      if (dealsRes.ok) {
-        const d = await dealsRes.json();
-        setDeals(d);
-      }
-
-      // 4. Fetch movements history
-      const movementRes = await fetch("/api/deals/audit-movement");
-      if (movementRes.ok) {
-        const mv = await movementRes.json();
-        setMovements(mv);
-      }
-
-      // 5. Fetch all activity logs
-      const actRes = await fetch("/api/activities");
-      if (actRes.ok) {
-        const acts = await actRes.json();
-        setAllActivities(acts);
-      }
-    } catch (err) {
-      console.error("Error fetching CRM pipeline data state", err);
+      doc.save(`Zyntra_Campaign_${campaign.name.replace(/\s+/g, '_')}_Report.pdf`);
+      showToast("Campaign Report PDF downloaded successfully!", "success");
+    } catch (err: any) {
+      console.error(err);
+      showToast("Failed to compile Campaign PDF: " + err.message, "error");
     }
   };
 
-  useEffect(() => {
-    refreshDbState();
-  }, [initialLeads]);
-
-  const getDaysInStage = (deal: Deal, stage: PipelineStage) => {
-    const relevantMovements = movements.filter(
-      m => m.dealId === deal.id && m.toStage === deal.stage
-    );
-
-    let entryDate = deal.createdAt && !isNaN(Date.parse(deal.createdAt)) ? new Date(deal.createdAt) : new Date();
-    
-    if (relevantMovements.length > 0) {
-      relevantMovements.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-      entryDate = new Date(relevantMovements[0].timestamp);
-    }
-
-    const currentDate = new Date();
-    const diffTime = currentDate.getTime() - entryDate.getTime();
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    return {
-      days: diffDays >= 0 ? diffDays : 0,
-      entryDate
-    };
+  // Drag and Drop handlers
+  const handleDragStart = (e: React.DragEvent, leadId: string) => {
+    e.dataTransfer.setData("text/plain", leadId);
   };
 
-  // SLA Breach Watchdog
-  useEffect(() => {
-    if (deals.length === 0 || !activePipeline) return;
-
-    deals.forEach(async (deal) => {
-      const stage = activePipeline.stages.find(s => s.id === deal.stage);
-      if (!stage || stage.slaDays <= 0) return;
-
-      const { days } = getDaysInStage(deal, stage);
-      if (days > stage.slaDays) {
-        const breachLogged = allActivities.some(
-          act => act.dealId === deal.id && 
-                 act.type === "sla_breach" && 
-                 act.description.includes(stage.name)
-        );
-
-        if (!breachLogged) {
-          try {
-            const res = await fetch("/api/activities", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                dealId: deal.id,
-                type: "sla_breach",
-                title: "🚨 SLA Breach Warning",
-                description: `Deal "${deal.title}" has stayed in stage "${stage.name}" for ${days} days (defined SLA: ${stage.slaDays} days).`,
-                agentName: deal.assignedAgent || "System Watchdog"
-              })
-            });
-            if (res.ok) {
-              const actsRes = await fetch("/api/activities");
-              if (actsRes.ok) {
-                const updatedActs = await actsRes.json();
-                setAllActivities(updatedActs);
-              }
-            }
-          } catch (err) {
-            console.error("Failed to log SLA breach activity", err);
-          }
-        }
-      }
-    });
-  }, [deals, movements, activePipeline, allActivities]);
-
-  // Drag handlers
   const handleDragOver = (e: React.DragEvent, stageId: string) => {
     e.preventDefault();
     if (dragOverStageId !== stageId) {
@@ -269,1272 +272,1159 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
     }
   };
 
-  const handleDragStart = (e: React.DragEvent, dealId: string) => {
-    e.dataTransfer.setData("text/plain", dealId);
-    setDraggingDealId(dealId);
-  };
-
-  const handleDragEnd = () => {
-    setDraggingDealId(null);
-    setDragOverStageId(null);
-  };
-
   const handleDrop = async (e: React.DragEvent, targetStageId: string) => {
     e.preventDefault();
-    setDraggingDealId(null);
     setDragOverStageId(null);
-    const dealId = e.dataTransfer.getData("text/plain");
-    const draggedDeal = deals.find(d => d.id === dealId);
+    const leadId = e.dataTransfer.getData("text/plain");
+    const draggedLead = leads.find(l => l.id === leadId);
     
-    if (draggedDeal && draggedDeal.stage !== targetStageId) {
-      // Optimistic physical update for ultra fast UI feel
-      const updatedDeals = deals.map(d => d.id === dealId ? { ...d, stage: targetStageId } : d);
-      setDeals(updatedDeals);
-
-      try {
-        const res = await fetch(`/api/deals/${dealId}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ stage: targetStageId, agentName: draggedDeal.assignedAgent || "Workspace Agent" })
-        });
-        
-        if (res.ok) {
-          showToast(`Deal stage promoted to "${targetStageId}" Successfully!`, "success");
-          if (onLeadsUpdated) onLeadsUpdated();
-          refreshDbState();
-        } else {
-          showToast("Failed to promote deal to target stage.", "error");
-          refreshDbState();
-        }
-      } catch (err) {
-        showToast("Communication loss updating deal stage.", "error");
-        refreshDbState();
+    if (draggedLead) {
+      const currentStage = getLeadStage(draggedLead);
+      if (currentStage !== targetStageId) {
+        await handleUpdateLead(leadId, { stage: targetStageId });
+        showToast(`Moved ${draggedLead.name} to ${targetStageId}`, "success");
       }
     }
   };
 
-  // Select deal to reveal drawer attributes
-  const selectActiveDeal = async (deal: Deal) => {
-    setSelectedDeal(deal);
-    setNewNoteText("");
-    setNewTaskTitle("");
+  // CSV Importer callback
+  const handleSmartImportComplete = async (importedRows: any[], summary: any, campaignOption?: { type: 'existing' | 'new', id?: string, name?: string }) => {
+    if (!user || !profile) return;
     
-    try {
-      // Fetch tasks checklist
-      const taskRes = await fetch("/api/tasks");
-      if (taskRes.ok) {
-        const allTasks: Task[] = await taskRes.json();
-        setDealTasks(allTasks.filter(t => t.dealId === deal.id));
-      }
+    let targetCampaignId = currentCampaign?.id;
 
-      // Fetch timeline logs
-      const actRes = await fetch("/api/activities");
-      if (actRes.ok) {
-        const allActs: ActivityLog[] = await actRes.json();
-        setDealActivities(allActs.filter(a => a.dealId === deal.id));
-      }
-
-      // Fetch Claude intelligence closing reports
-      const aiRes = await fetch(`/api/deals/${deal.id}/ai-report`);
-      if (aiRes.ok) {
-        const rp = await aiRes.json();
-        setAiReport(JSON.parse(rp.reportJson));
-      } else {
-        setAiReport(null);
-      }
-    } catch (err) {
-      console.error("Error loaded deal secondary info panel", err);
+    if (campaignOption?.type === 'new' && campaignOption.name) {
+       const newCamp = await onCreateCampaign(campaignOption.name);
+       if (newCamp && newCamp.id) {
+         targetCampaignId = newCamp.id;
+       }
+    } else if (campaignOption?.type === 'existing' && campaignOption.id) {
+       targetCampaignId = campaignOption.id;
+       const selectedCamp = campaigns.find(c => c.id === targetCampaignId);
+       if (selectedCamp) {
+         setCurrentCampaign(selectedCamp);
+       }
     }
-  };
 
-  const toggleViewPreference = async (type: "kanban" | "list") => {
-    setViewType(type);
-    try {
-      await fetch("/api/user-preferences", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: "default_lead_view", value: type })
-      });
-      showToast(`Saved ${type.toUpperCase()} layout as workspace preference.`, "info");
-    } catch (err) {
-      console.warn("Could not persist workspace layout preference.");
-    }
-  };
-
-  const handleAddTask = async () => {
-    if (!selectedDeal || !newTaskTitle || !newTaskDueDate) {
-      showToast("Please enter task action title and target reminder date.", "error");
+    if (!targetCampaignId) {
+      showToast("No target campaign found. Import aborted.", "error");
       return;
     }
-    
-    try {
-      const res = await fetch("/api/tasks", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: newTaskTitle,
-          dueDate: newTaskDueDate,
-          dealId: selectedDeal.id,
-          assignedAgent: selectedDeal.assignedAgent || "Workspace Operator"
-        })
-      });
 
-      if (res.ok) {
-        showToast("Followup checklist reminder created successfully.", "success");
-        setNewTaskTitle("");
-        setNewTaskDueDate("");
-        const tRes = await fetch("/api/tasks");
-        if (tRes.ok) {
-          const allTasks = await tRes.json();
-          setDealTasks(allTasks.filter((t: any) => t.dealId === selectedDeal.id));
-        }
-      }
-    } catch (err) {
-      showToast("Cannot initialize task follow-up.", "error");
-    }
+    const mappedLeads = importedRows.map(row => ({
+      userId: user.uid,
+      orgId: profile.orgId,
+      campaignId: targetCampaignId,
+      name: row.name || "",
+      role: row.role || "",
+      company: row.company || "",
+      industry: row.industry || "N/A",
+      country: row.country || "N/A",
+      phone: row.phone || "",
+      email: row.email || "",
+      linkedin_url: row.linkedin_url || "",
+      status: "imported",
+      stage: "Imported",
+      score: Number(row.score) || Math.floor(65 + Math.random() * 25),
+    }));
+
+    await saveLeads(mappedLeads);
+    setShowSmartImportModal(false);
+    showToast(`Successfully imported ${mappedLeads.length} leads!`, "success");
   };
 
-  const handleToggleTask = async (task: Task) => {
+  // Parse manual text paste
+  const parseManualLeads = async (input: string) => {
+    const lines = input.trim().split('\n').filter(l => l.trim());
+    if (lines.length < 2 || !currentCampaign || !user) return;
+
+    const headers = lines[0].split(',').map(h => (h || '').trim().toLowerCase().replace(/\s+/g, '_'));
+    const parsed = lines.slice(1).map(line => {
+      const vals = splitCSV(line);
+      const obj: any = {
+        userId: user.uid,
+        orgId: profile.orgId,
+        campaignId: currentCampaign.id,
+        status: 'imported',
+        stage: 'Imported'
+      };
+      headers.forEach((h, i) => { obj[h] = (vals[i] || '').trim(); });
+      return obj;
+    }).filter(r => r.name);
+
+    await saveLeads(parsed);
+    setRawLeads("");
+    setShowBulkAddModal(false);
+    showToast(`Successfully pasted and parsed ${parsed.length} leads!`, "success");
+  };
+
+  const splitCSV = (line: string) => {
+    const r = [];
+    let cur = '', inQ = false;
+    for (let c of line) {
+      if (c === '"') { inQ = !inQ; }
+      else if (c === ',' && !inQ) { r.push(cur); cur = ''; }
+      else { cur += c; }
+    }
+    r.push(cur);
+    return r;
+  };
+
+  const openSingleLeadModal = (stageId: string) => {
+    if (!currentCampaign) {
+      showToast("Select a campaign first to add leads.", "warning");
+      return;
+    }
+    setNewLeadStage(stageId);
+    setNewLeadForm({
+      name: "",
+      role: "",
+      company: "",
+      email: "",
+      phone: "",
+      linkedin_url: ""
+    });
+    setShowSingleLeadModal(true);
+  };
+
+  const handleCreateSingleLead = async () => {
+    if (!currentCampaign || !user || !profile) return;
+    if (!newLeadForm.name.trim() || !newLeadForm.company.trim()) {
+      showToast("Add at least the lead name and company.", "warning");
+      return;
+    }
+
+    const leadPayload = {
+      userId: user.uid,
+      orgId: profile.orgId,
+      campaignId: currentCampaign.id,
+      name: newLeadForm.name.trim(),
+      role: newLeadForm.role.trim(),
+      company: newLeadForm.company.trim(),
+      industry: "N/A",
+      country: "N/A",
+      phone: newLeadForm.phone.trim(),
+      email: newLeadForm.email.trim(),
+      linkedin_url: newLeadForm.linkedin_url.trim(),
+      status: "imported",
+      stage: newLeadStage,
+      score: calculateLeadScore(newLeadForm),
+      createdAt: Timestamp.now()
+    };
+
     try {
-      const res = await fetch(`/api/tasks/${task.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ completed: !task.completed })
+      const docRef = await addDoc(collection(db, 'leads'), leadPayload);
+      await updateDoc(doc(db, 'campaigns', currentCampaign.id), {
+        leadsCount: leads.length + 1
       });
-      if (res.ok) {
-        const tRes = await fetch("/api/tasks");
-        if (tRes.ok) {
-          const allTasks = await tRes.json();
-          setDealTasks(allTasks.filter((t: any) => t.dealId === selectedDeal!.id));
-        }
-      }
-    } catch (err) {
+      const createdLead = { id: docRef.id, ...leadPayload };
+      setShowSingleLeadModal(false);
+      openLeadDrawer(createdLead);
+      showToast("Lead created. Add more details in the profile drawer.", "success");
+    } catch (err: any) {
       console.error(err);
+      showToast(`Failed to create lead: ${err.message || err}`, "error");
     }
   };
 
-  const handleAddNote = async () => {
-    if (!selectedDeal || !newNoteText.trim()) return;
-
-    try {
-      const res = await fetch("/api/activities", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          dealId: selectedDeal.id,
-          type: "note_added",
-          title: "Internal Note logged",
-          description: newNoteText,
-          agentName: selectedDeal.assignedAgent || "Workspace Team"
-        })
-      });
-
-      if (res.ok) {
-        showToast("Negotiation note logged on chronological journey path.", "success");
-        setNewNoteText("");
-        const actRes = await fetch("/api/activities");
-        if (actRes.ok) {
-          const allActs = await actRes.json();
-          setDealActivities(allActs.filter(a => a.dealId === selectedDeal.id));
-        }
-      }
-    } catch (err) {
-      showToast("Network error publishing notes log.", "error");
-    }
+  // Lead Profile Drawer controls
+  const openLeadDrawer = (lead: any, defaultTab: 'overview' | 'outreach' | 'history' | 'intelligence' = 'overview') => {
+    setSelectedLead(lead);
+    setLeadNotes(lead.notes || "");
+    setEditedLeadData({ ...lead });
+    setIsEditingLead(false);
+    setSelectedTab(defaultTab);
   };
 
-  const handleRefreshAiReport = async () => {
-    if (!selectedDeal) return;
-    setIsRefreshingAi(true);
-    showToast("Launching background Claude Closed Analyzer thread...", "info");
+  const handleSaveNotes = async () => {
+    if (!selectedLead) return;
+    await handleUpdateLead(selectedLead.id, { notes: leadNotes });
+    showToast("Notes updated successfully", "success");
+  };
 
+  const handleSaveLeadEdit = async () => {
+    if (!selectedLead) return;
+    await handleUpdateLead(selectedLead.id, editedLeadData);
+    setSelectedLead({ ...selectedLead, ...editedLeadData });
+    setIsEditingLead(false);
+    showToast("Contact details saved", "success");
+  };
+
+  // Generate / Regenerate AI outreach draft for a single lead
+  const handleRegenerateOutreach = async (toneStyle: string) => {
+    if (!selectedLead || !currentCampaign) return;
+    setIsGeneratingLeadOutreach(true);
+    showToast(`Drafting personalized messages with tone "${toneStyle}"...`, "info");
     try {
-      const res = await fetch(`/api/deals/${selectedDeal.id}/ai-report/refresh`, {
-        method: "POST"
+      const result = await generateOutreach(selectedLead, { ...config, tone: toneStyle });
+      await setDoc(doc(db, 'messages', selectedLead.id), {
+        ...result,
+        leadId: selectedLead.id,
+        campaignId: currentCampaign.id,
+        userId: user.uid,
+        orgId: profile.orgId,
+        updatedAt: Timestamp.now()
       });
-      if (res.ok) {
-        const data = await res.json();
-        setAiReport(data.report);
-        setAiHistory(prev => [{ score: data.report.close_probability, date: new Date().toLocaleTimeString() }, ...prev].slice(0, 5));
-        showToast("Claude Sonnet Close intelligence compiling complete!", "success");
-        refreshDbState();
-      } else {
-        showToast("AI intelligence server returned error.", "error");
+      // Move lead to AI Generated stage automatically if in Imported or Pending Action
+      const currentStage = getLeadStage(selectedLead);
+      if (currentStage === 'Imported' || currentStage === 'Pending Action') {
+        await handleUpdateLead(selectedLead.id, { stage: 'AI Generated' });
       }
-    } catch (err) {
-      showToast("Error invoking Claude API endpoint.", "error");
+      showToast("AI Outreach drafts generated successfully!", "success");
+    } catch (e: any) {
+      console.error(e);
+      showToast("Outreach generation failed: " + e.message, "error");
     } finally {
-      setIsRefreshingAi(false);
+      setIsGeneratingLeadOutreach(false);
     }
   };
 
-  const checkForDuplicates = () => {
-    for (let i = 0; i < initialLeads.length; i++) {
-      for (let j = i + 1; j < initialLeads.length; j++) {
-        const a = initialLeads[i];
-        const b = initialLeads[j];
-        
-        const emailMatch = a.email && b.email && a.email.toLowerCase().trim() === b.email.toLowerCase().trim();
-        const phoneMatch = a.phone && b.phone && a.phone.trim() === b.phone.trim();
-        const companyMatch = a.company && b.company && a.company.toLowerCase().trim() === b.company.toLowerCase().trim() && a.name.toLowerCase().trim() === b.name.toLowerCase().trim();
-
-        if (emailMatch || phoneMatch || companyMatch) {
-          const conflicts: string[] = [];
-          if (a.role !== b.role) conflicts.push("role");
-          if (a.phone !== b.phone) conflicts.push("phone");
-          if (a.score !== b.score) conflicts.push("score");
-
-          setDuplicateConflicts({ leadA: a, leadB: b, fieldConflicts: conflicts });
-          setShowMergeModal(true);
-          return;
-        }
-      }
-    }
-    showToast("No unresolved lead duplicates or contact anomalies detected.", "info");
-  };
-
-  const handleResolveMerge = async (primaryId: string, secondaryId: string, overrides: any) => {
-    try {
-      const res = await fetch("/api/leads/merge", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          primaryId,
-          secondaryId,
-          resolvedFields: overrides
-        })
-      });
-
-      if (res.ok) {
-        showToast("Duplicate leads combined! Conflicts resolved in-place.", "success");
-        setShowMergeModal(false);
-        setDuplicateConflicts(null);
-        if (onLeadsUpdated) onLeadsUpdated();
-        refreshDbState();
-      } else {
-        showToast("Failed resolving duplicates merge log.", "error");
-      }
-    } catch (err) {
-      showToast("Deduplication merge error.", "error");
-    }
-  };
-
-  const handlePopulateDemoData = async () => {
-    try {
-      const demoDeals = [
-        { title: "NetApp Secure Cloud Transformation Upgrade", company: "NetApp Inc.", value: 125000, stage: "stage-discovery", agent: "Sarah Mitchell", status: "hot", tags: ["Enterprise", "Cloud"] },
-        { title: "Retool Data Workflow Automation Consult", company: "Retool Inc", value: 35000, stage: "stage-proposal", agent: "James Ochieng", status: "warm", tags: ["SaaS", "Consulting"] },
-        { title: "Stripe Unified Payment API Implementation", company: "Stripe", value: 195000, stage: "stage-negotiation", agent: "Sarah Mitchell", status: "hot", tags: ["High-Value", "FinTech"] },
-        { title: "Slack Conversational Agent licenses", company: "Slack Technologies", value: 18000, stage: "stage-discovery", agent: "User Pro", status: "cold", tags: ["SaaS", "Internal"] },
-        { title: "Canva Design Seat Bundle Onboarding", company: "Canva Pro", value: 48000, stage: "stage-won", agent: "James Ochieng", status: "warm", tags: ["Creative", "B2B"] },
-        { title: "Snowflake Enterprise Analytics Warehouse Integration", company: "Snowflake Corp", value: 220000, stage: "stage-proposal", agent: "Sarah Mitchell", status: "hot", tags: ["Enterprise", "Data"] }
-      ];
-
-      let createdCount = 0;
-
-      for (const d of demoDeals) {
-        // Find if we can link it to an existing lead, or use standard options
-        const matchingLead = initialLeads.find(l => l.company && l.company.toLowerCase().includes(d.company.split(" ")[0].toLowerCase())) || initialLeads[Math.floor(Math.random() * initialLeads.length)];
-        
-        const leadId = matchingLead?.id || "lead-default";
-
-        const res = await fetch("/api/deals", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            title: d.title,
-            value: Number(d.value),
-            leadId: leadId,
-            stage: d.stage,
-            assignedAgent: d.agent,
-            tags: d.tags
-          })
-        });
-
-        if (res.ok) {
-          const newD = await res.json();
-          createdCount++;
-
-          // Update status health (hot, warm, etc.)
-          await fetch(`/api/deals/${newD.id}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              ...newD,
-              status: d.status
-            })
-          });
-
-          // Seed timeline activities
-          await fetch("/api/activities", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              dealId: newD.id,
-              type: "stage_change",
-              title: "Opportunity Segment Seeding",
-              description: `Generated premium realistic demo tracker for "${d.title}" with default close ratios.`,
-              agentName: d.agent
-            })
-          });
-
-          // Seed dynamic checklist item
-          await fetch("/api/tasks", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              dealId: newD.id,
-              title: "🚀 Align with VP of Architecture regarding performance specs",
-              dueDate: new Date(Date.now() + 4 * 24 * 3600 * 1000).toISOString().split("T")[0],
-              completed: false,
-              assignedAgent: d.agent
-            })
-          });
-        }
-      }
-
-      showToast(`Successfully populated ${createdCount} top-notch demo deals on your Active Kanban Board!`, "success");
-      refreshDbState();
-    } catch {
-      showToast("Could not synthesize demo pipeline data.", "error");
-    }
-  };
-
-  const handleBulkImportLeads = async () => {
-    if (selectedLeadsForBulk.length === 0) {
-      showToast("Select at least one high-value lead checkbox to proceed.", "error");
-      return;
-    }
-
-    setIsBulkImporting(true);
-    let successCount = 0;
-
-    try {
-      for (const leadId of selectedLeadsForBulk) {
-        const lead = initialLeads.find(l => l.id === leadId);
-        if (!lead) continue;
-
-        const dealTitle = `${lead.company || lead.name} Strategic Expansion Account`;
-
-        const res = await fetch("/api/deals", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            title: dealTitle,
-            value: Number(bulkDealValue),
-            leadId: lead.id,
-            stage: bulkStage || activePipeline?.stages[0].id || "stage-discovery",
-            assignedAgent: bulkAgent,
-            tags: bulkTags ? bulkTags.split(",").map(t => t.trim()) : ["Bulk-Converted"]
-          })
-        });
-
-        if (res.ok) {
-          const newD = await res.json();
-          successCount++;
-
-          // Update status
-          await fetch(`/api/deals/${newD.id}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              ...newD,
-              status: bulkStatus
-            })
-          });
-
-          // Write activity
-          await fetch("/api/activities", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              dealId: newD.id,
-              type: "stage_change",
-              title: "Bulk Deal Initialized",
-              description: `Batch-converted lead "${lead.name}" (@${lead.company || "N/A"}) into a live Kanban journey opportunity tracker.`,
-              agentName: bulkAgent
-            })
-          });
-
-          // Create standard SLA task
-          await fetch("/api/tasks", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              dealId: newD.id,
-              title: `📅 Dispatch Initial Discovery Message Alignment Checklist`,
-              dueDate: new Date(Date.now() + 2 * 24 * 3600 * 1000).toISOString().split("T")[0],
-              completed: false,
-              assignedAgent: bulkAgent
-            })
-          });
-        }
-      }
-
-      showToast(`Conversion complete! ${successCount} leads are now active journey opportunities.`, "success");
-      setSelectedLeadsForBulk([]);
-      setShowBulkImportModal(false);
-      refreshDbState();
-    } catch {
-      showToast("Error occurred during bulk lead import.", "error");
-    } finally {
-      setIsBulkImporting(false);
-    }
-  };
-
-  const handleCreateDeal = async () => {
-    if (!newDealTitle || !newDealLeadId || !newDealValue) {
-      showToast("Please input a Deal Title, associate with a target Lead, and specify Deal Value.", "error");
-      return;
-    }
-
-    try {
-      const res = await fetch("/api/deals", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: newDealTitle,
-          value: Number(newDealValue),
-          leadId: newDealLeadId,
-          stage: newDealStage || activePipeline?.stages[0].id || "stage-discovery",
-          assignedAgent: newDealAgent,
-          tags: newDealTags ? newDealTags.split(",").map(t => t.trim()) : ["Key Target"]
-        })
-      });
-
-      if (res.ok) {
-        showToast("Deal successfully initialized on Journey Pipeline!", "success");
-        setNewDealTitle("");
-        setNewDealValue(25000);
-        setNewDealLeadId("");
-        setNewDealStage("");
-        setNewDealTags("");
-        setShowAddDealModal(false);
-        refreshDbState();
-      } else {
-        showToast("Failed provisioning lead journey deal.", "error");
-      }
-    } catch (err) {
-      showToast("Cannot write new Deal path.", "error");
-    }
-  };
-
-  const handleDeleteDeal = async (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!confirm("Are you sure you want to permanently revoke this deal segment?")) return;
-    try {
-      const res = await fetch(`/api/deals/${id}`, { method: "DELETE" });
-      if (res.ok) {
-        showToast("Deal path revoked successfully.", "info");
-        setSelectedDeal(null);
-        refreshDbState();
-      }
-    } catch {
-      showToast("Failed to revoke deal path.", "error");
-    }
-  };
-
-  const filteredDeals = deals.filter(deal => {
-    // Multi-Pipeline Filter Support: only show deals in stages of the current active pipeline
-    const pipelineStageIds = activePipeline?.stages.map(s => s.id) || [];
-    const isInPipeline = pipelineStageIds.includes(deal.stage);
-    if (!isInPipeline) return false;
-
-    const lead = initialLeads.find(l => l.id === deal.leadId);
-    const searchMatch = 
-      deal.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (lead?.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (lead?.company || "").toLowerCase().includes(searchQuery.toLowerCase());
+  // Send now outreach dispatcher
+  const handleSendOutreach = async (channel: 'wa' | 'li' | 'em', text: string, subject?: string) => {
+    if (!selectedLead) return;
     
-    const tagMatch = 
-      selectedTagFilter === "all" || 
-      deal.tags?.includes(selectedTagFilter) || 
-      lead?.tags?.includes(selectedTagFilter);
+    // Simulate integration dispatcher
+    if (channel === 'wa') {
+      const phone = (selectedLead.phone || '').replace(/\D/g, '');
+      const encoded = encodeURIComponent(text);
+      window.open(`https://wa.me/${phone}?text=${encoded}`, '_blank');
+    } else if (channel === 'em') {
+      const mailSubject = encodeURIComponent(subject || config.email_subject || 'Outreach from Zyntra');
+      const mailBody = encodeURIComponent(text);
+      window.location.href = `mailto:${selectedLead.email}?subject=${mailSubject}&body=${mailBody}`;
+    } else {
+      const url = selectedLead.linkedin_url?.startsWith('http') ? selectedLead.linkedin_url : `https://${selectedLead.linkedin_url}`;
+      if (url) window.open(url, '_blank');
+    }
 
-    const agentMatch = 
-      selectedAgentFilter === "all" || 
-      deal.assignedAgent === selectedAgentFilter;
+    // Automatically promote lead to "Outreach Sent" in the pipeline
+    await handleUpdateLead(selectedLead.id, { stage: 'Outreach Sent', status: 'sent' });
+    setSelectedLead({ ...selectedLead, stage: 'Outreach Sent', status: 'sent' });
+    showToast("Outreach dispatched and stage updated to 'Outreach Sent'!", "success");
+  };
 
-    return searchMatch && tagMatch && agentMatch;
+  // Stats calculators
+  const filteredLeads = leads.filter(l => {
+    const searchMatch = 
+      l.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      l.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      l.role.toLowerCase().includes(searchQuery.toLowerCase());
+    return searchMatch;
   });
 
-  const getHealthBadge = (health: string | undefined) => {
-    switch(health) {
-      case "hot":
-        return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-rose-500/15 text-rose-400 border border-rose-500/30 font-bold text-[9px] shadow-xs">🔥 Hot Close</span>;
-      case "warm":
-        return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30 font-bold text-[9px] shadow-xs">⚡ Warm Play</span>;
-      case "cold":
-        return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 font-bold text-[9px] shadow-xs">❄️ Cold Strobe</span>;
-      case "lost":
-        return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-500/15 text-slate-400 border border-slate-500/30 font-bold text-[9px] shadow-xs font-mono">💨 Closed Lost</span>;
-      default:
-        return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#00d4aa]/15 text-[#00d4aa] border border-[#00d4aa]/30 font-bold text-[9px] shadow-xs font-mono animate-pulse">⚡ Auto Assess</span>;
-    }
-  };
-
-  const getChartData = () => {
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-    const last30DaysMovements = movements.filter(m => {
-      const mDate = new Date(m.timestamp);
-      return mDate >= thirtyDaysAgo;
-    });
-
-    const counts: Record<string, number> = {};
-    last30DaysMovements.forEach(m => {
-      const deal = deals.find(d => d.id === m.dealId);
-      const agent = deal?.assignedAgent || m.agentName || "Workspace Agent";
-      counts[agent] = (counts[agent] || 0) + 1;
-    });
-
-    return Object.entries(counts).map(([name, value]) => ({
-      name,
-      moves: value
-    }));
-  };
-
-  const getAiNextBestAction = (deal: Deal) => {
-    if (deal.stage.includes("discovery") || deal.stage.includes("kickoff") || deal.stage.includes("triage")) {
-      return "📅 Arrange Initial Call & Needs Discovery Blueprint";
-    }
-    if (deal.stage.includes("proposal") || deal.stage.includes("integration") || deal.stage.includes("investigate")) {
-      return "📝 Share Custom Specs Estimate & Proposal";
-    }
-    if (deal.stage.includes("negotiation") || deal.stage.includes("training") || deal.stage.includes("hotfix")) {
-      return "🔑 SLA/Deal Terms Review With Key Stakeholders";
-    }
-    if (deal.stage.includes("won") || deal.stage.includes("active") || deal.stage.includes("qa") || deal.stage.includes("success")) {
-      return "🚀 Post-sale Onboarding Sync Call Scheduled";
-    }
-    return "⚡ Conduct Comprehensive Pipeline Calibration Review";
-  };
-
-  const chartData = getChartData();
-  const totalDealVolume = filteredDeals.reduce((sum, d) => sum + d.value, 0);
-
-  // Compute probability-weighted predictive expected revenue (AI Forecast value)
-  const expectedForecastVolume = filteredDeals.reduce((sum, d) => {
-    const stage = activePipeline?.stages.find(s => s.id === d.stage);
-    const probPct = stage ? stage.probability : 20;
-    return sum + (d.value * (probPct / 100));
-  }, 0);
-
-  // Count active hazards (SLA breaches + simulated Ghosting risks i.e. 4+ days duration)
-  const getHazardsCount = () => {
-    let count = 0;
-    filteredDeals.forEach(d => {
-      const stage = activePipeline?.stages.find(s => s.id === d.stage);
-      if (stage) {
-        const daysInfo = getDaysInStage(d, stage);
-        const isSlaBreached = stage.slaDays > 0 && daysInfo.days > stage.slaDays;
-        const isGhosted = daysInfo.days >= 4; // flag simulated ghosted if 4 days with no action
-        if (isSlaBreached || isGhosted) count++;
-      }
-    });
-    return count;
-  };
-
-  const hazardsCount = getHazardsCount();
+  const totalLeads = leads.length;
+  const sentCount = leads.filter(l => getLeadStage(l) === 'Outreach Sent' || getLeadStage(l) === 'Responded').length;
+  const respondedCount = leads.filter(l => getLeadStage(l) === 'Responded').length;
+  const importedCount = leads.filter(l => getLeadStage(l) === 'Imported').length;
+  const actionableCount = leads.filter(l => getLeadStage(l) === 'Pending Action' || getLeadStage(l) === 'AI Generated').length;
+  const responseRate = sentCount > 0 ? Math.round((respondedCount / sentCount) * 100) : 0;
+  const conversionRate = totalLeads > 0 ? Math.round((respondedCount / totalLeads) * 100) : 0;
+  const activePipelineRate = totalLeads > 0 ? Math.round(((totalLeads - importedCount) / totalLeads) * 100) : 0;
 
   return (
-    <div className="space-y-6">
-      {/* 1. Header Information Section and Quick KPI Stats Widget */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 border-b border-border/40 pb-6">
-        <div className="text-left space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="px-2.5 py-0.5 text-[9px] font-mono font-bold uppercase tracking-widest text-[#00d4aa] bg-[#00d4aa]/10 rounded-full border border-[#00d4aa]/20">
-              AI Intelligent Kanban Board
-            </span>
-            <div className="flex items-center gap-1 text-[#00d4aa]">
-              <TrendingUp className="w-3.5 h-3.5" />
-              <span className="text-[9px] font-mono font-bold uppercase tracking-wider">Predictive Revenue Intelligence</span>
+    <div className="space-y-5 min-w-0">
+      {/* Smart CSV Importer Modal */}
+      {showSmartImportModal && (
+        <SmartCsvImportModal 
+          onClose={() => setShowSmartImportModal(false)}
+          onImportComplete={handleSmartImportComplete}
+          existingLeads={leads}
+          showToast={showToast}
+          campaigns={campaigns}
+        />
+      )}
+
+      {/* Manual Paste Importer Modal */}
+      {showBulkAddModal && (
+        <div className="fixed inset-0 bg-[#090a10]/85 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <motion.div 
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            className="bg-surface border border-border rounded-3xl p-8 max-w-2xl w-full space-y-6 shadow-2xl relative select-text"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-syne font-bold text-white flex items-center gap-2">
+                  <PlusCircle className="w-5 h-5 text-brand-alt" />
+                  Bulk Paste Leads
+                </h2>
+                <p className="text-xs text-text-muted mt-0.5 font-medium">Paste CSV format data below. First row must contain column headers.</p>
+              </div>
+              <button 
+                onClick={() => setShowBulkAddModal(false)}
+                className="p-1 px-1.5 rounded-lg hover:bg-surface-alt text-text-muted transition-all cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="p-3 bg-brand/5 border border-brand/10 rounded-xl text-[11px] text-brand shrink-0">
+                <span className="font-bold">Required Columns: </span> <code className="bg-[#090a0f] p-1 rounded">name,role,company,industry,country,phone,email,linkedin_url</code>. Paste one lead per line.
+              </div>
+              <textarea 
+                className="w-full bg-surface-alt border border-border rounded-2xl p-6 text-xs font-mono focus:border-brand outline-none transition-all min-h-[220px] resize-none"
+                placeholder="Alice Smith,CEO,Acme Corp,Software,US,12345,alice@acme.com,linkedin.com/in/alice"
+                value={bulkAddRowsText}
+                onChange={e => setBulkAddRowsText(e.target.value)}
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
+              <button
+                onClick={() => setShowBulkAddModal(false)}
+                className="px-4.5 py-2 rounded-xl text-xs font-semibold text-text-muted border border-border hover:bg-surface-alt cursor-pointer transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => parseManualLeads(bulkAddRowsText)}
+                className="px-6 py-2 bg-brand text-white hover:opacity-90 rounded-xl text-xs font-bold shadow-lg shadow-brand/20 cursor-pointer transition-all"
+              >
+                Parse & Insert Leads
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Single Lead Creator Modal */}
+      {showSingleLeadModal && (
+        <div className="fixed inset-0 bg-[#090a10]/85 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            className="bg-surface border border-border rounded-2xl p-6 max-w-lg w-full space-y-5 shadow-2xl relative text-left"
+          >
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h2 className="text-base font-syne font-bold text-white flex items-center gap-2">
+                  <UserCheck className="w-5 h-5 text-brand-alt" />
+                  Add Lead
+                </h2>
+                <p className="text-[11px] text-text-muted mt-0.5 font-medium">
+                  Create one basic lead in {newLeadStage}. Add richer context after the card is created.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowSingleLeadModal(false)}
+                className="p-1.5 rounded-lg hover:bg-surface-alt text-text-muted hover:text-white transition-all cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1.5 sm:col-span-2">
+                <label className="text-[9px] text-text-muted font-bold uppercase tracking-wider">Full name</label>
+                <input
+                  value={newLeadForm.name}
+                  onChange={e => setNewLeadForm(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full bg-surface-alt border border-border rounded-xl p-3 text-xs outline-none focus:border-brand"
+                  placeholder="Lead name"
+                  autoFocus
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[9px] text-text-muted font-bold uppercase tracking-wider">Role</label>
+                <input
+                  value={newLeadForm.role}
+                  onChange={e => setNewLeadForm(prev => ({ ...prev, role: e.target.value }))}
+                  className="w-full bg-surface-alt border border-border rounded-xl p-3 text-xs outline-none focus:border-brand"
+                  placeholder="Director, VP, Founder"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[9px] text-text-muted font-bold uppercase tracking-wider">Company</label>
+                <input
+                  value={newLeadForm.company}
+                  onChange={e => setNewLeadForm(prev => ({ ...prev, company: e.target.value }))}
+                  className="w-full bg-surface-alt border border-border rounded-xl p-3 text-xs outline-none focus:border-brand"
+                  placeholder="Company"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[9px] text-text-muted font-bold uppercase tracking-wider">Email</label>
+                <input
+                  type="email"
+                  value={newLeadForm.email}
+                  onChange={e => setNewLeadForm(prev => ({ ...prev, email: e.target.value }))}
+                  className="w-full bg-surface-alt border border-border rounded-xl p-3 text-xs outline-none focus:border-brand"
+                  placeholder="name@company.com"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[9px] text-text-muted font-bold uppercase tracking-wider">Phone</label>
+                <input
+                  value={newLeadForm.phone}
+                  onChange={e => setNewLeadForm(prev => ({ ...prev, phone: e.target.value }))}
+                  className="w-full bg-surface-alt border border-border rounded-xl p-3 text-xs outline-none focus:border-brand"
+                  placeholder="+1 555 0100"
+                />
+              </div>
+              <div className="space-y-1.5 sm:col-span-2">
+                <label className="text-[9px] text-text-muted font-bold uppercase tracking-wider">LinkedIn URL</label>
+                <input
+                  value={newLeadForm.linkedin_url}
+                  onChange={e => setNewLeadForm(prev => ({ ...prev, linkedin_url: e.target.value }))}
+                  className="w-full bg-surface-alt border border-border rounded-xl p-3 text-xs outline-none focus:border-brand"
+                  placeholder="linkedin.com/in/contact"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
+              <button
+                onClick={() => setShowSingleLeadModal(false)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-text-muted border border-border hover:bg-surface-alt cursor-pointer transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreateSingleLead}
+                className="px-5 py-2 bg-brand text-white hover:opacity-90 rounded-xl text-xs font-bold shadow-lg shadow-brand/20 cursor-pointer transition-all flex items-center gap-1.5"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Create Lead
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Create Campaign Modal */}
+      {showCampaignModal && (
+        <div className="fixed inset-0 bg-[#090a10]/85 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <motion.div 
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            className="bg-surface border border-border rounded-3xl p-8 max-w-md w-full space-y-6 shadow-2xl relative"
+          >
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-syne font-bold text-white flex items-center gap-2">
+                <Target className="w-5 h-5 text-brand" />
+                Create New Campaign
+              </h2>
+              <button 
+                onClick={() => setShowCampaignModal(false)}
+                className="p-1 px-1.5 rounded-lg hover:bg-surface-alt text-text-muted transition-all cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <input 
+                type="text" 
+                placeholder="Campaign Name" 
+                className="w-full bg-surface-alt border border-border rounded-xl p-3 text-xs text-white outline-none focus:border-brand"
+                value={newCampaignName}
+                onChange={e => setNewCampaignName(e.target.value)}
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
+              <button
+                onClick={() => setShowCampaignModal(false)}
+                className="px-4.5 py-2 rounded-xl text-xs font-semibold text-text-muted border border-border hover:bg-surface-alt cursor-pointer transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  if (newCampaignName.trim()) {
+                    await onCreateCampaign(newCampaignName);
+                    setNewCampaignName("");
+                    setShowCampaignModal(false);
+                  }
+                }}
+                className="px-6 py-2 bg-brand text-white hover:opacity-90 rounded-xl text-xs font-bold shadow-lg shadow-brand/20 cursor-pointer transition-all"
+              >
+                Create Campaign
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* 1. Collapsible Campaign Stats Banner */}
+      {currentCampaign && (
+        <div className="bg-surface border border-border rounded-2xl overflow-hidden shadow-xl relative glow-brand/5">
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-brand/50 to-transparent pointer-events-none" />
+          
+          <div className="p-5 md:p-6 flex flex-col xl:flex-row xl:items-center justify-between gap-5 relative z-10 text-left">
+            <div className="space-y-3 min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="inline-flex items-center gap-1.5 bg-brand/10 text-brand border border-brand/20 px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider">
+                  <Sparkles className="w-3.5 h-3.5 text-brand" />
+                  <span>Live Pipeline</span>
+                </div>
+                <div className="inline-flex items-center gap-1.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">
+                  <Activity className="w-3.5 h-3.5" />
+                  <span>{activePipelineRate}% activated</span>
+                </div>
+              </div>
+              <div>
+                <h2 className="text-xl md:text-2xl font-bold tracking-tight text-white leading-tight font-syne truncate">
+                  {currentCampaign.name}
+                </h2>
+                <p className="text-xs text-text-muted mt-1.5 leading-relaxed max-w-xl">
+                  Manage target accounts, stage movement, personalized outreach, and active sales follow-up from one board.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2.5 self-start xl:self-center shrink-0">
+              <button 
+                onClick={() => downloadCampaignPDF(currentCampaign)}
+                className="px-4 py-2.5 bg-brand/10 border border-brand/20 text-brand hover:bg-brand hover:text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-sm"
+              >
+                <Download className="w-4 h-4" />
+                Download Report
+              </button>
+              <button 
+                onClick={async () => {
+                  if (confirm(`Are you sure you want to delete campaign "${currentCampaign.name}"?`)) {
+                    await onDeleteCampaign(currentCampaign.id);
+                  }
+                }}
+                className="p-2.5 bg-rose-500/10 border border-rose-500/20 text-rose-450 hover:bg-rose-500 hover:text-white rounded-xl transition-all"
+                title="Delete Campaign"
+              >
+                <Trash2 className="w-4.5 h-4.5" />
+              </button>
             </div>
           </div>
-          <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white font-syne flex items-center gap-2.5">
-            <Kanban className="w-6 h-6 text-[#00d4aa]" />
-            Deal Journeys & Kanban Pipelines
-          </h2>
-          <p className="text-xs text-text-muted leading-relaxed">
-            Manage your sales stages, track work-in-progress (WIP) thresholds, visualize velocity bottlenecks, and automate predictive forecasting algorithms.
-          </p>
-        </div>
 
-        {/* 3 Core CRM Stats Mini KPI Cards (AI Weighted Expected Revenue & Ghosting/SLA Alerts) */}
-        <div className="flex flex-wrap items-center gap-4 text-left">
-          <div className="bg-surface border border-border/80 rounded-2xl p-3.5 px-5 min-w-[130px] relative overflow-hidden group">
-            <span className="text-[9px] text-text-muted font-bold uppercase tracking-widest block font-mono">Absolute Volume</span>
-            <span className="text-lg font-syne font-extrabold text-[#00d4aa] mt-1 block">
-              ${totalDealVolume.toLocaleString()}
-            </span>
-            <span className="text-[8px] text-text-muted font-mono">{filteredDeals.length} opportunity items</span>
-          </div>
-
-          <div className="bg-surface border border-[#00d4aa]/30 rounded-2xl p-3.5 px-5 min-w-[155px] relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-20 h-20 bg-[#00d4aa]/5 rounded-full filter blur-md" />
-            <span className="text-[9px] text-[#00d4aa] font-black uppercase tracking-widest block font-mono flex items-center gap-1">
-              <Sparkles className="w-3 h-3 text-[#00d4aa] animate-pulse" />
-              AI Expected revenue
-            </span>
-            <span className="text-lg font-syne font-extrabold text-white mt-1 block">
-              ${Math.round(expectedForecastVolume).toLocaleString()}
-            </span>
-            <span className="text-[8.5px] text-text-muted font-mono">Stage probability weighted</span>
-          </div>
-
-          <div className="bg-surface border border-border/80 rounded-2xl p-3.5 px-5 min-w-[130px] relative overflow-hidden group">
-            <span className="text-[9px] text-text-muted font-bold uppercase tracking-widest block font-mono">Hazards & SLA Risks</span>
-            <span className={`text-lg font-syne font-extrabold mt-1 block ${hazardsCount > 0 ? "text-rose-400" : "text-emerald-400"}`}>
-              {hazardsCount} Active
-            </span>
-            <span className="text-[8px] text-text-muted font-mono">SLA delays & ghosting flags</span>
-          </div>
-        </div>
-      </div>
-
-      {/* 2. Unified Master Action Toolbar with Premium Styling */}
-      <div className="flex flex-col md:flex-row items-center justify-between gap-4 p-4.5 bg-surface border border-border rounded-3xl glow-brand/5">
-        
-        {/* Left Search input */}
-        <div className="relative w-full md:w-80">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-          <input 
-            type="text"
-            placeholder="Search deals, contacts or company..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-surface-alt border border-border rounded-xl py-2 pl-10 pr-4 text-xs font-semibold text-white placeholder:text-text-muted outline-none focus:border-[#00d4aa] focus:bg-[#07080c] transition-all"
-          />
-        </div>
-
-        {/* Filters and View Controllers Row */}
-        <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto md:justify-end">
-          
-          {/* Active Workflow Pipeline Selector (Supports Sales, Support, Onboarding flows in the visual layout) */}
-          <select 
-            value={activePipeline?.id || ""}
-            onChange={(e) => {
-              const selected = pipelinesList.find(p => p.id === e.target.value);
-              if (selected) {
-                setActivePipeline(selected);
-                showToast(`Switched pipeline schema to: ${selected.name}`, "info");
-              }
-            }}
-            className="bg-surface-alt border border-[#00d4aa]/30 text-xs text-[#00d4aa] rounded-xl py-2 px-3 font-bold outline-none focus:border-[#00d4aa] transition-all cursor-pointer min-w-[185px]"
-          >
-            {pipelinesList.map(p => (
-              <option key={p.id} value={p.id}>Pipeline: {p.name}</option>
+          {/* Bento Stats Panel */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 border-t border-border bg-surface-alt/25">
+            {[
+              { label: 'Total Leads', value: totalLeads, color: '#8b5cf6', icon: Users },
+              { label: 'New Imports', value: importedCount, color: '#a78bfa', icon: Download },
+              { label: 'Needs Action', value: actionableCount, color: '#f59e0b', icon: Clock },
+              { label: 'Outreach Sent', value: sentCount, color: '#10b981', icon: Send },
+              { label: 'Conversion', value: `${conversionRate}%`, color: '#3b82f6', icon: TrendingUp }
+            ].map((stat, i) => (
+              <div key={i} className={`p-4 md:p-5 border-r border-b lg:border-b-0 border-border lg:last:border-r-0 text-left space-y-2 min-w-0 ${i === 4 ? 'col-span-2 sm:col-span-1 border-r-0' : ''}`}>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider block truncate">{stat.label}</span>
+                  <stat.icon className="w-3.5 h-3.5 shrink-0" style={{ color: stat.color }} />
+                </div>
+                <span className="text-xl md:text-2xl font-syne font-extrabold block" style={{ color: stat.color }}>{stat.value}</span>
+              </div>
             ))}
-          </select>
+          </div>
+        </div>
+      )}
 
-          <select 
-            value={selectedTagFilter}
-            onChange={(e) => setSelectedTagFilter(e.target.value)}
-            className="bg-surface-alt border border-border text-xs text-text-muted rounded-xl py-2 px-3 font-semibold outline-none focus:border-[#00d4aa] transition-all cursor-pointer min-w-[120px]"
-          >
-            <option value="all">Tags: All</option>
-            <option value="Enterprise">Enterprise</option>
-            <option value="SaaS">SaaS</option>
-            <option value="High-Value">High-Value</option>
-            <option value="B2B">B2B</option>
-            <option value="Recruiting">Recruiting</option>
-          </select>
+      {/* 2. Top-Bar Control Row */}
+      <div className="flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-4 p-4 bg-surface border border-border rounded-2xl glow-brand/5">
+        
+        {/* Left search & Campaign dropdown */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full xl:w-auto min-w-0">
+          {/* Campaign Selector dropdown */}
+          <div className="relative shrink-0 text-left w-full sm:w-auto">
+            <select 
+              value={currentCampaign?.id || ""}
+              onChange={(e) => {
+                const id = e.target.value;
+                if (id === "__new__") {
+                  setShowCampaignModal(true);
+                } else {
+                  const selected = campaigns.find(c => c.id === id);
+                  setCurrentCampaign(selected || null);
+                }
+              }}
+              className="w-full sm:w-auto bg-surface-alt border border-[#8b5cf6]/35 text-xs text-[#8b5cf6] font-bold rounded-xl py-2.5 px-4 outline-none focus:border-brand transition-all cursor-pointer sm:min-w-[220px]"
+            >
+              {campaigns.map(c => (
+                <option key={c.id} value={c.id}>Campaign: {c.name}</option>
+              ))}
+              <option value="__new__" className="text-brand font-bold font-syne">➕ Create Campaign...</option>
+            </select>
+          </div>
 
-          <select 
-            value={selectedAgentFilter}
-            onChange={(e) => setSelectedAgentFilter(e.target.value)}
-            className="bg-surface-alt border border-border text-xs text-text-muted rounded-xl py-2 px-3 font-semibold outline-none focus:border-[#00d4aa] transition-all cursor-pointer min-w-[130px]"
-          >
-            <option value="all">Agent: All</option>
-            <option value="Sarah Mitchell">Sarah Mitchell</option>
-            <option value="James Ochieng">James Ochieng</option>
-            <option value="User Pro">User Pro</option>
-          </select>
+          {/* Quick Search */}
+          <div className="relative w-full sm:w-80 xl:w-72 min-w-0">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+            <input 
+              type="text"
+              placeholder="Search prospects..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-surface-alt border border-border rounded-xl py-2 pl-9 pr-4 text-xs font-semibold text-white placeholder:text-text-muted outline-none focus:border-brand transition-all"
+            />
+          </div>
+        </div>
 
-          <div className="w-[1px] h-6 bg-border mx-1.5 hidden lg:block" />
-
-          {/* Action triggers */}
-          <button 
-            onClick={checkForDuplicates}
-            className="px-3 py-2 rounded-xl border border-rose-500/20 bg-rose-500/10 hover:bg-rose-500 hover:text-white text-rose-400 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
-            title="Locate contact conflicts"
-          >
-            <ShieldAlert className="w-3.5 h-3.5" />
-            De-Duplicate Leads
-          </button>
-
-          <button 
-            onClick={() => setShowTeamActivityWidget(!showTeamActivityWidget)}
-            className={`px-3 py-2 rounded-xl border text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-              showTeamActivityWidget 
-                ? "border-emerald-500/30 bg-emerald-500/20 text-[#10b981]" 
-                : "border-border bg-surface-alt text-text-muted hover:text-white hover:border-border-subtle"
-            }`}
-          >
-            <BarChart3 className="w-3.5 h-3.5" />
-            Activity Chart
-          </button>
-
-          {viewType === "kanban" && (
+        {/* Right buttons row */}
+        <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2.5 w-full xl:w-auto justify-start xl:justify-end">
+          {currentCampaign && (
             <button 
-              onClick={() => setSwimlaneMode(!swimlaneMode)}
-              className={`px-3 py-2 rounded-xl border text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                swimlaneMode 
-                  ? "border-[#00d4aa]/30 bg-[#00d4aa]/20 text-[#00d4aa]" 
-                  : "border-border bg-surface-alt text-text-muted hover:text-white hover:border-border-subtle"
+              onClick={() => setShowDnaPanel(!showDnaPanel)}
+              className={`px-3.5 py-2.5 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                showDnaPanel 
+                  ? "border-brand/40 bg-brand/10 text-brand" 
+                  : "border-border bg-surface-alt text-text-muted hover:text-white"
               }`}
             >
-              <Kanban className="w-3.5 h-3.5" />
-              {swimlaneMode ? "Swimlanes ON" : "Swimlanes OFF"}
+              <Settings className="w-3.5 h-3.5" />
+              Product DNA
             </button>
           )}
 
-          <div className="flex items-center bg-surface-alt p-1 rounded-xl border border-border">
+          <div className="hidden sm:block w-[1px] h-6 bg-border mx-1" />
+
+          {/* Action Buttons Grid on Mobile */}
+          <div className="grid grid-cols-2 sm:flex sm:flex-row gap-2.5">
+            {/* Smart CSV Importer Trigger */}
+            <button 
+              onClick={() => {
+                if (!currentCampaign) {
+                  showToast("Select or create an active campaign first.", "warning");
+                  return;
+                }
+                setShowSmartImportModal(true);
+              }}
+              className="w-full sm:w-auto px-3.5 py-2.5 bg-brand-alt/10 border border-brand-alt/30 text-brand-alt rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+              title="Smart columns fuzzy-mapping CSV importer"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span className="truncate">Smart Import</span>
+            </button>
+
+            {/* Manual paste trigger */}
+            <button 
+              onClick={() => {
+                if (!currentCampaign) {
+                  showToast("Select or create an active campaign first.", "warning");
+                  return;
+                }
+                setShowBulkAddModal(true);
+              }}
+              className="w-full sm:w-auto px-3.5 py-2.5 border border-border bg-surface-alt hover:bg-border rounded-xl text-xs font-bold text-text-muted hover:text-white transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span className="truncate">Paste CSV</span>
+            </button>
+          </div>
+
+          <div className="hidden sm:block w-[1px] h-6 bg-border mx-1" />
+
+          {/* View switcher tabs */}
+          <div className="flex items-center gap-3 bg-surface-alt/50 border border-border p-1 rounded-xl justify-center sm:justify-start">
             <button
-              onClick={() => toggleViewPreference("kanban")}
-              className={`p-1.5 rounded-lg transition-all flex items-center gap-1 text-xs font-bold cursor-pointer ${
-                viewType === "kanban" ? "bg-white/10 text-white" : "text-text-muted hover:text-white"
+              onClick={() => setViewType("kanban")}
+              className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                viewType === "kanban" ? "bg-brand text-white shadow-sm" : "text-text-muted hover:text-white"
               }`}
             >
               <Kanban className="w-3.5 h-3.5" />
               Board
             </button>
             <button
-              onClick={() => toggleViewPreference("list")}
-              className={`p-1.5 rounded-lg transition-all flex items-center gap-1 text-xs font-bold cursor-pointer ${
-                viewType === "list" ? "bg-white/10 text-white" : "text-text-muted hover:text-white"
+              onClick={() => setViewType("list")}
+              className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                viewType === "list" ? "bg-brand text-white shadow-sm" : "text-text-muted hover:text-white"
               }`}
             >
               <List className="w-3.5 h-3.5" />
-              Grid
+              List
             </button>
           </div>
-
-          <button 
-            onClick={handlePopulateDemoData}
-            className="px-3 py-2 rounded-xl border border-blue-500/30 bg-blue-500/10 hover:bg-blue-500 hover:text-white text-blue-400 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
-            title="Generate 6 premium, realistic pipeline deals automatically for testing"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-blue-400" />
-            Seed Demo Deals
-          </button>
-
-          <button 
-            onClick={() => {
-              // Pre-select all available leads that don't have deals.
-              const leadsWithDeals = deals.map(d => d.leadId);
-              const eligible = initialLeads.filter(l => !leadsWithDeals.includes(l.id)).map(l => l.id);
-              setSelectedLeadsForBulk(eligible);
-              setShowBulkImportModal(true);
-            }}
-            className="px-3 py-2 rounded-xl border border-[#00d4aa]/30 bg-[#00d4aa]/10 hover:bg-[#00d4aa] hover:text-slate-950 text-[#00d4aa] text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
-            title="Convert multiple raw system leads info to live Kanban deal stages at once"
-          >
-            <Users className="w-3.5 h-3.5" />
-            Bulk Convert Leads
-          </button>
-
-          <button 
-            onClick={() => {
-              setNewDealStage(activePipeline?.stages[0].id || "");
-              setShowAddDealModal(true);
-            }}
-            className="px-4 py-2 bg-[#00d4aa] hover:bg-[#00d4aa]/90 text-slate-950 text-xs font-black rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-[0_4px_16px_rgba(0,212,170,0.2)] ml-1"
-          >
-            <Plus className="w-4 h-4 text-slate-950 stroke-[3]" />
-            Create Deal
-          </button>
         </div>
       </div>
 
-      {/* 3. Interactive Team Activity Chart Panel */}
+      {/* Collapsible Product DNA Panel */}
       <AnimatePresence>
-        {showTeamActivityWidget && (
+        {showDnaPanel && currentCampaign && (
           <motion.div 
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="bg-surface border border-border rounded-3xl p-5 space-y-4 overflow-hidden relative"
+            className="bg-surface border border-border rounded-3xl p-6 text-left space-y-4 overflow-hidden relative"
           >
-            <div className="flex items-center justify-between border-b border-border/20 pb-3">
-              <div className="flex items-center gap-2">
-                <BarChart3 className="w-4.5 h-4.5 text-[#00d4aa]" />
-                <h3 className="text-xs font-bold uppercase tracking-widest text-white">Representative Journey Staging Velocity</h3>
-              </div>
-              <span className="text-[10px] text-text-muted bg-surface-alt border border-border px-2.5 py-0.5 rounded-md font-mono font-bold">
-                Total moves: {chartData.reduce((sum, d) => sum + d.moves, 0)} (Last 30d)
-              </span>
+            <div className="flex items-center gap-2 border-b border-border pb-3">
+              <Briefcase className="w-5 h-5 text-brand" />
+              <h3 className="text-sm font-bold text-white font-syne">Product DNA Configuration</h3>
             </div>
-
-            {chartData.length === 0 ? (
-              <div className="py-8 text-center text-xs text-text-muted italic bg-surface-alt/40 rounded-2xl border border-dashed border-border/80">
-                No pipeline advancements logged by workspace team over the last month. Promote deals between columns to record logs!
-              </div>
-            ) : (
-              <div className="h-44 w-full pr-4 text-xs font-mono">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData} margin={{ top: 10, right: 10, left: -25, bottom: 5 }}>
-                    <defs>
-                      <linearGradient id="barFlowGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#00d4aa" stopOpacity={0.8} />
-                        <stop offset="100%" stopColor="#3b82f6" stopOpacity={0.2} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" opacity={0.15} vertical={false} />
-                    <XAxis dataKey="name" stroke="var(--muted)" fontSize={10} tickLine={false} />
-                    <YAxis stroke="var(--muted)" fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
-                    <Tooltip 
-                      contentStyle={{ backgroundColor: "#0f172a", borderColor: "var(--border)", borderRadius: "12px", color: "white", fontSize: "11px" }}
-                      itemStyle={{ color: "#00d4aa", fontSize: "11px" }}
-                      labelStyle={{ color: "white", fontSize: "11px", fontWeight: "bold" }}
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <label className="text-[9px] text-text-muted font-bold uppercase tracking-wider">Company Name</label>
+                    <input 
+                      className="w-full bg-surface-alt border border-border rounded-xl p-3 text-xs outline-none focus:border-brand"
+                      placeholder="Company"
+                      value={config.company}
+                      onChange={e => setConfig((prev: any) => ({ ...prev, company: e.target.value }))}
                     />
-                    <Bar dataKey="moves" fill="url(#barFlowGradient)" radius={[4, 4, 0, 0]} maxBarSize={30} />
-                  </BarChart>
-                </ResponsiveContainer>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[9px] text-text-muted font-bold uppercase tracking-wider">Product / Solution</label>
+                    <input 
+                      className="w-full bg-surface-alt border border-border rounded-xl p-3 text-xs outline-none focus:border-brand"
+                      placeholder="Product"
+                      value={config.product}
+                      onChange={e => setConfig((prev: any) => ({ ...prev, product: e.target.value }))}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[9px] text-text-muted font-bold uppercase tracking-wider">Value Proposition</label>
+                  <textarea 
+                    className="w-full bg-surface-alt border border-border rounded-xl p-3 text-xs outline-none focus:border-brand min-h-[90px] resize-none"
+                    placeholder="Describe your solution's core value hook..."
+                    value={config.vp}
+                    onChange={e => setConfig((prev: any) => ({ ...prev, vp: e.target.value }))}
+                  />
+                </div>
               </div>
-            )}
+
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <label className="text-[9px] text-text-muted font-bold uppercase tracking-wider">Sender Representative</label>
+                    <input 
+                      className="w-full bg-surface-alt border border-border rounded-xl p-3 text-xs outline-none focus:border-brand"
+                      value={config.sender}
+                      onChange={e => setConfig((prev: any) => ({ ...prev, sender: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[9px] text-text-muted font-bold uppercase tracking-wider">Call To Action (CTA)</label>
+                    <select 
+                      className="w-full bg-surface-alt border border-border rounded-xl p-3 text-xs outline-none focus:border-brand cursor-pointer"
+                      value={config.cta}
+                      onChange={e => setConfig((prev: any) => ({ ...prev, cta: e.target.value }))}
+                    >
+                      <option>20-minute demo call</option>
+                      <option>15-minute intro call</option>
+                      <option>Reply with interest</option>
+                      <option>Book via Calendly</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex items-end justify-end pt-5">
+                  <button 
+                    onClick={async () => {
+                      await updateDoc(doc(db, 'campaigns', currentCampaign.id), { config });
+                      showToast('Product DNA saved successfully!', 'success');
+                      setShowDnaPanel(false);
+                    }}
+                    className="px-6 py-3 bg-brand text-white font-bold rounded-xl text-xs hover:opacity-95 flex items-center gap-1.5 shadow-lg shadow-brand/10 cursor-pointer"
+                  >
+                    <Save className="w-4 h-4" />
+                    Save Configuration
+                  </button>
+                </div>
+              </div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* 4. Kanban Pipeline Segment vs List Grid switcher */}
+      {/* 3. Primary Board / List rendering */}
       {viewType === "kanban" ? (
-        swimlaneMode ? (
-          /* SWIMLANE ROW GRID (BETTER CATEGORIZED VIEW) */
-          <div className="space-y-6 text-left">
-            {(() => {
-              const swimlanes = [
-                { key: "hot", label: "Hot Close Priorities", colorClass: "text-rose-400", bgClass: "bg-surface-alt/70 border border-border/80 shadow-[0_4px_16px_rgba(244,63,94,0.03)]", icon: "🔥" },
-                { key: "warm", label: "Active Nurturing Plays", colorClass: "text-amber-400", bgClass: "bg-surface-alt/70 border border-border/80 shadow-[0_4px_16px_rgba(245,158,11,0.03)]", icon: "⚡" },
-                { key: "cold", label: "Cold & Static Accounts", colorClass: "text-slate-400", bgClass: "bg-surface-alt/30 border border-border/40", icon: "❄️" }
-              ];
+        /* ── NEW KANBAN BOARD ── */
+        <div
+          className="flex gap-4 overflow-x-auto px-1 pb-5 pt-1 select-none items-stretch custom-scrollbar snap-x snap-mandatory scroll-p-1"
+          style={{ minHeight: 'calc(100vh - 260px)' }}
+        >
+          {PIPELINE_STAGES.map((stage) => {
+            const stageLeads = filteredLeads.filter(l => getLeadStage(l) === stage.name);
+            const isOver = dragOverStageId === stage.id;
 
-              return (
-                <div className="space-y-8 w-full">
-                  {swimlanes.map((lane) => {
-                    const laneDeals = filteredDeals.filter(d => {
-                      if (lane.key === "hot") return d.status === "hot";
-                      if (lane.key === "warm") return d.status === "warm";
-                      return d.status === "cold" || d.status === "lost" || !d.status;
-                    });
+            // Pick a subtle left-border accent color per stage
+            const accentBorder = stage.color;
 
-                    const totalValue = laneDeals.reduce((sum, d) => sum + d.value, 0);
-
-                    return (
-                      <div key={lane.key} className={`rounded-3xl p-5 ${lane.bgClass} space-y-4`}>
-                        {/* Swimlane Column Header block */}
-                        <div className="flex items-center justify-between border-b border-border/40 pb-2.5">
-                          <div className="flex items-center gap-2">
-                            <span className="text-base select-none">{lane.icon}</span>
-                            <h3 className={`text-xs font-extrabold font-mono tracking-widest uppercase ${lane.colorClass}`}>
-                              {lane.label}
-                            </h3>
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-surface/80 text-text-muted border border-border font-bold font-mono">
-                              {laneDeals.length} Deals
-                            </span>
-                          </div>
-                          <span className="text-xs text-emerald-400 font-mono font-bold">
-                            Total volume: ${totalValue.toLocaleString()}
-                          </span>
-                        </div>
-
-                        {/* Staged Columns layout inside row */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 overflow-x-auto pb-2">
-                          {activePipeline?.stages.map((stage) => {
-                            const stageLaneDeals = laneDeals.filter(d => d.stage === stage.id);
-                            const cumulativeStageValue = stageLaneDeals.reduce((sum, d) => sum + d.value, 0);
-                            const isOver = dragOverStageId === stage.id;
-
-                            return (
-                              <div 
-                                key={stage.id}
-                                onDragOver={(e) => handleDragOver(e, stage.id)}
-                                onDragLeave={() => setDragOverStageId(null)}
-                                onDragEnd={handleDragEnd}
-                                onDrop={(e) => handleDrop(e, stage.id)}
-                                className={`flex flex-col rounded-2xl min-h-[160px] relative transition-all duration-200 p-3.5 ${
-                                  isOver 
-                                    ? "bg-[#00d4aa]/5 border-2 border-dashed border-[#00d4aa]/75 scale-[1.01] shadow-[inset_0_0_12px_rgba(0,212,170,0.15)]" 
-                                    : "bg-surface/50 border border-border/60 hover:bg-surface/80"
-                                }`}
-                              >
-                                {/* Stage segment name inside Lane */}
-                                <div className="flex items-center justify-between border-b border-border/30 pb-2 mb-3">
-                                  <div className="flex items-center gap-1.5 min-w-0">
-                                    <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: stage.color }} />
-                                    <span className="text-[9px] font-bold text-white uppercase tracking-wider truncate" title={stage.name}>
-                                      {stage.name}
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center gap-1 shrink-0">
-                                    {stageLaneDeals.length > 2 && (
-                                      <span className="text-[7.5px] px-1 py-0.2 rounded bg-rose-500/10 border border-rose-500/35 text-rose-400 font-extrabold font-mono" title="Stage Overloaded (Cap: 2)">
-                                        ⚠️ WIP
-                                      </span>
-                                    )}
-                                    <span className="text-[9px] font-mono font-bold text-[#00d4aa]">
-                                      ${cumulativeStageValue.toLocaleString()}
-                                    </span>
-                                  </div>
-                                </div>
-
-                                {/* Items Container */}
-                                <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1 select-none flex-1">
-                                  {stageLaneDeals.length === 0 ? (
-                                    <div className="h-full flex flex-col items-center justify-center text-center p-2 border border-dashed border-border/40 rounded-xl bg-surface-alt/10">
-                                      <span className="text-[8px] text-text-muted font-bold font-mono uppercase tracking-wider">Empty</span>
-                                    </div>
-                                  ) : (
-                                    stageLaneDeals.map((deal) => {
-                                      const associatedLead = initialLeads.find(l => l.id === deal.leadId);
-                                      const daysInfo = getDaysInStage(deal, stage);
-                                      const isSlaBreached = stage.slaDays > 0 && daysInfo.days > stage.slaDays;
-                                      const isGhosted = daysInfo.days >= 4;
-                                      const isDraggingThis = draggingDealId === deal.id;
-                                      
-                                      // Left indicator tag color based on deal health status
-                                      const leftBorderColor = 
-                                        deal.status === "hot" ? "border-l-[3.5px] border-l-[#00d4aa]" :
-                                        deal.status === "warm" ? "border-l-[3.5px] border-l-amber-500" :
-                                        deal.status === "cold" ? "border-l-[3.5px] border-l-blue-500" :
-                                        "border-l-[3.5px] border-l-slate-600";
-
-                                      return (
-                                        <div
-                                          key={deal.id}
-                                          draggable
-                                          onDragStart={(e) => handleDragStart(e, deal.id)}
-                                          onDragEnd={handleDragEnd}
-                                          onClick={() => selectActiveDeal(deal)}
-                                          className={`group relative p-3 rounded-xl border cursor-grab active:cursor-grabbing text-left space-y-2 transition-all duration-200 select-none ${leftBorderColor} ${
-                                            selectedDeal?.id === deal.id 
-                                              ? "border-[#00d4aa] bg-[#0c0d12] shadow-[0_4px_20px_rgba(0,212,170,0.15)] ring-1 ring-[#00d4aa]/30" 
-                                              : "border-border bg-[#090a0f] hover:border-text-muted hover:bg-surface-alt/75 hover:translate-y-[-1.5px]"
-                                          } ${isDraggingThis ? "opacity-35 border-dashed border-slate-500 scale-95" : ""}`}
-                                        >
-                                          {isSlaBreached && (
-                                            <div className="bg-rose-500/10 border border-rose-500/30 text-rose-400 rounded-lg p-1.5 flex items-center gap-1 text-[8px] leading-tight font-extrabold font-mono">
-                                              <AlertCircle className="w-3 h-3 text-rose-400 shrink-0" />
-                                              <span>SLA BREACH ({daysInfo.days}d)</span>
-                                            </div>
-                                          )}
-
-                                          {isGhosted && (
-                                            <div className="bg-amber-500/10 border border-amber-500/25 text-[#f59e0b] rounded-lg p-1 text-[7.5px] font-bold font-mono tracking-wide flex items-center justify-center gap-1">
-                                              <span className="animate-pulse">⚠️</span>
-                                              <span>Ghosting Risk (no timeline activity)</span>
-                                            </div>
-                                          )}
-
-                                          <div className="flex items-start justify-between gap-1">
-                                            <h5 className="text-[10.5px] font-bold text-white group-hover:text-[#00d4aa] transition-colors truncate tracking-tight leading-snug" title={deal.title}>
-                                              {deal.title}
-                                            </h5>
-                                            <button 
-                                              onClick={(e) => handleDeleteDeal(deal.id, e)}
-                                              className="opacity-0 group-hover:opacity-100 p-0.5 hover:text-rose-500 text-text-muted transition-all rounded shadow-sm"
-                                              title="Delete deal"
-                                            >
-                                              <Trash2 className="w-3 h-3" />
-                                            </button>
-                                          </div>
-
-                                          {/* Custom Lead Organization Info Box with letter avatar */}
-                                          <div className="flex items-center gap-1.5 min-w-0 bg-[#0f111a] p-1.5 rounded-lg border border-border/40">
-                                            <div className="w-4.5 h-4.5 rounded-full bg-slate-800 text-slate-300 flex items-center justify-center font-mono text-[8.5px] uppercase font-bold shrink-0 border border-border">
-                                              {associatedLead?.company ? associatedLead.company[0] : (associatedLead?.name ? associatedLead.name[0] : "L")}
-                                            </div>
-                                            <div className="truncate text-left leading-tight">
-                                              <span className="font-extrabold text-[#edf2f7] block truncate text-[9px]">{associatedLead?.name || "Unassigned Lead"}</span>
-                                              <span className="text-[7.5px] text-text-muted block truncate font-mono">@{associatedLead?.company || "N/A"}</span>
-                                            </div>
-                                          </div>
-
-                                          {/* AI Copilot Suggestion Pill */}
-                                          <div className="bg-blue-500/5 hover:bg-blue-500/10 border border-blue-500/12 rounded-lg p-1.5 space-y-0.5 text-left text-[8px] text-blue-350 transition-colors">
-                                            <div className="flex items-center gap-1 font-mono uppercase tracking-wider font-extrabold text-blue-400">
-                                              <Sparkles className="w-2.5 h-2.5 text-blue-400 shrink-0" />
-                                              <span>AI Smart Step:</span>
-                                            </div>
-                                            <p className="font-medium text-slate-300 leading-snug line-clamp-2">{getAiNextBestAction(deal)}</p>
-                                          </div>
-
-                                          {/* Footer: Value and Custom Rating Indicator */}
-                                          <div className="flex items-center justify-between border-t border-border/30 pt-1.5 text-[9px] font-mono">
-                                            <span className="font-extrabold text-emerald-400">${deal.value.toLocaleString()}</span>
-                                            <div className="flex items-center gap-1.5">
-                                              {/* Rating Gauge */}
-                                              <div className="flex items-center gap-1 scale-[0.95] origin-right">
-                                                <div className="w-6 h-1 bg-slate-800 rounded-full overflow-hidden shrink-0">
-                                                  <div className="h-full bg-[#00d4aa]" style={{ width: `${associatedLead?.score || 85}%` }} />
-                                                </div>
-                                                <span className="text-[7.5px] font-bold text-slate-400 font-mono">
-                                                  {associatedLead?.score || 85}%
-                                                </span>
-                                              </div>
-                                              {getHealthBadge(deal.status)}
-                                            </div>
-                                          </div>
-                                        </div>
-                                      );
-                                    })
-                                  )}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            })()}
-          </div>
-        ) : (
-          /* STANDARD VERTICAL COLUMNS KANBAN VIEW */
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5 overflow-x-auto pb-4">
-            {activePipeline?.stages.map((stage) => {
-              const stageDeals = filteredDeals.filter(d => d.stage === stage.id);
-              const cumulativeValue = stageDeals.reduce((sum, d) => sum + d.value, 0);
-
-              return (
-                <div 
-                  key={stage.id}
-                  onDragOver={(e) => handleDragOver(e, stage.id)}
-                  onDragLeave={() => setDragOverStageId(null)}
-                  onDragEnd={handleDragEnd}
-                  onDrop={(e) => handleDrop(e, stage.id)}
-                  className={`flex flex-col rounded-3xl min-h-[500px] h-[520px] transition-all duration-300 p-4 ${
-                    dragOverStageId === stage.id 
-                      ? "bg-[#00d4aa]/5 border-2 border-dashed border-[#00d4aa]/70 scale-[1.015] shadow-[0_8px_32px_rgba(0,212,170,0.06)] ring-2 ring-[#00d4aa]/15" 
-                      : "bg-surface border border-border"
-                  }`}
-                >
-                  {/* Column Header */}
-                  <div className="flex items-center justify-between border-b border-border/30 pb-2 mb-3">
+            return (
+              <div
+                key={stage.id}
+                onDragOver={(e) => handleDragOver(e, stage.id)}
+                onDragLeave={() => setDragOverStageId(null)}
+                onDrop={(e) => handleDrop(e, stage.id)}
+                className={`flex flex-col flex-shrink-0 w-[85vw] sm:w-[286px] rounded-2xl border transition-all duration-300 overflow-hidden snap-center ${
+                  isOver
+                    ? 'border-dashed scale-[1.01]'
+                    : 'border-[#1e2130]'
+                }`}
+                style={{
+                  backgroundColor: '#141722',
+                  borderColor: isOver ? accentBorder : '#1e2130',
+                  boxShadow: isOver ? `0 0 0 2px ${accentBorder}33, 0 16px 40px rgba(0,0,0,0.35)` : '0 10px 30px rgba(0,0,0,0.18)',
+                  // Full viewport height minus header — column scrolls independently
+                  height: 'calc(100vh - 235px)',
+                  minHeight: '520px',
+                  maxHeight: '760px',
+                  display: 'flex',
+                  flexDirection: 'column'
+                }}
+              >
+                {/* ── Column Header ── */}
+                <div className="sticky top-0 z-20 px-4 pt-4 pb-3 flex items-start justify-between gap-2 shrink-0 bg-[#141722]/95 backdrop-blur-md border-b border-white/[0.04]">
+                  <div className="min-w-0">
                     <div className="flex items-center gap-2 min-w-0">
-                      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: stage.color }} />
-                      <h4 className="text-xs font-extrabold text-white truncate uppercase tracking-widest font-mono" title={stage.name}>
+                      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: accentBorder }} />
+                      <h4 className="text-sm font-bold text-white leading-tight truncate" title={stage.name}>
                         {stage.name}
                       </h4>
                     </div>
-                    <div className="flex items-center gap-1.5 shink-0">
-                      {stageDeals.length > 3 && (
-                        <span className="text-[8px] px-1.5 py-0.2 rounded bg-rose-500/10 border border-rose-500/40 text-rose-400 font-bold font-mono tracking-tight animate-pulse" title="Stage Work-In-Progress Threshold Exceeded (Cap: 3)">
-                          ⚠️ WIP
-                        </span>
-                      )}
-                      <span className={`px-2 py-0.5 rounded-full border text-[9px] font-mono font-bold ${stageDeals.length > 3 ? "border-rose-500/50 text-rose-400 bg-rose-500/5" : "bg-surface-alt border border-border text-white"}`}>
-                        {stageDeals.length}
-                      </span>
-                    </div>
+                    <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">
+                      {stageLeads.length} {stageLeads.length === 1 ? 'lead' : 'leads'} · {stage.probability}% probability
+                    </p>
                   </div>
-
-                  {/* Summary Metric pill */}
-                  <div className="text-[10px] text-text-muted font-mono mb-4 flex items-center justify-between px-2 py-1 bg-surface-alt/70 border border-border/70 rounded-xl">
-                    <span>Prob: {stage.probability}%</span>
-                    <strong className="text-emerald-400">${cumulativeValue.toLocaleString()}</strong>
-                  </div>
-
-                  {/* Column Cards wrapper */}
-                  <div className={`flex-1 space-y-3 overflow-y-auto pr-1 text-left custom-scrollbar ${dragOverStageId === stage.id ? "bg-[#00d4aa]/2" : ""}`}>
-                    {stageDeals.length === 0 ? (
-                      <div className="h-full flex flex-col items-center justify-center text-center p-4 border border-dashed border-border/40 rounded-2xl bg-surface-alt/10">
-                        <Briefcase className="w-6 h-6 text-slate-700 mb-1.5" />
-                        <span className="text-[9px] text-text-muted font-mono">Stage Empty</span>
-                        <span className="text-[8px] text-slate-500 uppercase tracking-widest mt-1">SLA: {stage.slaDays} days</span>
-                      </div>
-                    ) : (
-                      stageDeals.map((deal) => {
-                        const associatedLead = initialLeads.find(l => l.id === deal.leadId);
-                        const daysInfo = getDaysInStage(deal, stage);
-                        const isSlaBreached = stage.slaDays > 0 && daysInfo.days > stage.slaDays;
-                        const isGhosted = daysInfo.days >= 4;
-                        const isDraggingThis = draggingDealId === deal.id;
-
-                        // Left indicator tag color based on deal health status
-                        const leftBorderColor = 
-                          deal.status === "hot" ? "border-l-[4px] border-l-[#00d4aa]" :
-                          deal.status === "warm" ? "border-l-[4px] border-l-amber-500" :
-                          deal.status === "cold" ? "border-l-[4px] border-l-blue-500" :
-                          "border-l-[4px] border-l-slate-600";
-
-                        return (
-                          <div
-                            key={deal.id}
-                            draggable
-                            onDragStart={(e) => handleDragStart(e, deal.id)}
-                            onDragEnd={handleDragEnd}
-                            onClick={() => selectActiveDeal(deal)}
-                            className={`group relative p-3.5 rounded-2xl border transition-all duration-250 cursor-grab active:cursor-grabbing text-left space-y-3 select-none ${leftBorderColor} ${
-                              selectedDeal?.id === deal.id 
-                                ? "border-[#00d4aa] bg-[#0c0d12] shadow-[0_4px_24px_rgba(0,212,170,0.18)] ring-1 ring-[#00d4aa]/30" 
-                                : "border-border bg-[#090a0f] hover:border-text-muted hover:bg-surface-alt/80 hover:translate-y-[-1.5px]"
-                            } ${isDraggingThis ? "opacity-35 border-dashed border-slate-500 scale-95" : ""}`}
-                          >
-                            {isSlaBreached && (
-                              <div className="bg-rose-500/10 border border-rose-500/30 text-rose-405 rounded-xl p-2 flex items-center gap-1 text-[9px] leading-tight font-black font-mono">
-                                <AlertCircle className="w-3.5 h-3.5 text-rose-400 shrink-0" />
-                                <span>SLA OVERDUE ({daysInfo.days}d / max {stage.slaDays}d)</span>
-                              </div>
-                            )}
-
-                            {isGhosted && (
-                              <div className="bg-amber-500/10 border border-amber-500/25 text-[#f59e0b] rounded-lg p-1 text-[8px] font-bold font-mono tracking-wide flex items-center justify-center gap-1">
-                                <span className="animate-pulse">⚠️</span>
-                                <span>Ghosting Risk (no timeline activity)</span>
-                              </div>
-                            )}
-
-                            <div className="flex items-start justify-between gap-1.5">
-                              <h5 className="text-[11px] font-extrabold text-white group-hover:text-[#00d4aa] transition-colors leading-snug line-clamp-2" title={deal.title}>
-                                {deal.title}
-                              </h5>
-                              <button 
-                                onClick={(e) => handleDeleteDeal(deal.id, e)}
-                                className="opacity-0 group-hover:opacity-100 p-0.5 hover:text-rose-400 text-text-muted transition-all rounded-md"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-
-                            {/* Custom Lead Organization Info Box with letter avatar */}
-                            <div className="flex items-center gap-2 min-w-0 bg-[#0f111a] p-2 rounded-xl border border-border/40">
-                              <div className="w-5.5 h-5.5 rounded-full bg-slate-800 text-slate-300 flex items-center justify-center font-mono text-[9px] uppercase font-bold shrink-0 border border-border/50">
-                                {associatedLead?.company ? associatedLead.company[0] : (associatedLead?.name ? associatedLead.name[0] : "L")}
-                              </div>
-                              <div className="truncate text-left leading-tight">
-                                <span className="font-extrabold text-[#edf2f7] block truncate text-[9.5px]">{associatedLead?.name || "Unassigned Lead"}</span>
-                                <span className="text-[8px] text-text-muted block truncate font-mono">@{associatedLead?.company || "N/A"}</span>
-                              </div>
-                            </div>
-
-                            {/* AI Copilot Suggestion Pill */}
-                            <div className="bg-blue-500/5 hover:bg-blue-500/10 border border-blue-500/12 rounded-lg p-2.5 space-y-0.5 text-left text-[8.5px] text-blue-350 transition-colors">
-                              <div className="flex items-center gap-1 font-mono uppercase tracking-wider font-extrabold text-blue-400">
-                                <Sparkles className="w-3 h-3 text-blue-400 shrink-0" />
-                                <span>AI Next Best Action:</span>
-                              </div>
-                              <p className="font-medium text-slate-200 leading-relaxed">{getAiNextBestAction(deal)}</p>
-                            </div>
-
-                            {/* Base Attributes */}
-                            <div className="flex items-center justify-between border-t border-border/20 pt-2.5 text-[10px] font-mono">
-                              <span className="font-extrabold text-[#00d4aa]">${deal.value.toLocaleString()}</span>
-                              <div className="flex items-center gap-1.5">
-                                {/* Probability Close Gauge */}
-                                <div className="flex items-center gap-1">
-                                  <div className="w-8 h-1 bg-slate-800 rounded-full overflow-hidden shrink-0">
-                                    <div className="h-full bg-[#00d4aa]" style={{ width: `${associatedLead?.score || 85}%` }} />
-                                  </div>
-                                  <span className="text-[8.5px] font-mono text-slate-400 font-bold">
-                                    {associatedLead?.score || 85}%
-                                  </span>
-                                </div>
-                                {getHealthBadge(deal.status)}
-                              </div>
-                            </div>
-
-                            {/* Actionable Tags snippet */}
-                            {deal.tags && deal.tags.length > 0 && (
-                              <div className="flex flex-wrap gap-1 pt-1 border-t border-border/10">
-                                {deal.tags.slice(0, 2).map((t, idx) => (
-                                  <span key={idx} className="text-[8px] bg-surface font-mono font-bold text-[#00d4aa] px-1.5 py-0.5 rounded border border-border">
-                                    {t}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
-
-                            {/* Card footer metrics */}
-                            <div className="flex items-center justify-between text-[8px] text-text-muted uppercase tracking-wider font-mono pt-1">
-                              <span>Duration: {daysInfo.days}d</span>
-                              <span className="text-slate-400 truncate max-w-[80px]">{deal.assignedAgent || "No Operator"}</span>
-                            </div>
-                          </div>
-                        );
-                      })
-                    )}
+                  <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
+                    {/* Count badge */}
+                    <span
+                      className="w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-extrabold font-mono"
+                      style={{ backgroundColor: `${accentBorder}20`, color: accentBorder }}
+                    >
+                      {stageLeads.length}
+                    </span>
+                    <button className="p-1 rounded-md text-slate-500 hover:text-white hover:bg-white/5 transition-colors cursor-pointer" title="Column options">
+                      <MoreVertical className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        )
-      ) : (
-        /* LIST GRID VIEW FALLBACK WITH BULK SUPPORT */
-        <div className="overflow-x-auto bg-surface border border-border shadow-2xl rounded-3xl text-left select-none">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="border-b border-border text-[9px] uppercase font-bold text-text-muted tracking-widest bg-surface-alt/50">
-                <th className="py-4 px-6 text-left">Deal Title Item</th>
-                <th className="py-4 px-6 text-left">Contact Associate</th>
-                <th className="py-4 px-6 text-left">Pipeline Phase</th>
-                <th className="py-4 px-6 text-right">Value Volume</th>
-                <th className="py-4 px-6 text-left">Assigned Agent</th>
-                <th className="py-4 px-6 text-center">AI Closing Badge</th>
-                <th className="py-4 px-6 text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/60 text-xs text-text">
-              {filteredDeals.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="py-12 text-center text-text-muted italic bg-surface-alt/10 font-mono">
-                    No active Deal pipelines filtered. Combine tags or refine criteria values above.
-                  </td>
-                </tr>
-              ) : (
-                filteredDeals.map((deal) => {
-                  const lead = initialLeads.find(l => l.id === deal.leadId);
-                  const stage = activePipeline?.stages.find(s => s.id === deal.stage);
 
-                  return (
-                    <tr 
-                      key={deal.id}
-                      onClick={() => selectActiveDeal(deal)}
-                      className="hover:bg-surface-alt/70 transition-colors cursor-pointer border-b border-border/30"
+                {/* Progress bar */}
+                <div className="sticky top-[65px] z-20 px-4 pb-3 shrink-0 bg-[#141722]/95 backdrop-blur-md">
+                  <div className="h-[2px] w-full bg-[#1e2130] rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{
+                        width: `${Math.min(100, (stageLeads.length / Math.max(filteredLeads.length, 1)) * 100)}%`,
+                        backgroundColor: accentBorder
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* ── Cards — unlimited scroll ── */}
+                <div className="flex-1 min-h-0 overflow-y-auto px-3 py-3 space-y-3 custom-scrollbar scroll-smooth">
+                  {stageLeads.length === 0 ? (
+                    <div
+                      className="flex flex-col items-center justify-center text-center py-12 px-4 border border-dashed rounded-xl mt-2 bg-black/10"
+                      style={{ borderColor: `${accentBorder}40` }}
                     >
-                      <td className="py-3.5 px-6 font-bold text-white">{deal.title}</td>
-                      <td className="py-3.5 px-6">
-                        <div className="font-extrabold text-white">{lead?.name || "Unassigned"}</div>
-                        <div className="text-[10px] text-text-muted mt-0.5">@{lead?.company || "N/A"}</div>
-                      </td>
-                      <td className="py-3.5 px-6">
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold" style={{ backgroundColor: `${stage?.color}15`, color: stage?.color, border: `1px solid ${stage?.color}30` }}>
-                          <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: stage?.color }} />
-                          {stage?.name || deal.stage}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-6 text-right font-mono font-bold text-emerald-400">
-                        ${deal.value.toLocaleString()}
-                      </td>
-                      <td className="py-3.5 px-6 text-text-muted font-medium">{deal.assignedAgent || "None"}</td>
-                      <td className="py-3.5 px-6 text-center">{getHealthBadge(deal.status)}</td>
-                      <td className="py-3.5 px-6 text-center" onClick={e => e.stopPropagation()}>
-                        <button 
-                          onClick={(e) => handleDeleteDeal(deal.id, e)}
-                          className="px-2.5 py-1.5 bg-rose-500/10 border border-rose-500/20 text-rose-400 hover:bg-rose-500 hover:text-white rounded-xl text-xs font-bold transition-all"
+                      <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-3" style={{ backgroundColor: `${accentBorder}16`, color: accentBorder }}>
+                        <Briefcase className="w-4 h-4" />
+                      </div>
+                      <span className="text-[11px] font-bold text-slate-400">No leads here yet</span>
+                      <span className="text-[9px] text-slate-600 mt-1">Drag a card or add a lead</span>
+                    </div>
+                  ) : (
+                    stageLeads.map((lead) => {
+                      const score = lead.score ?? calculateLeadScore(lead);
+                      const msg = messages[lead.id];
+                      const hasEmail  = chState.em && lead.email;
+                      const hasWa     = chState.wa && lead.phone;
+                      const hasLi     = chState.li && lead.linkedin_url;
+                      // Derive a short date label
+                      const dateLabel = lead.createdAt?.toDate
+                        ? lead.createdAt.toDate().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+                        : 'Recently';
+                      // Avatar color from name
+                      const avatarColor = (name: string) => {
+                        const hues = [210, 150, 30, 0, 270, 180, 320];
+                        const idx = (name || 'A').charCodeAt(0) % hues.length;
+                        return `hsl(${hues[idx]}, 65%, 55%)`;
+                      };
+
+                      return (
+                        <div
+                          key={lead.id}
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, lead.id)}
+                          onClick={() => openLeadDrawer(lead)}
+                          className="rounded-xl border cursor-grab active:cursor-grabbing text-left transition-all duration-200 hover:translate-y-[-2px] hover:border-white/15 hover:shadow-xl group overflow-hidden"
+                          style={{
+                            backgroundColor: '#0b0d14',
+                            borderColor: '#1e2333',
+                            borderLeftWidth: '3px',
+                            borderLeftColor: accentBorder,
+                            boxShadow: '0 2px 12px rgba(0,0,0,0.3)',
+                          }}
                         >
-                          Revoke
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+                          <div className="p-4">
+                            <div className="flex items-start justify-between gap-3 mb-2">
+                              <h5
+                                className="text-[13px] font-bold text-white leading-snug group-hover:text-blue-300 transition-colors line-clamp-2"
+                                title={lead.name}
+                              >
+                                {lead.name || "Unnamed lead"}
+                              </h5>
+                              <span
+                                className="shrink-0 px-2 py-1 rounded-lg text-[9px] font-extrabold border"
+                                style={{
+                                  backgroundColor: score >= 70 ? 'rgba(16,185,129,0.12)' : score >= 40 ? 'rgba(245,158,11,0.12)' : 'rgba(244,63,94,0.12)',
+                                  borderColor: score >= 70 ? 'rgba(16,185,129,0.22)' : score >= 40 ? 'rgba(245,158,11,0.22)' : 'rgba(244,63,94,0.22)',
+                                  color: score >= 70 ? '#34d399' : score >= 40 ? '#fbbf24' : '#fb7185'
+                                }}
+                              >
+                                {score}
+                              </span>
+                            </div>
+
+                            {/* Description = role + company */}
+                            <p className="text-[11px] text-slate-400 leading-relaxed line-clamp-2 mb-3 min-h-[32px]">
+                              {lead.role}{lead.company ? ` · ${lead.company}` : ''}
+                              {lead.industry ? ` · ${lead.industry}` : ''}
+                            </p>
+
+                             {/* Outreach channel mini-badges & Intel option */}
+                             <div className="flex items-center justify-between mb-3 min-h-[22px]">
+                               <div className="flex flex-wrap items-center gap-1.5">
+                                 {hasEmail && (
+                                   <span className="px-1.5 py-0.5 rounded text-[8px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/20">✉ Email</span>
+                                 )}
+                                 {hasWa && (
+                                   <span className="px-1.5 py-0.5 rounded text-[8px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">📱 WA</span>
+                                 )}
+                                 {hasLi && (
+                                   <span className="px-1.5 py-0.5 rounded text-[8px] font-bold bg-blue-500/15 text-blue-400 border border-blue-500/20">in LI</span>
+                                 )}
+                                 {msg && (
+                                   <span className="px-1.5 py-0.5 rounded text-[8px] font-bold bg-purple-500/15 text-purple-400 border border-purple-500/20">AI ✓</span>
+                                 )}
+                               </div>
+
+                               <button
+                                 onClick={(e) => {
+                                   e.stopPropagation();
+                                   openLeadDrawer(lead, 'intelligence');
+                                 }}
+                                 className="px-2 py-0.5 bg-brand/10 border border-brand/20 hover:bg-brand text-brand hover:text-white rounded-lg text-[8.5px] font-extrabold transition-all cursor-pointer flex items-center gap-0.5 shrink-0"
+                                 title="View AI dossier"
+                               >
+                                 <span>🔍 Intel</span>
+                               </button>
+                             </div>
+
+                            {/* Bottom row: avatars + date */}
+                            <div className="flex items-center justify-between pt-3 border-t border-white/[0.05]">
+                              {/* Avatar stack */}
+                              <div className="flex items-center -space-x-2">
+                                {/* Lead avatar */}
+                                <div
+                                  className="w-7 h-7 rounded-full border-2 border-[#0e1019] flex items-center justify-center text-[10px] font-extrabold text-white shrink-0"
+                                  style={{ backgroundColor: avatarColor(lead.name) }}
+                                  title={lead.name}
+                                >
+                                  {(lead.name || '?')[0].toUpperCase()}
+                                </div>
+                                {/* Company avatar */}
+                                {lead.company && (
+                                  <div
+                                    className="w-7 h-7 rounded-full border-2 border-[#0e1019] flex items-center justify-center text-[10px] font-extrabold text-white shrink-0"
+                                    style={{ backgroundColor: avatarColor(lead.company + '1') }}
+                                    title={lead.company}
+                                  >
+                                    {lead.company[0].toUpperCase()}
+                                  </div>
+                                )}
+                                <div className="w-7 h-7 rounded-full border-2 border-[#0e1019] flex items-center justify-center text-[8px] font-extrabold shrink-0 bg-slate-800 text-slate-300" title={getLeadStage(lead)}>
+                                  {getLeadStage(lead).slice(0, 2).toUpperCase()}
+                                </div>
+                              </div>
+
+                              {/* Date badge */}
+                              <div className="flex items-center gap-1 text-[10px] text-slate-500">
+                                <Calendar className="w-3 h-3" />
+                                <span>{dateLabel}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+
+                {/* ── Add New pinned footer ── */}
+                <div className="sticky bottom-0 z-20 p-3 shrink-0 border-t border-[#1e2130] bg-[#141722]/95 backdrop-blur-md shadow-[0_-16px_28px_rgba(9,10,15,0.62)]">
+                  <button
+                    onClick={() => openSingleLeadModal(stage.id)}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-[12px] font-bold transition-all cursor-pointer hover:brightness-110 active:scale-[0.99]"
+                    style={{
+                      backgroundColor: accentBorder,
+                      color: '#fff',
+                      boxShadow: `0 4px 14px ${accentBorder}40`
+                    }}
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add New
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        /* list layout */
+        <div className="bg-surface border border-border shadow-xl rounded-3xl p-6 text-left select-none space-y-4">
+          <div className="space-y-1 border-b border-border/30 pb-4 flex justify-between items-center">
+            <div>
+              <h3 className="text-base font-bold text-white font-syne flex items-center gap-2">
+                <List className="w-5 h-5 text-brand" />
+                Campaign Target Prospects List
+              </h3>
+              <p className="text-[10px] text-text-muted">A structured table containing all target prospects synced within campaign boundaries.</p>
+            </div>
+            
+            {selectedLeadIds.length > 0 && (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={async () => {
+                    if (confirm(`Are you sure you want to delete ${selectedLeadIds.length} prospects?`)) {
+                      for (const id of selectedLeadIds) {
+                        await handleDeleteLead(id);
+                      }
+                      setSelectedLeadIds([]);
+                      showToast("Bulk delete completed", "success");
+                    }
+                  }}
+                  className="px-3.5 py-1.5 rounded-xl text-[10px] font-bold bg-rose-500/10 border border-rose-500/20 text-rose-400 hover:bg-rose-500 hover:text-white transition-all flex items-center gap-1.5"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Bulk Delete ({selectedLeadIds.length})
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="border-b border-border text-[9px] uppercase font-bold text-text-muted tracking-widest bg-surface-alt/50">
+                  <th className="py-4 px-6 text-left w-12">
+                    <input 
+                      type="checkbox"
+                      checked={filteredLeads.length > 0 && selectedLeadIds.length === filteredLeads.length}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedLeadIds(filteredLeads.map(l => l.id));
+                        } else {
+                          setSelectedLeadIds([]);
+                        }
+                      }}
+                      className="w-4 h-4 rounded text-brand border-border bg-[#090a0f] focus:ring-brand focus:ring-offset-0 focus:ring-1"
+                    />
+                  </th>
+                  <th className="py-4 px-6 text-left">Prospect</th>
+                  <th className="py-4 px-6 text-left">Score</th>
+                  <th className="py-4 px-6 text-left">Contact channels</th>
+                  <th className="py-4 px-6 text-left">Pipeline Stage</th>
+                  <th className="py-4 px-6 text-left">Location</th>
+                  <th className="py-4 px-6 text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/65 text-xs text-text">
+                {filteredLeads.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-12 text-center text-text-muted italic bg-surface-alt/5 font-mono">
+                      No prospects discovered in campaign workspace search segment.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredLeads.map((lead) => {
+                    const stage = PIPELINE_STAGES.find(s => s.name === getLeadStage(lead));
+                    const score = calculateLeadScore(lead);
+                    const isSelected = selectedLeadIds.includes(lead.id);
+
+                    return (
+                      <tr 
+                        key={lead.id}
+                        className={`hover:bg-surface-alt/45 transition-colors cursor-pointer ${isSelected ? 'bg-brand/5' : ''}`}
+                        onClick={() => openLeadDrawer(lead)}
+                      >
+                        <td className="py-3.5 px-6" onClick={e => e.stopPropagation()}>
+                          <input 
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedLeadIds(prev => [...prev, lead.id]);
+                              } else {
+                                setSelectedLeadIds(prev => prev.filter(id => id !== lead.id));
+                              }
+                            }}
+                            className="w-4 h-4 rounded text-brand border-border bg-[#090a0f] focus:ring-brand focus:ring-offset-0"
+                          />
+                        </td>
+                        <td className="py-3.5 px-6">
+                          <div className="font-extrabold text-white">{lead.name}</div>
+                          <div className="text-[10px] text-text-muted mt-0.5">{lead.role} @ {lead.company}</div>
+                        </td>
+                        <td className="py-3.5 px-6">
+                          <span className={`px-1.5 py-0.5 rounded font-mono font-bold border ${getScoreColor(score)}`}>
+                            {score}%
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-6" onClick={e => e.stopPropagation()}>
+                          <div className="flex items-center gap-2.5 text-text-muted">
+                            {lead.phone ? (
+                              <a href={`tel:${lead.phone}`} className="hover:text-brand transition-all" title={lead.phone}><Phone className="w-4 h-4" /></a>
+                            ) : (
+                              <Phone className="w-4 h-4 opacity-20" />
+                            )}
+                            {lead.email ? (
+                              <a href={`mailto:${lead.email}`} className="hover:text-brand transition-all" title={lead.email}><Mail className="w-4 h-4" /></a>
+                            ) : (
+                              <Mail className="w-4 h-4 opacity-20" />
+                            )}
+                            {lead.linkedin_url ? (
+                              <a href={lead.linkedin_url.startsWith('http') ? lead.linkedin_url : `https://${lead.linkedin_url}`} target="_blank" rel="noreferrer" className="hover:text-brand transition-all" title={lead.linkedin_url}><Linkedin className="w-4 h-4" /></a>
+                            ) : (
+                              <Linkedin className="w-4 h-4 opacity-20" />
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-3.5 px-6">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold" style={{ backgroundColor: `${stage?.color}15`, color: stage?.color, border: `1px solid ${stage?.color}30` }}>
+                            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: stage?.color }} />
+                            {stage?.name || 'Imported'}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-6 font-mono text-[10px] text-text-muted">
+                          {COUNTRY_FLAGS[lead.country] || '🌍'} {lead.country || 'Global'}
+                        </td>
+                        <td className="py-3.5 px-6 text-center" onClick={e => e.stopPropagation()}>
+                          <div className="flex items-center justify-center gap-2">
+                            <button 
+                              onClick={() => openLeadDrawer(lead, 'intelligence')}
+                              className="px-2.5 py-1.5 bg-brand/10 border border-brand/20 text-brand hover:bg-brand hover:text-white rounded-xl text-[10px] font-bold transition-all cursor-pointer flex items-center gap-1"
+                            >
+                              🔍 Intel
+                            </button>
+                            <button 
+                              onClick={() => openLeadDrawer(lead)}
+                              className="px-2.5 py-1.5 bg-surface-alt border border-border text-slate-300 hover:bg-border hover:text-white rounded-xl text-[10px] font-bold transition-all cursor-pointer"
+                            >
+                              Details
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
-      {/* 5. Dynamic Detail Collapsible Side Drawer Panel */}
+      {/* 4. Interactive 4-Tab Lead Profile Drawer (Right Slide Out) */}
       <AnimatePresence>
-        {selectedDeal && (
+        {selectedLead && (
           <div className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-xs flex justify-end">
-            {/* Backdrop click closer */}
-            <div className="absolute inset-0" onClick={() => setSelectedDeal(null)} />
+            <div className="absolute inset-0 w-full h-full" onClick={() => setSelectedLead(null)} />
 
             <motion.div 
               initial={{ x: "100%" }}
@@ -1543,256 +1433,535 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
               className="relative w-full sm:max-w-2xl bg-[#0b0c10]/95 backdrop-blur-md border-l border-border/80 shadow-[-10px_0_40px_rgba(0,0,0,0.6)] flex flex-col h-full z-10"
             >
-              {/* Sidebar Drawer Header */}
+              {/* Drawer Header */}
               <div className="p-6 border-b border-border/60 flex items-center justify-between bg-surface-alt/70">
                 <div className="space-y-1 text-left">
-                  <span className="px-2 py-0.5 text-[8.5px] font-mono font-bold uppercase tracking-widest text-blue-400 bg-blue-500/10 border border-blue-500/25 rounded-md">
-                    Journey Record File
+                  <span className="px-2 py-0.5 text-[8.5px] font-mono font-bold uppercase tracking-widest text-[#8b5cf6] bg-[#8b5cf6]/10 border border-[#8b5cf6]/25 rounded-md">
+                    Salesperson Prospect File
                   </span>
-                  <h3 className="text-base font-extrabold text-white truncate max-w-sm mt-1">{selectedDeal.title}</h3>
+                  <h3 className="text-base font-extrabold text-white truncate max-w-sm mt-1">{selectedLead.name}</h3>
+                  <p className="text-[10px] text-text-muted font-medium font-mono">{selectedLead.role} @ {selectedLead.company}</p>
                 </div>
                 <button 
-                  onClick={() => setSelectedDeal(null)}
+                  onClick={() => setSelectedLead(null)}
                   className="p-1.5 bg-surface-alt border border-border hover:bg-border text-text-muted hover:text-white rounded-xl transition-all cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
 
-              {/* Drawer Body content (scrolls) */}
-              <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar bg-surface text-left">
+              {/* Four Tab Headers */}
+              <div className="flex border-b border-border bg-surface-alt/30 select-none">
+                {[
+                  { key: 'overview', label: '🏠 Overview' },
+                  { key: 'outreach', label: '✉️ AI Outreach' },
+                  { key: 'history', label: '⏳ History' },
+                  { key: 'intelligence', label: '🔍 Prospect Intelligence' }
+                ].map(t => (
+                  <button
+                    key={t.key}
+                    onClick={() => setSelectedTab(t.key as any)}
+                    className={`flex-1 py-3 text-center text-xs font-bold transition-all border-b-2 ${
+                      selectedTab === t.key 
+                        ? 'text-brand border-brand bg-brand/5' 
+                        : 'text-text-muted border-transparent hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Drawer Content */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar bg-surface text-left">
                 
-                {/* 1. AI CLAUDE PROGRESSION ANALYTICS */}
-                <div className="bg-gradient-to-br from-blue-500/5 to-[#00d4aa]/5 border border-[#00d4aa]/30 rounded-3xl p-5 space-y-4 relative overflow-hidden">
-                  <div className="absolute -top-12 -right-12 w-32 h-32 bg-[#00d4aa]/3 rounded-full filter blur-xl pointer-events-none" />
-                  
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Sparkles className="w-5 h-5 text-[#00d4aa] animate-pulse" />
-                      <div className="text-xs font-bold text-white uppercase tracking-wider font-mono">Claude Closed-Loop Predictor</div>
-                    </div>
-
-                    <button
-                      onClick={handleRefreshAiReport}
-                      disabled={isRefreshingAi}
-                      className="px-2.5 py-1.5 bg-surface border border-border hover:border-border-subtle text-text hover:text-white rounded-xl text-[10px] transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-40"
-                    >
-                      <RefreshCw className={`w-3 h-3 ${isRefreshingAi ? "animate-spin text-[#00d4aa]" : ""}`} />
-                      {isRefreshingAi ? "Analyzing..." : "Regenerate Intelligence"}
-                    </button>
-                  </div>
-
-                  {aiReport ? (
-                    <div className="space-y-4 text-left">
-                      <div className="grid grid-cols-2 gap-4">
-                        {/* Prob widget gauge */}
-                        <div className="bg-surface-alt border border-border rounded-2xl p-4 text-center space-y-1">
-                          <div className="text-[9px] uppercase font-bold text-text-muted tracking-wide font-mono">Closing Probability</div>
-                          <div className="text-3xl font-extrabold text-[#00d4aa] font-mono">{aiReport.close_probability}%</div>
-                          <div className="text-[8.5px] text-text-muted mt-1 font-mono">Est: {aiReport.estimated_close_date || "N/A"}</div>
-                        </div>
-
-                        {/* Health Status card widget */}
-                        <div className="bg-surface-alt border border-border rounded-2xl p-4 text-center space-y-1 flex flex-col justify-between">
-                          <div className="text-[9px] uppercase font-bold text-text-muted tracking-wide font-mono font-bold">Deal Health Gauge</div>
-                          <div className="flex justify-center my-1.5">{getHealthBadge(aiReport.health_status)}</div>
-                          <div className="text-[8px] text-text-muted mt-1 uppercase tracking-widest font-mono">Model: Claude 3.5 Sonnet</div>
-                        </div>
-                      </div>
-
-                      {/* Summary text */}
-                      <div className="bg-surface-alt border border-border/80 rounded-2xl p-4 text-xs leading-relaxed text-slate-300">
-                        <strong className="text-white block mb-1 text-[10px] font-mono uppercase tracking-widest text-brand-alt">Executive Analysis:</strong>
-                        {aiReport.analysis_summary}
-                      </div>
-
-                      {/* Risk factors list */}
-                      <div className="space-y-2">
-                        <div className="text-[10px] uppercase font-bold text-rose-400 flex items-center gap-1 font-mono">
-                          <AlertCircle className="w-4 h-4 text-rose-400" />
-                          Identified Negotiation Hazards
-                        </div>
-                        <ul className="space-y-1.5 text-[11px] text-text-muted">
-                          {aiReport.key_risks?.map((risk: string, idx: number) => (
-                            <li key={idx} className="flex items-start gap-2 bg-rose-500/5 p-2 rounded-lg border border-rose-500/10">
-                              <span className="text-rose-400 select-none font-bold font-mono">0{idx+1}.</span>
-                              <span className="text-slate-300">{risk}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-
-                      {/* Next steps list */}
-                      <div className="space-y-2">
-                        <div className="text-[10px] uppercase font-bold text-emerald-400 flex items-center gap-1 font-mono">
-                          <CheckCircle className="w-4 h-4 text-[#00d4aa]" />
-                          Fulfillment Action Blueprint
-                        </div>
-                        <ul className="space-y-1.5 text-[11px] text-text-muted">
-                          {aiReport.recommended_next_steps?.map((step: string, idx: number) => (
-                            <li key={idx} className="flex items-start gap-2 bg-[#00d4aa]/5 p-2 rounded-lg border border-[#00d4aa]/10">
-                              <span className="text-[#00d4aa] select-none font-bold font-mono">→</span>
-                              <span className="text-slate-300 font-semibold">{step}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-
-                      {/* AI email outreach body */}
-                      <div className="bg-surface-alt border border-border rounded-2xl p-4.5 space-y-2.5 text-left">
-                        <div className="text-[9px] font-mono uppercase font-bold text-[#00d4aa] flex items-center justify-between">
-                          <div className="flex items-center gap-1.5">
-                            <Mail className="w-3.5 h-3.5" />
-                            Rendered AI Personal Pitch Copy
-                          </div>
-                        </div>
-                        <div className="text-xs text-slate-300 leading-relaxed font-mono whitespace-pre-line p-3 bg-[#07080b] border border-border rounded-xl">
-                          {aiReport.ideal_outreach_message}
-                        </div>
-                      </div>
-
-                      {/* History Log comparative elements */}
-                      {aiHistory.length > 0 && (
-                        <div className="border-t border-border/30 pt-4">
-                          <div className="text-[9px] uppercase font-bold text-text-muted mb-2 tracking-widest flex items-center gap-1">
-                            <History className="w-3.5 h-3.5 text-brand" />
-                            Probability Run History Audit
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {aiHistory.map((hist, idx) => (
-                              <div key={idx} className="bg-surface-alt border border-border rounded-xl px-2.5 py-1 text-center font-mono">
-                                <span className="text-[7.5px] text-text-muted block">{hist.date}</span>
-                                <span className="text-xs text-blue-450 font-bold">{hist.score}%</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center p-8 bg-surface-alt/50 border border-dashed border-border rounded-2xl text-center">
-                      <Sparkles className="w-8 h-8 text-border mb-2.5" />
-                      <p className="text-xs font-extrabold text-white">No Analysis Compiled</p>
-                      <p className="text-[10px] text-text-muted mt-1 max-w-sm">
-                        Engage background Claude Sonnet models to identify pipeline risks and generate custom, high-converting copy triggers.
-                      </p>
-                      <button
-                        onClick={handleRefreshAiReport}
-                        disabled={isRefreshingAi}
-                        className="mt-4 px-3.5 py-2 bg-[#00d4aa] hover:bg-[#00d4aa]/90 text-slate-950 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5"
+                {/* TAB 1 — Overview */}
+                {selectedTab === 'overview' && (
+                  <div className="space-y-5">
+                    {/* Header edit action */}
+                    <div className="flex items-center justify-between border-b border-border/40 pb-2">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-white">Contact Specifications</h4>
+                      <button 
+                        onClick={() => {
+                          if (isEditingLead) {
+                            handleSaveLeadEdit();
+                          } else {
+                            setEditedLeadData({ ...selectedLead });
+                            setIsEditingLead(true);
+                          }
+                        }}
+                        className="px-3 py-1.5 bg-brand/10 border border-brand/20 hover:bg-brand text-brand hover:text-white rounded-xl text-[10px] font-bold transition-all flex items-center gap-1 cursor-pointer"
                       >
-                        <RefreshCw className={`w-3.5 h-3.5 ${isRefreshingAi ? "animate-spin text-slate-950" : ""}`} />
-                        Launch AI Analyzer
+                        {isEditingLead ? <Save className="w-3 h-3" /> : <Settings className="w-3 h-3" />}
+                        {isEditingLead ? "Save Details" : "Edit Contact"}
                       </button>
                     </div>
-                  )}
-                </div>
 
-                {/* 2. CHRONOLOGICAL CHECKLIST followups */}
-                <div className="space-y-4">
-                  <h4 className="text-[10px] font-mono uppercase font-bold tracking-widest text-[#00d4aa] flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-[#00d4aa]" />
-                    Staging Checklist & Tasks ({dealTasks.filter(t => t.completed).length}/{dealTasks.length})
-                  </h4>
-
-                  <div className="flex flex-col sm:flex-row items-center gap-2.5">
-                    <input 
-                      type="text"
-                      placeholder="Schedule new follow-up action step..."
-                      value={newTaskTitle}
-                      onChange={(e) => setNewTaskTitle(e.target.value)}
-                      className="w-full bg-surface-alt border border-border text-white placeholder:text-text-muted rounded-xl py-2 px-3 text-xs outline-none focus:border-brand"
-                    />
-                    <input 
-                      type="date"
-                      value={newTaskDueDate}
-                      onChange={(e) => setNewTaskDueDate(e.target.value)}
-                      className="bg-surface-alt border border-border text-white rounded-xl py-2 px-3 text-xs outline-none focus:border-brand w-full sm:w-auto"
-                    />
-                    <button 
-                      onClick={handleAddTask}
-                      className="px-4 py-2 bg-surface-alt border border-border hover:bg-border text-white text-xs font-black rounded-xl transition-all cursor-pointer whitespace-nowrap w-full sm:w-auto"
-                    >
-                      Schedule Task
-                    </button>
-                  </div>
-
-                  <div className="space-y-2">
-                    {dealTasks.length === 0 ? (
-                      <p className="text-[10px] italic text-text-muted text-center font-mono py-2 bg-surface-alt/20 rounded-xl border border-border/30">
-                        No scheduling tasks recorded. Track SLA checkpoints here.
-                      </p>
+                    {isEditingLead ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                        <div className="space-y-1">
+                          <label className="text-[9px] text-text-muted font-bold uppercase">Name</label>
+                          <input 
+                            type="text" 
+                            className="w-full bg-surface-alt border border-border rounded-xl p-2.5 text-white" 
+                            value={editedLeadData.name || ""} 
+                            onChange={e => setEditedLeadData({ ...editedLeadData, name: e.target.value })}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[9px] text-text-muted font-bold uppercase">Role Title</label>
+                          <input 
+                            type="text" 
+                            className="w-full bg-surface-alt border border-border rounded-xl p-2.5 text-white" 
+                            value={editedLeadData.role || ""} 
+                            onChange={e => setEditedLeadData({ ...editedLeadData, role: e.target.value })}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[9px] text-text-muted font-bold uppercase">Company Name</label>
+                          <input 
+                            type="text" 
+                            className="w-full bg-surface-alt border border-border rounded-xl p-2.5 text-white" 
+                            value={editedLeadData.company || ""} 
+                            onChange={e => setEditedLeadData({ ...editedLeadData, company: e.target.value })}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[9px] text-text-muted font-bold uppercase">Email Address</label>
+                          <input 
+                            type="email" 
+                            className="w-full bg-surface-alt border border-border rounded-xl p-2.5 text-white" 
+                            value={editedLeadData.email || ""} 
+                            onChange={e => setEditedLeadData({ ...editedLeadData, email: e.target.value })}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[9px] text-text-muted font-bold uppercase">Phone Number</label>
+                          <input 
+                            type="text" 
+                            className="w-full bg-surface-alt border border-border rounded-xl p-2.5 text-white" 
+                            value={editedLeadData.phone || ""} 
+                            onChange={e => setEditedLeadData({ ...editedLeadData, phone: e.target.value })}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[9px] text-text-muted font-bold uppercase">LinkedIn Profile Link</label>
+                          <input 
+                            type="text" 
+                            className="w-full bg-surface-alt border border-border rounded-xl p-2.5 text-white" 
+                            value={editedLeadData.linkedin_url || ""} 
+                            onChange={e => setEditedLeadData({ ...editedLeadData, linkedin_url: e.target.value })}
+                          />
+                        </div>
+                      </div>
                     ) : (
-                      dealTasks.map((task) => (
-                        <div key={task.id} className="flex items-center justify-between p-3.5 bg-surface-alt border border-border/80 rounded-2xl">
-                          <div className="flex items-center gap-2.5">
-                            <input 
-                              type="checkbox"
-                              checked={task.completed}
-                              onChange={() => handleToggleTask(task)}
-                              className="w-4 h-4 rounded text-[#00d4aa] border-border bg-[#090a0f] focus:ring-brand focus:ring-offset-0 focus:ring-1"
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                        <div className="bg-surface-alt border border-border p-3.5 rounded-2xl">
+                          <span className="text-[8px] text-text-muted uppercase tracking-wider block mb-0.5">Corporate Role</span>
+                          <span className="text-white font-bold block truncate">{selectedLead.role || "N/A"}</span>
+                        </div>
+                        <div className="bg-surface-alt border border-border p-3.5 rounded-2xl">
+                          <span className="text-[8px] text-text-muted uppercase tracking-wider block mb-0.5">Enterprise Company</span>
+                          <span className="text-white font-bold block truncate">{selectedLead.company || "N/A"}</span>
+                        </div>
+                        <div className="bg-surface-alt border border-border p-3.5 rounded-2xl">
+                          <span className="text-[8px] text-text-muted uppercase tracking-wider block mb-0.5">Verified Email</span>
+                          <span className="text-brand font-mono font-bold block truncate">{selectedLead.email || "N/A"}</span>
+                        </div>
+                        <div className="bg-surface-alt border border-border p-3.5 rounded-2xl">
+                          <span className="text-[8px] text-text-muted uppercase tracking-wider block mb-0.5">Verified Phone</span>
+                          <span className="text-white font-mono font-bold block truncate">{selectedLead.phone || "N/A"}</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Staging & Rep selectors */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1 text-xs">
+                        <label className="text-[9px] text-text-muted font-bold uppercase tracking-wider">Pipeline Stage</label>
+                        <select 
+                          value={getLeadStage(selectedLead)}
+                          onChange={async (e) => {
+                            const newStage = e.target.value;
+                            await handleUpdateLead(selectedLead.id, { stage: newStage });
+                            setSelectedLead({ ...selectedLead, stage: newStage });
+                          }}
+                          className="w-full bg-surface-alt border border-border text-white rounded-xl p-3 text-xs font-bold outline-none cursor-pointer focus:border-brand"
+                        >
+                          {PIPELINE_STAGES.map(s => (
+                            <option key={s.id} value={s.id}>{s.name}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="space-y-1 text-xs">
+                        <label className="text-[9px] text-text-muted font-bold uppercase tracking-wider">Assigned representative</label>
+                        <select 
+                          value={selectedLead.assignedAgent || profile.displayName || "SDR Operator"}
+                          onChange={async (e) => {
+                            const agent = e.target.value;
+                            await handleUpdateLead(selectedLead.id, { assignedAgent: agent });
+                            setSelectedLead({ ...selectedLead, assignedAgent: agent });
+                          }}
+                          className="w-full bg-surface-alt border border-border text-white rounded-xl p-3 text-xs font-bold outline-none cursor-pointer focus:border-brand"
+                        >
+                          <option value="Sarah Mitchell">Sarah Mitchell</option>
+                          <option value="James Ochieng">James Ochieng</option>
+                          <option value={profile.displayName}>{profile.displayName}</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Lead Score Rationale bento grid */}
+                    <div className="bg-[#0f111a] border border-border/80 rounded-3xl p-5 space-y-3">
+                      <div className="flex items-center justify-between border-b border-border/25 pb-2">
+                        <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-brand">Prospect Score Alignment</span>
+                        <span className={`px-2 py-0.5 rounded font-mono font-extrabold text-[10px] border ${getScoreColor(calculateLeadScore(selectedLead))}`}>
+                          Score: {calculateLeadScore(selectedLead)}%
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-text-muted leading-relaxed">
+                        High lead scores represent decision maker seniority, product relevance alignment, and active channels discoverability.
+                      </p>
+                    </div>
+
+                    {/* Notes field */}
+                    <div className="space-y-2">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-white">Representative Internal Notes</h4>
+                      <textarea
+                        value={leadNotes}
+                        onChange={(e) => setLeadNotes(e.target.value)}
+                        placeholder="Log custom prospect specifications or callback notes here..."
+                        className="w-full bg-surface-alt border border-border text-slate-200 placeholder:text-text-muted rounded-2xl p-4 text-xs outline-none focus:border-brand h-28 resize-none select-text"
+                      />
+                      <div className="flex justify-end">
+                        <button 
+                          onClick={handleSaveNotes}
+                          className="px-4.5 py-2 bg-[#10b981] hover:bg-[#10b981]/90 text-slate-950 font-bold rounded-xl text-xs flex items-center gap-1 cursor-pointer transition-all shadow-md"
+                        >
+                          <Save className="w-3.5 h-3.5 text-slate-950" />
+                          Update Notes
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB 2 — AI Outreach */}
+                {selectedTab === 'outreach' && (
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between border-b border-border pb-3">
+                      <div>
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-white">Omnichannel message drafts</h4>
+                        <p className="text-[10px] text-text-muted mt-0.5">Draft cold outreach personalized across active channels simultaneously.</p>
+                      </div>
+
+                      <button
+                        onClick={() => handleRegenerateOutreach(selectedTone.wa)}
+                        disabled={isGeneratingLeadOutreach}
+                        className="px-4 py-2 bg-brand text-white hover:opacity-90 rounded-xl text-[10px] font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-40 transition-all shadow-md"
+                      >
+                        <RefreshCw className={`w-3 h-3 ${isGeneratingLeadOutreach ? 'animate-spin' : ''}`} />
+                        {isGeneratingLeadOutreach ? "Regenerating..." : "Generate drafts"}
+                      </button>
+                    </div>
+
+                    {/* AI Draft cards */}
+                    {(() => {
+                      const msg = messages[selectedLead.id];
+
+                      if (!msg) {
+                        return (
+                          <div className="text-center py-12 border border-dashed border-border rounded-3xl space-y-3 bg-surface-alt/25">
+                            <Sparkles className="w-8 h-8 text-slate-700 mx-auto" />
+                            <h5 className="text-xs font-bold text-white">No drafts ready yet</h5>
+                            <p className="text-[10px] text-text-muted max-w-sm mx-auto">Click "Generate drafts" to personal messages for WhatsApp, LinkedIn InMail, and Email customized for this prospect.</p>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div className="space-y-4">
+                          {/* Tone selector */}
+                          <div className="flex items-center gap-3 text-xs bg-surface-alt p-3 rounded-2xl border border-border">
+                            <span className="font-bold text-white">Outreach Tone:</span>
+                            <select
+                              value={selectedTone.wa}
+                              onChange={(e) => {
+                                const newTone = e.target.value;
+                                setSelectedTone({ wa: newTone, li: newTone, em: newTone });
+                                handleRegenerateOutreach(newTone);
+                              }}
+                              className="bg-[#0b0c10] border border-border text-xs text-[#8b5cf6] font-bold rounded-lg py-1 px-3 outline-none cursor-pointer"
+                            >
+                              <option>Conversational</option>
+                              <option>Professional B2B</option>
+                              <option>Concise</option>
+                            </select>
+                          </div>
+
+                          {/* Email Draft Card */}
+                          <div className="bg-surface-alt border border-border rounded-3xl p-5 space-y-3 relative overflow-hidden">
+                            <div className="flex items-center justify-between border-b border-border/40 pb-2">
+                              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-email flex items-center gap-1.5"><Mail className="w-4 h-4 text-email" /> Email Pitch Draft</span>
+                              <button 
+                                onClick={() => handleSendOutreach('em', msg.email_body, msg.email_subject)}
+                                className="px-3 py-1.5 bg-email/15 border border-email/30 hover:bg-email text-email hover:text-white rounded-xl text-[10px] font-bold transition-all flex items-center gap-1 cursor-pointer"
+                              >
+                                <Send className="w-3 h-3" />
+                                Send Now
+                              </button>
+                            </div>
+                            <div className="space-y-2 text-xs">
+                              <div className="p-2.5 bg-[#090a0f] border border-border rounded-xl">
+                                <span className="text-[8px] text-text-muted uppercase tracking-wider block mb-0.5">Subject Line</span>
+                                <strong className="text-white font-mono">{msg.email_subject}</strong>
+                              </div>
+                              <div 
+                                contentEditable
+                                onBlur={async (e) => {
+                                  await updateDoc(doc(db, 'messages', selectedLead.id), { email_body: e.currentTarget.innerText });
+                                }}
+                                className="p-3 bg-[#090a0f] border border-border rounded-xl font-mono text-[11px] text-slate-350 leading-relaxed outline-none min-h-[80px]"
+                                dangerouslySetInnerHTML={{ __html: (msg.email_body || '').replace(/\n/g, '<br>') }}
+                              />
+                            </div>
+                          </div>
+
+                          {/* WhatsApp Draft Card */}
+                          <div className="bg-surface-alt border border-border rounded-3xl p-5 space-y-3">
+                            <div className="flex items-center justify-between border-b border-border/40 pb-2">
+                              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-whatsapp flex items-center gap-1.5"><Smartphone className="w-4 h-4 text-whatsapp" /> WhatsApp conversational</span>
+                              <button 
+                                onClick={() => handleSendOutreach('wa', msg.whatsapp)}
+                                className="px-3 py-1.5 bg-whatsapp/15 border border-whatsapp/30 hover:bg-whatsapp text-whatsapp hover:text-white rounded-xl text-[10px] font-bold transition-all flex items-center gap-1 cursor-pointer"
+                              >
+                                <Send className="w-3 h-3" />
+                                Send Now
+                              </button>
+                            </div>
+                            <div 
+                              contentEditable
+                              onBlur={async (e) => {
+                                await updateDoc(doc(db, 'messages', selectedLead.id), { whatsapp: e.currentTarget.innerText });
+                              }}
+                              className="p-3 bg-[#090a0f] border border-border rounded-xl font-mono text-[11px] text-slate-350 leading-relaxed outline-none min-h-[60px]"
+                              dangerouslySetInnerHTML={{ __html: msg.whatsapp }}
                             />
-                            <span className={`text-xs ${task.completed ? "line-through text-text-muted opacity-60" : "text-white font-medium"}`}>
-                              {task.title}
+                          </div>
+
+                          {/* LinkedIn Draft Card */}
+                          <div className="bg-surface-alt border border-border rounded-3xl p-5 space-y-3">
+                            <div className="flex items-center justify-between border-b border-border/40 pb-2">
+                              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-linkedin flex items-center gap-1.5"><Linkedin className="w-4 h-4 text-linkedin" /> LinkedIn Connection note</span>
+                              <button 
+                                onClick={() => handleSendOutreach('li', msg.linkedin_connect)}
+                                className="px-3 py-1.5 bg-linkedin/15 border border-linkedin/30 hover:bg-linkedin text-linkedin hover:text-white rounded-xl text-[10px] font-bold transition-all flex items-center gap-1 cursor-pointer"
+                              >
+                                <Send className="w-3 h-3" />
+                                Send Now
+                              </button>
+                            </div>
+                            <div 
+                              contentEditable
+                              onBlur={async (e) => {
+                                await updateDoc(doc(db, 'messages', selectedLead.id), { linkedin_connect: e.currentTarget.innerText });
+                              }}
+                              className="p-3 bg-[#090a0f] border border-border rounded-xl font-mono text-[11px] text-slate-350 leading-relaxed outline-none min-h-[60px]"
+                              dangerouslySetInnerHTML={{ __html: msg.linkedin_connect }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
+
+                {/* TAB 3 — Message History */}
+                {selectedTab === 'history' && (
+                  <div className="space-y-5">
+                    <div className="border-b border-border/45 pb-3">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-white">Sent Outreach Timeline</h4>
+                      <p className="text-[10px] text-text-muted mt-0.5">A chronological feed containing all outreach dispatched from Zyntra bridge.</p>
+                    </div>
+
+                    {selectedLead.status === 'sent' || getLeadStage(selectedLead) === 'Outreach Sent' ? (
+                      <div className="relative border-l border-border pl-4 space-y-6">
+                        <div className="relative space-y-1.5 text-left">
+                          <span className="absolute -left-[21px] top-1.5 w-2.5 h-2.5 rounded-full border border-surface bg-emerald-450" />
+                          <div className="text-[11px] font-extrabold text-white flex items-center justify-between">
+                            <span className="flex items-center gap-1.5 font-syne"><Mail className="w-3.5 h-3.5 text-brand" /> Cold Outreach Dispatched</span>
+                            <span className="text-[8px] text-text-muted font-mono">Dispatched</span>
+                          </div>
+                          <p className="text-[10px] text-text-muted leading-relaxed">
+                            Personalized campaign pitch sent to {selectedLead.email || 'prospect destinations'}.
+                          </p>
+                          <div className="px-2.5 py-1 bg-surface-alt border border-border text-[9px] rounded-lg text-text-muted font-mono flex items-center gap-1 w-max">
+                            <Check className="w-3 h-3 text-[#10b981]" /> Status: Delivered
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-16 opacity-30 space-y-3 font-mono text-xs">
+                        <History className="w-12 h-12 mx-auto" />
+                        <p>Timeline is currently inactive. Dispatch drafts to log communications.</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* TAB 4 — Intelligence */}
+                {selectedTab === 'intelligence' && (
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between border-b border-border pb-3">
+                      <div>
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-white">Prospect dossier preview</h4>
+                        <p className="text-[10px] text-text-muted mt-0.5">Structured AI company news signals, likely B2B pain points, and value hooks.</p>
+                      </div>
+
+                      <button
+                        onClick={handleExecuteIntelligence}
+                        disabled={isExecutingIntelligence}
+                        className={`px-3.5 py-1.5 border rounded-xl text-[10px] font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 ${
+                          executedIntelligenceMap[selectedLead.id]
+                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500 hover:text-white'
+                            : 'bg-brand/10 border-brand/20 text-brand hover:bg-brand hover:text-white'
+                        }`}
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 ${isExecutingIntelligence ? 'animate-spin' : ''}`} />
+                        {isExecutingIntelligence ? "Executing..." : executedIntelligenceMap[selectedLead.id] ? "Refresh Intelligence" : "Execute Intelligence"}
+                      </button>
+                    </div>
+
+                    {!executedIntelligenceMap[selectedLead.id] ? (
+                      <div className="text-center py-16 opacity-50 space-y-3 font-mono text-xs">
+                        <Sparkles className="w-10 h-10 mx-auto text-brand opacity-60" />
+                        <p className="text-white">No intelligence generated yet.</p>
+                        <p className="text-[10px] text-text-muted max-w-[200px] mx-auto leading-relaxed">
+                          Click "Execute Intelligence" to run deep research on this prospect.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-5 text-xs text-slate-350 animate-fadeIn">
+                        
+                        {/* Company Firmographics */}
+                        <div className="bg-surface-alt border border-border p-5 rounded-2xl space-y-4">
+                          <strong className="text-white uppercase font-mono tracking-wider text-xs block">Company Firmographics</strong>
+                          <div className="grid grid-cols-2 gap-4 text-xs">
+                            <div><span className="text-text-muted">Industry:</span> <span className="text-white font-bold block mt-1">{executedIntelligenceMap[selectedLead.id].companyInfo?.industry || "Unknown"}</span></div>
+                            <div><span className="text-text-muted">Revenue:</span> <span className="text-white font-bold block mt-1">{executedIntelligenceMap[selectedLead.id].companyInfo?.revenue || "Unknown"}</span></div>
+                            <div><span className="text-text-muted">Employees:</span> <span className="text-white font-bold block mt-1">{executedIntelligenceMap[selectedLead.id].companyInfo?.employees || "Unknown"}</span></div>
+                            <div><span className="text-text-muted">HQ:</span> <span className="text-white font-bold block mt-1">{executedIntelligenceMap[selectedLead.id].companyInfo?.hq || "Unknown"}</span></div>
+                          </div>
+                        </div>
+
+                        {/* Tech Stack */}
+                        <div className="bg-surface-alt border border-border p-5 rounded-2xl space-y-4">
+                          <strong className="text-indigo-400 uppercase font-mono tracking-wider text-xs block">Detected Tech Stack</strong>
+                          <div className="flex flex-wrap gap-2.5">
+                            {executedIntelligenceMap[selectedLead.id].techStack?.erp?.name && <span className="px-3 py-1.5 bg-indigo-500/10 border border-indigo-500/20 rounded-md text-xs text-indigo-300">ERP: {executedIntelligenceMap[selectedLead.id].techStack.erp.name}</span>}
+                            {executedIntelligenceMap[selectedLead.id].techStack?.crm?.name && <span className="px-3 py-1.5 bg-indigo-500/10 border border-indigo-500/20 rounded-md text-xs text-indigo-300">CRM: {executedIntelligenceMap[selectedLead.id].techStack.crm.name}</span>}
+                            {executedIntelligenceMap[selectedLead.id].techStack?.bi?.name && <span className="px-3 py-1.5 bg-indigo-500/10 border border-indigo-500/20 rounded-md text-xs text-indigo-300">BI: {executedIntelligenceMap[selectedLead.id].techStack.bi.name}</span>}
+                            {executedIntelligenceMap[selectedLead.id].techStack?.websiteTech?.slice(0, 3).map(tech => <span key={tech} className="px-3 py-1.5 bg-indigo-500/10 border border-indigo-500/20 rounded-md text-xs text-indigo-300">{tech}</span>)}
+                          </div>
+                        </div>
+
+                        {/* Detailed Pain Points */}
+                        <div className="space-y-4">
+                          <strong className="text-rose-400 uppercase font-mono tracking-wider text-xs block">Verified Pain Points</strong>
+                          {executedIntelligenceMap[selectedLead.id].painPoints?.map((pain, idx) => (
+                            <div key={idx} className="bg-surface-alt border border-rose-500/20 p-5 rounded-xl space-y-3">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-bold text-white">{pain.title}</span>
+                                <span className={`text-[10px] px-2.5 py-1 rounded-md uppercase font-extrabold ${pain.severity === 'CRITICAL' ? 'bg-rose-500/20 text-rose-400' : pain.severity === 'HIGH' ? 'bg-orange-500/20 text-orange-400' : 'bg-amber-500/20 text-amber-400'}`}>{pain.severity}</span>
+                              </div>
+                              <p className="text-text-muted text-xs leading-relaxed">{pain.description}</p>
+                              <div className="text-xs border-l-2 border-border pl-3 mt-3 space-y-2">
+                                <span className="text-text font-medium block">Impact: {pain.impact}</span>
+                                {pain.evidence?.[0] && <span className="text-text-muted italic block text-xs">"{pain.evidence[0].quote}"<br/><span className="text-[10px] text-text-muted mt-1 block">— {pain.evidence[0].source}</span></span>}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* AI Solutions & Target Value Proposition */}
+                        <div className="space-y-4">
+                          <strong className="text-[#00d4aa] uppercase font-mono tracking-wider text-xs block">Target Value Proposition Hooks</strong>
+                          {executedIntelligenceMap[selectedLead.id].aiSolutions?.map((sol, idx) => (
+                            <div key={idx} className="bg-surface-alt border border-[#00d4aa]/20 p-5 rounded-xl space-y-3">
+                              <span className="text-sm font-bold text-white block">{sol.title}</span>
+                              <p className="text-text-muted text-xs leading-relaxed">{sol.mvp}</p>
+                              <div className="grid grid-cols-2 gap-3 mt-3">
+                                <div className="bg-[#090a0f] p-3 rounded-lg border border-border">
+                                  <span className="text-[10px] text-text-muted uppercase block mb-1">Potential LTV</span>
+                                  <span className="text-sm font-mono text-[#00d4aa] font-bold">{sol.pricing?.potentialLtv || 'Unknown'}</span>
+                                </div>
+                                <div className="bg-[#090a0f] p-3 rounded-lg border border-border">
+                                  <span className="text-[10px] text-text-muted uppercase block mb-1">Year 1 Contract</span>
+                                  <span className="text-sm font-mono text-[#00d4aa] font-bold">{sol.pricing?.year1Contract || 'Unknown'}</span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Decision Maker & GTM Strategy */}
+                        <div className="bg-surface-alt border border-brand/20 p-5 rounded-2xl space-y-4">
+                          <strong className="text-brand uppercase font-mono tracking-wider text-xs block">GTM Strategy & Decision Maker</strong>
+                          
+                          {executedIntelligenceMap[selectedLead.id].gtmStrategy?.decisionMaker && (
+                            <div className="bg-[#090a0f] p-4 rounded-xl border border-border flex items-start gap-4">
+                              <div className="w-10 h-10 rounded-full bg-brand/10 flex items-center justify-center shrink-0">
+                                <Target className="w-5 h-5 text-brand" />
+                              </div>
+                              <div className="space-y-1">
+                                <span className="text-sm font-bold text-white block">{executedIntelligenceMap[selectedLead.id].gtmStrategy.decisionMaker.name || 'Unknown Executive'}</span>
+                                <span className="text-xs text-brand uppercase font-bold block">{executedIntelligenceMap[selectedLead.id].gtmStrategy.decisionMaker.title || 'Decision Maker'}</span>
+                                <div className="mt-2 space-y-2 pt-2 border-t border-border/50">
+                                  <span className="text-xs text-text-muted block"><strong className="text-text">Motivations:</strong> {executedIntelligenceMap[selectedLead.id].gtmStrategy.decisionMaker.motivation || 'N/A'}</span>
+                                  <span className="text-xs text-text-muted block"><strong className="text-text">Owns Pain:</strong> {executedIntelligenceMap[selectedLead.id].gtmStrategy.decisionMaker.painOwns || 'N/A'}</span>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="space-y-4 pt-3 border-t border-border/50">
+                            <div>
+                              <span className="text-[10px] text-text-muted uppercase block mb-1.5 font-bold">Cold Outreach Opening Hook</span>
+                              <p className="text-xs text-white italic border-l-2 border-brand/40 pl-3 bg-brand/5 py-2 pr-2 rounded-r-lg leading-relaxed">"{executedIntelligenceMap[selectedLead.id].gtmStrategy?.openingHook || 'N/A'}"</p>
+                            </div>
+                            <div>
+                              <span className="text-[10px] text-text-muted uppercase block mb-1.5 font-bold">Core Pitch Message</span>
+                              <p className="text-xs text-white italic border-l-2 border-brand/40 pl-3 bg-brand/5 py-2 pr-2 rounded-r-lg leading-relaxed">"{executedIntelligenceMap[selectedLead.id].gtmStrategy?.coreMessage || 'N/A'}"</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* AI Adoption & Competitors */}
+                        <div className="bg-surface-alt border border-border p-5 rounded-2xl space-y-4">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <strong className="text-amber-500 uppercase font-mono tracking-wider text-xs block">Market & Competitors</strong>
+                            <span className="text-[10px] px-2.5 py-1 bg-amber-500/10 text-amber-500 rounded-md font-bold border border-amber-500/20 uppercase w-fit">
+                              AI Maturity: {executedIntelligenceMap[selectedLead.id].aiAdoption?.maturityLevel || 'Unknown'}
                             </span>
                           </div>
                           
-                          <div className="flex items-center gap-1.5 font-mono text-[9px] text-[#00d4aa] bg-[#00d4aa]/5 px-2 py-0.5 rounded border border-[#00d4aa]/15 animate-fade-in">
-                            <Calendar className="w-3 h-3" />
-                            <span>By {new Date(task.dueDate).toLocaleDateString()}</span>
+                          <div className="space-y-3 mt-3">
+                            {executedIntelligenceMap[selectedLead.id].aiAdoption?.competitors?.map((comp, idx) => (
+                              <div key={idx} className="flex items-center justify-between text-xs border-b border-border/50 pb-2.5 last:border-0 last:pb-0">
+                                <span className="font-bold text-white">{comp.name}</span>
+                                <span className="text-text-muted font-medium bg-surface px-2 py-0.5 rounded text-[10px] uppercase tracking-wider">{comp.aiMaturity} AI</span>
+                              </div>
+                            ))}
+                            {(!executedIntelligenceMap[selectedLead.id].aiAdoption?.competitors || executedIntelligenceMap[selectedLead.id].aiAdoption!.competitors.length === 0) && (
+                              <span className="text-xs text-text-muted">No competitor data found.</span>
+                            )}
                           </div>
                         </div>
-                      ))
+                      </div>
                     )}
                   </div>
-                </div>
-
-                {/* 3. ACTIVITY LOGS PATHWAY */}
-                <div className="space-y-4">
-                  <h4 className="text-[10px] font-mono uppercase font-bold tracking-widest text-[#00d4aa] flex items-center gap-2">
-                    <Activity className="w-4 h-4 text-brand-alt" />
-                    Interaction Timeline Logs
-                  </h4>
-
-                  <div className="space-y-2">
-                    <textarea
-                      placeholder="Log manual notes, communication outcome triggers, or call summaries..."
-                      value={newNoteText}
-                      onChange={(e) => setNewNoteText(e.target.value)}
-                      className="w-full bg-surface-alt border border-border text-white placeholder:text-text-muted rounded-2xl p-3 text-xs outline-none focus:border-brand h-20 resize-none select-text"
-                    />
-                    <div className="flex justify-end">
-                      <button 
-                        onClick={handleAddNote}
-                        className="px-4 py-2 bg-[#00d4aa] hover:bg-[#00d4aa]/90 text-slate-950 font-black rounded-xl text-xs transition-all cursor-pointer"
-                      >
-                        Append Note Log
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="relative border-l border-border pl-4 space-y-6">
-                    {dealActivities.length === 0 ? (
-                      <p className="text-[10px] italic text-text-muted text-center font-mono py-2">Timeline inactive. Move stages to generate activity metrics.</p>
-                    ) : (
-                      dealActivities.map((act) => (
-                        <div key={act.id} className="relative space-y-1 text-left">
-                          <span className="absolute -left-[21px] top-1.5 w-2.5 h-2.5 rounded-full border border-surface bg-[#00d4aa]" />
-                          
-                          <div className="text-[11px] font-extrabold text-white flex items-center justify-between">
-                            <span>{act.title}</span>
-                            <span className="text-[8px] text-text-muted font-mono">{new Date(act.timestamp).toLocaleTimeString()}</span>
-                          </div>
-                          <p className="text-[10px] text-text-muted leading-relaxed select-text">{act.description}</p>
-                          <div className="text-[8px] text-text-muted italic flex items-center gap-1.5 pt-0.5 font-mono select-none">
-                            <User className="w-3 h-3 opacity-60 text-brand" />
-                            Broker Agent: {act.agentName}
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
+                )}
 
               </div>
             </motion.div>
@@ -1800,443 +1969,6 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
         )}
       </AnimatePresence>
 
-      {/* 6. CREATE DEAL MODAL */}
-      {showAddDealModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-4 backdrop-blur-sm select-text">
-          <div className="bg-surface border border-border rounded-3xl max-w-md w-full p-6 text-left space-y-5 shadow-2xl animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between border-b border-border/40 pb-3">
-              <h3 className="text-base font-bold text-white flex items-center gap-2">
-                <Briefcase className="w-5 h-5 text-[#00d4aa]" />
-                Initialize Journey Deal
-              </h3>
-              <button onClick={() => setShowAddDealModal(false)} className="text-text-muted hover:text-white cursor-pointer">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="space-y-4 text-xs">
-              <div className="space-y-1.5">
-                <label className="text-[9px] font-mono tracking-widest text-text-muted uppercase">Deal / Opportunity Title</label>
-                <input 
-                  type="text"
-                  placeholder="e.g. Acme Enterprise Automation Upgrade"
-                  value={newDealTitle}
-                  onChange={(e) => setNewDealTitle(e.target.value)}
-                  className="w-full bg-surface-alt border border-border text-white rounded-xl py-2 px-3 text-xs outline-none focus:border-[#00d4aa] transition-all"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-[9px] font-mono tracking-widest text-text-muted uppercase">Lead Target Assgined</label>
-                  <select 
-                    value={newDealLeadId}
-                    onChange={(e) => setNewDealLeadId(e.target.value)}
-                    className="w-full bg-surface-alt border border-border text-white rounded-xl py-2 px-3 text-xs outline-none focus:border-[#00d4aa]"
-                  >
-                    <option value="">Select Target...</option>
-                    {initialLeads.map(l => (
-                      <option key={l.id} value={l.id}>{l.name} ({l.company})</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-[9px] font-mono tracking-widest text-text-muted uppercase">Deal Value ($ USD)</label>
-                  <input 
-                    type="number"
-                    value={newDealValue}
-                    onChange={(e) => setNewDealValue(Number(e.target.value))}
-                    className="w-full bg-surface-alt border border-border text-white rounded-xl py-2 px-3 text-xs outline-none focus:border-[#00d4aa]"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-[9px] font-mono tracking-widest text-text-muted uppercase">Start Pipeline Stage</label>
-                  <select 
-                    value={newDealStage}
-                    onChange={(e) => setNewDealStage(e.target.value)}
-                    className="w-full bg-surface-alt border border-border text-white rounded-xl py-2 px-3 text-xs outline-none focus:border-[#00d4aa]"
-                  >
-                    {activePipeline?.stages.map(s => (
-                      <option key={s.id} value={s.id}>{s.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-[9px] font-mono tracking-widest text-text-muted uppercase">Responsible Broker Agent</label>
-                  <select 
-                    value={newDealAgent}
-                    onChange={(e) => setNewDealAgent(e.target.value)}
-                    className="w-full bg-surface-alt border border-border text-white rounded-xl py-2 px-3 text-xs outline-none focus:border-[#00d4aa]"
-                  >
-                    <option value="Sarah Mitchell">Sarah Mitchell</option>
-                    <option value="James Ochieng">James Ochieng</option>
-                    <option value="User Pro">User Pro</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-[9px] font-mono tracking-widest text-text-muted uppercase">Tags Context (comma separated)</label>
-                <input 
-                  type="text"
-                  placeholder="e.g. Enterprise, High-Value, SaaS"
-                  value={newDealTags}
-                  onChange={(e) => setNewDealTags(e.target.value)}
-                  className="w-full bg-surface-alt border border-border text-white rounded-xl py-2 px-3 text-xs outline-none focus:border-[#00d4aa]"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-3 pt-4 border-t border-border/40 text-xs font-bold">
-              <button 
-                onClick={() => setShowAddDealModal(false)}
-                className="px-4.5 py-2 hover:bg-surface-alt border border-border text-text-muted hover:text-white rounded-xl transition-all cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={handleCreateDeal}
-                className="px-4.5 py-2 bg-[#00d4aa] text-slate-950 hover:bg-[#00d4aa]/90 rounded-xl transition-all cursor-pointer"
-              >
-                Create Target Deal
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 7. DEDUPLICATION MATCHES MODAL */}
-      {showMergeModal && duplicateConflicts && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-4 backdrop-blur-sm select-text">
-          <div className="bg-surface border border-border rounded-3xl max-w-2xl w-full p-6 text-left space-y-6 shadow-2xl animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between border-b border-border/40 pb-3">
-              <h3 className="text-base font-bold text-rose-400 flex items-center gap-2">
-                <ShieldAlert className="w-5 h-5 text-rose-500" />
-                CRM Contact Integrity & Deduplication Gateway
-              </h3>
-              <button onClick={() => setShowMergeModal(false)} className="text-text-muted hover:text-white cursor-pointer">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="bg-rose-500/10 border border-rose-500/20 text-xs text-rose-400 p-4.5 rounded-2xl leading-relaxed">
-              We identified dual duplicates conflict records on work email or phone context pairings:
-              <span className="font-mono block pt-1.5 font-extrabold text-white text-[11px]">Conflict Identifier Key: {duplicateConflicts.leadA.email}</span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 text-xs">
-              {/* Card Lead A */}
-              <div className="border border-border p-4.5 rounded-2xl bg-surface-alt text-left space-y-3">
-                <div className="font-bold text-brand border-b border-border/30 pb-1.5 font-mono uppercase text-[9px] tracking-widest">Duplicate Target Alpha [A]</div>
-                <div>
-                  <span className="text-text-muted uppercase text-[8px] tracking-wider block font-mono">Full name</span> 
-                  <span className="text-white font-bold">{duplicateConflicts.leadA.name}</span>
-                </div>
-                <div>
-                  <span className="text-text-muted uppercase text-[8px] tracking-wider block font-mono">Role Title</span> 
-                  <span className="text-white font-medium">{duplicateConflicts.leadA.role}</span>
-                </div>
-                <div>
-                  <span className="text-text-muted uppercase text-[8px] tracking-wider block font-mono">Contact Phone</span> 
-                  <span className="text-white font-mono">{duplicateConflicts.leadA.phone || "Empty"}</span>
-                </div>
-                <div>
-                  <span className="text-text-muted uppercase text-[8px] tracking-wider block font-mono">Enrichment score</span> 
-                  <span className="text-white font-bold text-emerald-400">{duplicateConflicts.leadA.score}%</span>
-                </div>
-              </div>
-
-              {/* Card Lead B */}
-              <div className="border border-border p-4.5 rounded-2xl bg-surface-alt text-left space-y-3">
-                <div className="font-bold text-blue-400 border-b border-border/30 pb-1.5 font-mono uppercase text-[9px] tracking-widest">Duplicate Target Beta [B]</div>
-                <div>
-                  <span className="text-text-muted uppercase text-[8px] tracking-wider block font-mono">Full name</span> 
-                  <span className="text-white font-bold">{duplicateConflicts.leadB.name}</span>
-                </div>
-                <div>
-                  <span className="text-text-muted uppercase text-[8px] tracking-wider block font-mono">Role Title</span> 
-                  <span className="text-white font-medium">{duplicateConflicts.leadB.role}</span>
-                </div>
-                <div>
-                  <span className="text-text-muted uppercase text-[8px] tracking-wider block font-mono">Contact Phone</span> 
-                  <span className="text-white font-mono">{duplicateConflicts.leadB.phone || "Empty"}</span>
-                </div>
-                <div>
-                  <span className="text-text-muted uppercase text-[8px] tracking-wider block font-mono">Enrichment score</span> 
-                  <span className="text-white font-bold text-blue-400">{duplicateConflicts.leadB.score}%</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Selection row block */}
-            <div className="space-y-3">
-              <div className="text-[10px] uppercase font-mono font-bold tracking-widest text-[#00d4aa]">Field-Level Value Retainer Scheme:</div>
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <button
-                  onClick={() => handleResolveMerge(duplicateConflicts.leadA.id, duplicateConflicts.leadB.id, {
-                    role: duplicateConflicts.leadA.role || duplicateConflicts.leadB.role,
-                    phone: duplicateConflicts.leadA.phone || duplicateConflicts.leadB.phone,
-                    score: duplicateConflicts.leadA.score || duplicateConflicts.leadB.score
-                  })}
-                  className="p-4 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 rounded-2xl text-left transition-all"
-                >
-                  <span className="font-extrabold text-[#10b981] block mb-1">Prioritize Record Alpha [A]</span>
-                  <span className="text-[10px] text-text-muted leading-relaxed block">Merges duplicates together but preserves Alpha values if overlapping fields conflict.</span>
-                </button>
-
-                <button
-                  onClick={() => handleResolveMerge(duplicateConflicts.leadA.id, duplicateConflicts.leadB.id, {
-                    role: duplicateConflicts.leadB.role || duplicateConflicts.leadA.role,
-                    phone: duplicateConflicts.leadB.phone || duplicateConflicts.leadA.phone,
-                    score: duplicateConflicts.leadB.score || duplicateConflicts.leadA.score
-                  })}
-                  className="p-4 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 rounded-2xl text-left transition-all"
-                >
-                  <span className="font-extrabold text-blue-450 block mb-1">Prioritize Record Beta [B]</span>
-                  <span className="text-[10px] text-text-muted leading-relaxed block">Merges duplicates together but preserves Beta values if overlapping fields conflict.</span>
-                </button>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-3 pt-4 border-t border-border/40 text-xs">
-              <button 
-                onClick={() => setShowMergeModal(false)}
-                className="px-4 py-2 hover:bg-surface-alt border border-border text-text-muted hover:text-white rounded-xl transition-all font-bold cursor-pointer"
-              >
-                Keep Separately
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 8. BULK LEAD CONVERSION MODAL */}
-      {showBulkImportModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-4 backdrop-blur-sm select-text">
-          <div className="bg-[#0b0c10] border border-border rounded-3xl max-w-4xl w-full p-6 text-left space-y-6 shadow-2xl animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-border/40 pb-3 shrink-0">
-              <div className="space-y-1">
-                <span className="px-2 py-0.5 text-[8.5px] font-mono font-bold uppercase tracking-widest text-[#00d4aa] bg-[#00d4aa]/10 border border-[#00d4aa]/25 rounded-md">
-                  Active Batch Deploy
-                </span>
-                <h3 className="text-base font-bold text-white flex items-center gap-2">
-                  <Users className="w-5 h-5 text-[#00d4aa]" />
-                  Convert Multiple Leads to Active Kanban Deals
-                </h3>
-              </div>
-              <button 
-                onClick={() => setShowBulkImportModal(false)} 
-                className="text-text-muted hover:text-white cursor-pointer p-1.5 hover:bg-surface-alt rounded-lg"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Modal Content Split Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 overflow-y-auto pr-1 flex-1 py-1 custom-scrollbar">
-              {/* Left Wing: Lead Selector List with check boxes */}
-              <div className="space-y-4 flex flex-col h-full min-h-[250px]">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] uppercase font-mono font-bold tracking-widest text-[#00d4aa]">
-                    1. Select Candidates ({selectedLeadsForBulk.length} chosen)
-                  </span>
-                  
-                  {/* Select All / Deselect All */}
-                  <div className="flex items-center gap-3 font-mono text-[10px]">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const leadsWithDeals = deals.map(d => d.leadId);
-                        const eligible = initialLeads.filter(l => !leadsWithDeals.includes(l.id));
-                        setSelectedLeadsForBulk(eligible.map(l => l.id));
-                      }}
-                      className="text-[#00d4aa] hover:underline font-bold bg-transparent border-0 cursor-pointer"
-                    >
-                      Select All Available
-                    </button>
-                    <span className="text-border">|</span>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedLeadsForBulk([])}
-                      className="text-text-muted hover:text-white font-bold bg-transparent border-0 cursor-pointer"
-                    >
-                      Deselect All
-                    </button>
-                  </div>
-                </div>
-
-                {/* Candidate Scroller List */}
-                <div className="border border-border rounded-2xl bg-surface-alt/40 p-1 divide-y divide-border/45 overflow-y-auto flex-1 max-h-[350px]">
-                  {(() => {
-                    const leadsWithDeals = deals.map(d => d.leadId);
-                    const eligibleLeads = initialLeads.filter(l => !leadsWithDeals.includes(l.id));
-                    
-                    if (eligibleLeads.length === 0) {
-                      return (
-                        <div className="py-12 px-4 text-center space-y-2">
-                          <CheckCircle className="w-8 h-8 text-emerald-400 mx-auto" />
-                          <p className="text-xs text-text-muted italic">All existing system leads have already been converted to active CRM deal segments!</p>
-                        </div>
-                      );
-                    }
-                    
-                    return eligibleLeads.map((lead) => {
-                      const isChecked = selectedLeadsForBulk.includes(lead.id);
-                      return (
-                        <div 
-                          key={lead.id} 
-                          onClick={() => {
-                            if (isChecked) {
-                              setSelectedLeadsForBulk(prev => prev.filter(id => id !== lead.id));
-                            } else {
-                              setSelectedLeadsForBulk(prev => [...prev, lead.id]);
-                            }
-                          }}
-                          className={`flex items-start gap-3 p-3 hover:bg-[#0f1118] transition-all cursor-pointer rounded-xl ${isChecked ? 'bg-emerald-500/5' : ''}`}
-                        >
-                          <input 
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={() => {}} // Click handled by parent item click
-                            className="w-4 h-4 rounded mt-0.5 text-[#00d4aa] border-border bg-[#090a0f]"
-                          />
-                          <div className="min-w-0 flex-1 text-left">
-                            <div className="flex items-center gap-1.5 justify-between">
-                              <span className="text-xs font-bold text-white truncate">{lead.name}</span>
-                              <span className={`text-[8.5px] font-mono px-1.5 py-0.5 rounded-sm font-bold ${lead.score >= 80 ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-slate-500/10 text-text-muted'}`}>
-                                Score: {lead.score}%
-                              </span>
-                            </div>
-                            <p className="text-[10px] text-text-muted truncate">@{lead.company || "No Org Info"}</p>
-                            {lead.email && <p className="text-[9px] text-slate-500 truncate mt-0.5">{lead.email}</p>}
-                          </div>
-                        </div>
-                      );
-                    });
-                  })()}
-                </div>
-              </div>
-
-              {/* Right Wing: Batch Conversion Form Parameters */}
-              <div className="space-y-4 flex flex-col justify-between h-full bg-[#0f111a]/45 border border-border rounded-2xl p-4.5">
-                <div>
-                  <span className="text-[10px] uppercase font-mono font-bold tracking-widest text-[#00d4aa] block mb-2">
-                    2. Customize Journey parameters
-                  </span>
-
-                  <div className="space-y-4 text-xs">
-                    {/* Est Value */}
-                    <div className="space-y-1.5">
-                      <label className="text-[9px] font-mono tracking-widest text-text-muted uppercase">Deal Opportunity Value ($ USD per Lead)</label>
-                      <input 
-                        type="number"
-                        value={bulkDealValue}
-                        onChange={(e) => setBulkDealValue(Number(e.target.value))}
-                        className="w-full bg-surface-alt border border-border text-white rounded-xl py-2 px-3 text-xs outline-none focus:border-[#00d4aa]"
-                        placeholder="e.g. 35000"
-                      />
-                      <p className="text-[8.5px] text-text-muted mt-0.5">Each chosen prospect will be created with reference to this baseline deal value.</p>
-                    </div>
-
-                    {/* Stage & Agent Row */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-1.5">
-                        <label className="text-[9px] font-mono tracking-widest text-text-muted uppercase">Starting Pipeline Stage</label>
-                        <select 
-                          value={bulkStage}
-                          onChange={(e) => setBulkStage(e.target.value)}
-                          className="w-full bg-surface-alt border border-border text-white rounded-xl py-2 px-3 text-xs outline-none focus:border-[#00d4aa] cursor-pointer"
-                        >
-                          {activePipeline?.stages.map(s => (
-                            <option key={s.id} value={s.id}>{s.name}</option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <label className="text-[9px] font-mono tracking-widest text-text-muted uppercase">Responsible Agent</label>
-                        <select 
-                          value={bulkAgent}
-                          onChange={(e) => setBulkAgent(e.target.value)}
-                          className="w-full bg-surface-alt border border-border text-white rounded-xl py-2 px-3 text-xs outline-none focus:border-[#00d4aa] cursor-pointer"
-                        >
-                          <option value="Sarah Mitchell">Sarah Mitchell</option>
-                          <option value="James Ochieng">James Ochieng</option>
-                          <option value="User Pro">User Pro</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    {/* Status & Comm Tag */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-1.5">
-                        <label className="text-[9px] font-mono tracking-widest text-text-muted uppercase">Opportunity Health status</label>
-                        <select 
-                          value={bulkStatus}
-                          onChange={(e) => setBulkStatus(e.target.value as any)}
-                          className="w-full bg-surface-alt border border-border text-white rounded-xl py-2 px-3 text-xs outline-none focus:border-[#00d4aa] cursor-pointer"
-                        >
-                          <option value="hot">🔥 Hot Close</option>
-                          <option value="warm">⚡ Warm Play</option>
-                          <option value="cold">❄️ Cold Strobe</option>
-                        </select>
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <label className="text-[9px] font-mono tracking-widest text-text-muted uppercase">Comma Separated Tags</label>
-                        <input 
-                          type="text"
-                          value={bulkTags}
-                          onChange={(e) => setBulkTags(e.target.value)}
-                          className="w-full bg-surface-alt border border-border text-white rounded-xl py-2 px-3 text-xs outline-none focus:border-[#00d4aa]"
-                          placeholder="Enterprise, High-Value"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="pt-4 border-t border-border/25 mt-4 text-[10px] text-text-muted leading-relaxed select-text">
-                  Upon batch confirmation, the Zyntra SDR pipeline engines initialize automatic timeline logging arrays and follow-up activities to preserve SLA response milestones.
-                </div>
-              </div>
-            </div>
-
-            {/* Modal Actions Footer */}
-            <div className="flex items-center justify-end gap-3 pt-4 border-t border-border/40 text-xs font-bold shrink-0">
-              <button 
-                onClick={() => setShowBulkImportModal(false)}
-                className="px-4.5 py-2.5 hover:bg-surface-alt border border-border text-text-muted hover:text-white rounded-xl transition-all cursor-pointer bg-transparent"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={handleBulkImportLeads}
-                disabled={isBulkImporting || selectedLeadsForBulk.length === 0}
-                className="px-5 py-2.5 bg-[#00d4aa] text-slate-950 hover:bg-[#00d4aa]/90 disabled:opacity-40 rounded-xl transition-all cursor-pointer flex items-center gap-2 shadow-[0_4px_16px_rgba(0,212,170,0.2)] border-0"
-              >
-                {isBulkImporting ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin text-slate-950" />
-                    Converting {selectedLeadsForBulk.length} Leads...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="w-4 h-4 text-slate-950" />
-                    Convert & Import {selectedLeadsForBulk.length} Prospects
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

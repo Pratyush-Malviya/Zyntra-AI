@@ -504,11 +504,12 @@ let pipelines: Pipeline[] = [
     orgId: "org-default",
     name: "Enterprise Sales Pipeline",
     stages: [
-      { id: "stage-discovery", name: "Incident Discovery", color: "#3b82f6", probability: 20, slaDays: 5, statuses: ["Awaiting Intro", "Discovery Booked"] },
-      { id: "stage-proposal", name: "Solution Proposal", color: "#f59e0b", probability: 50, slaDays: 10, statuses: ["Drafting proposal", "Proposal Delivered"] },
-      { id: "stage-negotiation", name: "Contract Negotiation", color: "#8b5cf6", probability: 75, slaDays: 7, statuses: ["SLA Review", "Contracting"] },
-      { id: "stage-won", name: "Closed Won", color: "#10b981", probability: 100, slaDays: 0, statuses: ["Signed", "Onboarded"] },
-      { id: "stage-lost", name: "Closed Lost", color: "#ef4444", probability: 0, slaDays: 0, statuses: ["Disqualified", "Competitor lost"] }
+      { id: "stage-discovery", name: "Imported", color: "#8b5cf6", probability: 20, slaDays: 5, statuses: ["Just imported", "Awaiting Intro"] },
+      { id: "stage-proposal", name: "Pending Action", color: "#f59e0b", probability: 50, slaDays: 10, statuses: ["Needs Action", "Pending Review"] },
+      { id: "stage-negotiation", name: "AI Generated", color: "#3b82f6", probability: 75, slaDays: 7, statuses: ["AI Generated", "Message Ready"] },
+      { id: "stage-won", name: "Outreach Sent", color: "#10b981", probability: 90, slaDays: 0, statuses: ["Outreach Delivered", "Sent"] },
+      { id: "stage-responded", name: "Responded", color: "#00d4aa", probability: 95, slaDays: 0, statuses: ["Lead Replied", "Responded"] },
+      { id: "stage-lost", name: "Failed / Disqualified", color: "#ef4444", probability: 0, slaDays: 0, statuses: ["Delivery Failed", "Bounced"] }
     ]
   },
   {
@@ -720,10 +721,11 @@ async function runAiDealAnalysis(deal: Deal, lead: Lead | undefined, activities:
   // 3. Fallback to heuristics if no keys are defined
   console.warn("[Claude Close Analyzer] Running heuristic calculations...");
   const statusToProb: Record<string, number> = {
-    "stage-discovery": 25,
-    "stage-proposal": 55,
-    "stage-negotiation": 80,
-    "stage-won": 100,
+    "stage-discovery": 20,
+    "stage-proposal": 50,
+    "stage-negotiation": 75,
+    "stage-won": 90,
+    "stage-responded": 95,
     "stage-lost": 0
   };
   const prob = statusToProb[deal.stage] || 35;
@@ -871,6 +873,15 @@ async function startServer() {
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
+  // Set relaxed Content-Security-Policy header to support HMR, inline script preambles, and Firebase/Google APIs
+  app.use((req, res, next) => {
+    res.setHeader(
+      "Content-Security-Policy",
+      "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://*.googleapis.com; connect-src 'self' ws://localhost:24678 ws://127.0.0.1:24678 ws://localhost:3000 ws://127.0.0.1:3000 wss://*.firebaseio.com https://securetoken.googleapis.com https://*.googleapis.com https://*.firebase.com https://*.firestore.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://*; frame-src 'self' https://*.firebaseapp.com https://*.googleapis.com;"
+    );
+    next();
+  });
+
   // API Authentication Middleware supporting standard API keys, session roles and impersonation
   const authenticateApiKey = (req: express.Request, res: express.Response, next: express.NextFunction) => {
     const authHeader = req.header("Authorization");
@@ -919,6 +930,247 @@ async function startServer() {
   // Health endpoint
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok" });
+  });
+
+  // Server-side NVIDIA Fallback Proxy to bypass CORS policies and protect private API keys
+  app.post("/api/fallback/nvidia", async (req, res) => {
+    const { prompt, systemPrompt, isJson, apiKey, selectedModel } = req.body;
+    const nvidiaKey = apiKey || process.env.NVIDIA_API_KEY;
+    if (!nvidiaKey) {
+      return res.status(500).json({ error: "NVIDIA_API_KEY is not configured on the server." });
+    }
+
+    try {
+      const modelToUse = selectedModel || "meta/llama-3.3-70b-instruct";
+      console.log(`[Server NVIDIA Fallback] Proxying ${modelToUse} request...`);
+      const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${nvidiaKey}`
+        },
+        body: JSON.stringify({
+          model: modelToUse,
+          messages: [
+            ...(systemPrompt ? [{ role: "system", content: systemPrompt }] : []),
+            { role: "user", content: prompt }
+          ],
+          temperature: 0.15,
+          max_tokens: 8192,
+          ...(isJson ? { response_format: { type: "json_object" } } : {})
+        })
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        return res.status(response.status).json({ error: `NVIDIA API response error: ${errorBody}` });
+      }
+
+      const data = await response.json();
+      if (!data?.choices?.[0]?.message?.content) {
+        return res.status(502).json({ error: "Invalid response format received from NVIDIA API." });
+      }
+
+      res.json({ content: data.choices[0].message.content });
+    } catch (err: any) {
+      console.error("[Server NVIDIA Fallback] Failed proxying request:", err);
+      res.status(500).json({ error: err.message || "Failed to contact NVIDIA API" });
+    }
+  });
+
+  // Server-side GET endpoint to fetch all real-time models available from OpenRouter API
+  app.get("/api/fallback/openrouter/models", async (req, res) => {
+    const openrouterKey = req.query.apiKey as string || process.env.OPENROUTER_API_KEY;
+    if (!openrouterKey) {
+      return res.status(500).json({ error: "OPENROUTER_API_KEY is not configured on the server." });
+    }
+
+    try {
+      console.log("[Server OpenRouter Models] Querying real-time models directory...");
+      const response = await fetch("https://openrouter.ai/api/v1/models", {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${openrouterKey}`
+        }
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        return res.status(response.status).json({ error: `Failed fetching OpenRouter catalog: ${errorBody}` });
+      }
+
+      const data = await response.json();
+      res.json(data);
+    } catch (err: any) {
+      console.error("[Server OpenRouter Models] Exception thrown:", err);
+      res.status(500).json({ error: err.message || "Failed to contact OpenRouter catalog API" });
+    }
+  });
+
+  // Server-side OpenRouter Fallback Proxy with dynamic multi-model free tier fallbacks
+  app.post("/api/fallback/openrouter", async (req, res) => {
+    const { prompt, systemPrompt, isJson, apiKey, selectedModel } = req.body;
+    const openrouterKey = apiKey || process.env.OPENROUTER_API_KEY;
+    if (!openrouterKey) {
+      return res.status(500).json({ error: "OPENROUTER_API_KEY is not configured on the server." });
+    }
+
+    const freeModels = [
+      "deepseek/deepseek-r1:free",
+      "meta-llama/llama-3.3-70b-instruct:free",
+      "qwen/qwen-2.5-7b-instruct:free"
+    ];
+
+    // If admin has selected a specific custom model, try it first, otherwise fallback to the free catalog loop
+    const modelsToTry = selectedModel && selectedModel !== "openrouter/free"
+      ? [selectedModel, ...freeModels]
+      : freeModels;
+
+    let lastError: any = null;
+    for (const model of modelsToTry) {
+      try {
+        console.log(`[Server OpenRouter Fallback] Attempting model: ${model}...`);
+        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${openrouterKey}`,
+            "HTTP-Referer": "http://localhost:3000",
+            "X-Title": "Zyntra AI"
+          },
+          body: JSON.stringify({
+            model: model,
+            messages: [
+              ...(systemPrompt ? [{ role: "system", content: systemPrompt }] : []),
+              { role: "user", content: prompt }
+            ],
+            temperature: 0.15,
+            max_tokens: 8192,
+            ...(isJson ? { response_format: { type: "json_object" } } : {})
+          })
+        });
+
+        if (!response.ok) {
+          const errorBody = await response.text();
+          console.warn(`[Server OpenRouter Fallback] Model ${model} failed with status ${response.status}: ${errorBody}`);
+          lastError = new Error(`OpenRouter API response error for ${model} (${response.status}): ${errorBody}`);
+          continue;
+        }
+
+        const data = await response.json();
+        if (!data?.choices?.[0]?.message?.content) {
+          console.warn(`[Server OpenRouter Fallback] Model ${model} returned invalid response format.`);
+          lastError = new Error(`Invalid response format received from OpenRouter API for ${model}`);
+          continue;
+        }
+
+        console.log(`[Server OpenRouter Fallback] SUCCESS: Model ${model} responded.`);
+        return res.json({ content: data.choices[0].message.content, modelUsed: model });
+      } catch (err: any) {
+        console.warn(`[Server OpenRouter Fallback] Model ${model} threw error:`, err);
+        lastError = err;
+      }
+    }
+
+    const errMsg = lastError?.message || "All OpenRouter models failed to respond.";
+    res.status(502).json({ error: errMsg });
+  });
+
+  // Server-side OpenAI Proxy — gpt-4o-search-preview with live web search (primary paid fallback)
+  app.post("/api/fallback/openai", async (req, res) => {
+    const { prompt, systemPrompt, apiKey, selectedModel } = req.body;
+    const openaiKey = apiKey || process.env.OPENAI_API_KEY;
+    if (!openaiKey) {
+      return res.status(500).json({ error: "OPENAI_API_KEY is not configured on the server." });
+    }
+
+    try {
+      const modelToUse = selectedModel || "gpt-4o";
+      console.log(`[Server OpenAI Fallback] Proxying ${modelToUse} request...`);
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${openaiKey}`
+        },
+        body: JSON.stringify({
+          model: modelToUse,
+          messages: [
+            {
+              role: "system",
+              content: (systemPrompt || "") + "\n\nIMPORTANT: You MUST return ONLY a raw JSON object. Do NOT wrap it in markdown code fences. Do NOT include any explanation. Start your response with { and end with }."
+            },
+            { role: "user", content: prompt }
+          ],
+          max_tokens: 8000
+        })
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        console.error("[Server OpenAI Fallback] Error:", errorBody);
+        return res.status(response.status).json({ error: `OpenAI API error: ${errorBody}` });
+      }
+
+      const data = await response.json();
+      const content = data?.choices?.[0]?.message?.content;
+      if (!content) {
+        return res.status(502).json({ error: "Invalid response format from OpenAI API." });
+      }
+
+      console.log("[Server OpenAI Fallback] Success. Model:", data?.model, "| Tokens:", data?.usage?.total_tokens);
+      res.json({ content });
+    } catch (err: any) {
+      console.error("[Server OpenAI Fallback] Failed proxying request:", err);
+      res.status(500).json({ error: err.message || "Failed to contact OpenAI API" });
+    }
+  });
+
+  // Server-side Groq Proxy — fast free fallback
+  app.post("/api/fallback/groq", async (req, res) => {
+    const { prompt, systemPrompt, isJson, apiKey } = req.body;
+    const groqKey = apiKey || process.env.GROQ_API_KEY;
+    if (!groqKey) {
+      return res.status(500).json({ error: "GROQ_API_KEY is not configured on the server." });
+    }
+
+    try {
+      console.log("[Server Groq Fallback] Proxying llama-3.3-70b-versatile request...");
+      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${groqKey}`
+        },
+        body: JSON.stringify({
+          model: "llama-3.3-70b-versatile",
+          messages: [
+            ...(systemPrompt ? [{ role: "system", content: systemPrompt }] : []),
+            { role: "user", content: prompt }
+          ],
+          temperature: 0.15,
+          max_tokens: 8192,
+          ...(isJson ? { response_format: { type: "json_object" } } : {})
+        })
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        console.error("[Server Groq Fallback] Error:", errorBody);
+        return res.status(response.status).json({ error: `Groq API response error: ${errorBody}` });
+      }
+
+      const data = await response.json();
+      if (!data?.choices?.[0]?.message?.content) {
+        return res.status(502).json({ error: "Invalid response format from Groq API." });
+      }
+
+      console.log("[Server Groq Fallback] Success. Tokens used:", data?.usage?.total_tokens);
+      res.json({ content: data.choices[0].message.content });
+    } catch (err: any) {
+      console.error("[Server Groq Fallback] Failed proxying request:", err);
+      res.status(500).json({ error: err.message || "Failed to contact Groq API" });
+    }
   });
 
   // REST API: Lead CRUD (Task 3)

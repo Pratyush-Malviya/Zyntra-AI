@@ -63,7 +63,7 @@ import LandingPage from './components/LandingPage';
 import { SuperAdminDashboard as SuperAdminPanel } from './components/SuperAdminDashboard';
 import { CrmSyncLogsPanel } from './components/CrmSyncLogsPanel';
 import { SmartCsvImportModal } from './components/SmartCsvImportModal';
-import { SettingsApiKeysPanel } from './components/SettingsApiKeysPanel';
+import { SettingsHub } from './components/SettingsApiKeysPanel';
 import { CrmPipelineBoard } from './components/CrmPipelineBoard';
 import { LeadJourneyAnalytics } from './components/LeadJourneyAnalytics';
 import { 
@@ -90,6 +90,10 @@ import {
   linkWithPopup,
   User 
 } from './firebase';
+import { UserManagement } from './components/admin/UserManagement';
+import { RoleWorkspaceSelector } from './components/RoleWorkspaceSelector';
+import { SidebarNav } from './components/SidebarNav';
+import { Role, usePermission, FieldGuard } from './lib/rbac';
 
 // --- Types ---
 enum OperationType {
@@ -376,16 +380,20 @@ const ReviewCard: React.FC<{
 
 // --- Utilities ---
 const calculateLeadScore = (lead: Lead): number => {
+  if (!lead) return 0;
   let score = 0;
   const highValueRoles = ['ceo', 'founder', 'vp', 'director', 'head', 'manager', 'owner', 'cto', 'cmo', 'coo'];
-  const role = (lead.role || '').toLowerCase();
+  const role = String(lead.role || '').toLowerCase();
   if (highValueRoles.some(r => role.includes(r))) score += 40;
   const techIndustries = ['software', 'tech', 'it', 'saas', 'digital', 'ai', 'cloud'];
-  const industry = (lead.industry || '').toLowerCase();
+  const industry = String(lead.industry || '').toLowerCase();
   if (techIndustries.some(i => industry.includes(i))) score += 20;
-  if (lead.linkedin_url && lead.linkedin_url.length > 10) score += 10;
-  if (lead.phone && lead.phone.length > 5) score += 10;
-  if (lead.email && lead.email.includes('@')) score += 10;
+  const linkedin = String(lead.linkedin_url || '');
+  if (linkedin && linkedin.length > 10) score += 10;
+  const phone = String(lead.phone || '');
+  if (phone && phone.length > 5) score += 10;
+  const email = String(lead.email || '');
+  if (email && email.includes('@')) score += 10;
   return score;
 };
 
@@ -570,6 +578,21 @@ function MainApp({ user, profile, theme, setTheme, isMobileDevice }: { user: Use
   };
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [activeRole, setActiveRole] = useState<Role>(() => {
+    const saved = localStorage.getItem('zyntra-sim-role');
+    if (saved) return saved as Role;
+    
+    // Map existing default roles to new RBAC roles
+    const oldRole = profile.role as any;
+    if (oldRole === 'super_admin' || oldRole === 'org_admin') return 'Org Admin';
+    return 'SDR';
+  });
+
+  const handleRoleChange = (role: Role) => {
+    setActiveRole(role);
+    localStorage.setItem('zyntra-sim-role', role);
+    showToast(`Switched workspace role to: ${role}`, 'info');
+  };
   const [activePanel, setActivePanel] = useState(-1); 
   const [activeView, setActiveView] = useState<'OUTREACH' | 'SETTINGS' | 'TEAM_ADMIN' | 'SUPER_ADMIN' | 'RESEARCH' | 'JOURNEY' | 'ANALYTICS'>('OUTREACH');
   const [researchKey, setResearchKey] = useState(0);
@@ -675,6 +698,12 @@ function MainApp({ user, profile, theme, setTheme, isMobileDevice }: { user: Use
     });
     return unsubscribe;
   }, [user, profile.orgId]);
+
+  useEffect(() => {
+    if (campaigns.length > 0 && !currentCampaign) {
+      setCurrentCampaign(campaigns[0]);
+    }
+  }, [campaigns, currentCampaign]);
 
   useEffect(() => {
     if (!currentCampaign || !user || !profile.orgId) return;
@@ -948,8 +977,10 @@ function MainApp({ user, profile, theme, setTheme, isMobileDevice }: { user: Use
       createdAt: Timestamp.now()
     };
     const docRef = await addDoc(collection(db, 'campaigns'), newCamp);
-    setCurrentCampaign({ id: docRef.id, ...newCamp } as Campaign);
+    const createdCampaign = { id: docRef.id, ...newCamp } as Campaign;
+    setCurrentCampaign(createdCampaign);
     setActivePanel(0);
+    return createdCampaign;
   };
 
   const handleDeleteCampaign = async (id: string) => {
@@ -1571,351 +1602,24 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
           </button>
         </div>
 
-        <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto max-h-[calc(100vh-180px)] scrollbar-thin">
-          <div>
-            <NavButton 
-              active={activeView === 'RESEARCH'} 
-              onClick={() => { setActiveView('RESEARCH'); setIsMobileMenuOpen(false); }}
-              icon={Globe}
-              label="Intelligence"
-              subLabel="Prospect Research"
-              isCollapsed={isMobileMenuOpen ? false : isMenuCollapsed}
-            />
-            <AnimatePresence initial={false}>
-              {activeView === 'RESEARCH' && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.25, ease: 'easeInOut' }}
-                  className={`overflow-hidden ml-5 pl-3 border-l border-brand/20 my-1 space-y-1 ${
-                    isMenuCollapsed && !isMobileMenuOpen ? 'pl-0 ml-0 border-l-0' : ''
-                  }`}
-                >
-                  <button
-                    onClick={() => {
-                      setResearchKey(prev => prev + 1);
-                      setActiveView('RESEARCH');
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-xs text-text-muted hover:bg-bg-subtle hover:text-text transition-all cursor-pointer ${
-                      isMenuCollapsed && !isMobileMenuOpen ? 'justify-center p-2' : ''
-                    }`}
-                    title="Launch New Intel Synthesis"
-                  >
-                    <Plus className="w-3.5 h-3.5 shrink-0 text-brand-alt" />
-                    {(!isMenuCollapsed || isMobileMenuOpen) && <span className="truncate font-semibold">New Deep-Dive</span>}
-                  </button>
-                  <button
-                    onClick={() => {
-                      setActiveView('RESEARCH');
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-xs text-brand bg-brand/10 font-bold hover:bg-brand/20 transition-all cursor-pointer ${
-                      isMenuCollapsed && !isMobileMenuOpen ? 'justify-center p-2' : ''
-                    }`}
-                    title="Browse Saved Dossiers"
-                  >
-                    <History className="w-3.5 h-3.5 shrink-0" />
-                    {(!isMenuCollapsed || isMobileMenuOpen) && <span className="truncate">Saved Dossiers</span>}
-                  </button>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          <div>
-            <NavButton 
-              active={activeView === 'OUTREACH'} 
-              onClick={() => { setActiveView('OUTREACH'); setActivePanel(-1); setIsMobileMenuOpen(false); }}
-              icon={Target}
-              label="Outreach"
-              subLabel="Campaigns & Leads"
-              isCollapsed={isMobileMenuOpen ? false : isMenuCollapsed}
-            />
-            <AnimatePresence initial={false}>
-              {activeView === 'OUTREACH' && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.25, ease: 'easeInOut' }}
-                  className={`overflow-hidden ml-5 pl-3 border-l border-brand/20 my-1 space-y-1 ${
-                    isMenuCollapsed && !isMobileMenuOpen ? 'pl-0 ml-0 border-l-0' : ''
-                  }`}
-                >
-                  <button
-                    onClick={() => {
-                      setCurrentCampaign(null);
-                      setActivePanel(-1);
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
-                      activePanel === -1
-                        ? 'bg-brand/10 text-brand font-bold'
-                        : 'text-text-muted hover:bg-bg-subtle hover:text-text'
-                    } ${isMenuCollapsed && !isMobileMenuOpen ? 'justify-center p-2' : ''}`}
-                    title="All Campaigns Dashboard"
-                  >
-                    <LayoutDashboard className="w-3.5 h-3.5 shrink-0 text-brand-alt" />
-                    {(!isMenuCollapsed || isMobileMenuOpen) && <span className="truncate">All Campaigns</span>}
-                  </button>
-
-                  {currentCampaign ? (
-                    <>
-                      <div className={`px-3 py-1 text-[8px] font-bold text-text-muted uppercase tracking-wider select-none mt-2 ${
-                        isMenuCollapsed && !isMobileMenuOpen ? 'hidden' : ''
-                      }`}>
-                        Active Campaign
-                      </div>
-                      {[
-                        { id: 0, label: 'Agent Product DNA', icon: Settings },
-                        { id: 1, label: 'Import & Quality Map', icon: Users, badge: leads.length },
-                        { id: 2, label: 'Auto-Generate outreach', icon: Zap },
-                        { id: 3, label: 'Review Copy & Edit', icon: Eye, badge: Object.keys(messages).length },
-                        { id: 4, label: 'Outreach & Export', icon: Download }
-                      ].map(p => (
-                        <button
-                          key={p.id}
-                          onClick={() => {
-                            setActivePanel(p.id);
-                            setIsMobileMenuOpen(false);
-                          }}
-                          className={`w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
-                            activePanel === p.id
-                              ? 'bg-brand/15 text-brand font-bold'
-                              : 'text-text-muted hover:bg-bg-subtle hover:text-text'
-                          } ${isMenuCollapsed && !isMobileMenuOpen ? 'justify-center p-2' : ''}`}
-                          title={p.label}
-                        >
-                          <div className="flex items-center gap-2.5 truncate">
-                            <p.icon className="w-3.5 h-3.5 shrink-0" />
-                            {(!isMenuCollapsed || isMobileMenuOpen) && <span className="truncate">{p.label}</span>}
-                          </div>
-                          {p.badge && (!isMenuCollapsed || isMobileMenuOpen) ? (
-                            <span className="px-1.5 py-0.5 text-[8px] font-mono font-bold rounded-md bg-brand-alt/10 text-brand-alt border border-brand-alt/20">
-                              {p.badge}
-                            </span>
-                          ) : null}
-                        </button>
-                      ))}
-                    </>
-                  ) : (
-                    campaigns.length > 0 && (
-                      <>
-                        <div className={`px-3 py-1 text-[8px] font-bold text-text-muted uppercase tracking-wider select-none mt-2 ${
-                          isMenuCollapsed && !isMobileMenuOpen ? 'hidden' : ''
-                        }`}>
-                          Select Campaign
-                        </div>
-                        {campaigns.slice(0, 4).map(c => (
-                          <button
-                            key={c.id}
-                            onClick={() => {
-                              setCurrentCampaign(c);
-                              setActivePanel(0);
-                              setIsMobileMenuOpen(false);
-                            }}
-                            className="w-full flex items-center gap-2 px-3 py-1 rounded-xl text-[11px] text-text-muted hover:text-brand hover:bg-brand/5 transition-all cursor-pointer text-left"
-                            title={c.name}
-                          >
-                            <span className="w-1.5 h-1.5 rounded-full bg-brand-alt shrink-0" />
-                            {(!isMenuCollapsed || isMobileMenuOpen) && (
-                              <span className="truncate max-w-[120px]">{c.name}</span>
-                            )}
-                          </button>
-                        ))}
-                      </>
-                    )
-                  )}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          <div>
-            <NavButton 
-              active={activeView === 'JOURNEY'} 
-              onClick={() => { setActiveView('JOURNEY'); setIsMobileMenuOpen(false); }}
-              icon={TrendingUp}
-              label="Journeys"
-              subLabel="CRM Deals & Boards"
-              isCollapsed={isMobileMenuOpen ? false : isMenuCollapsed}
-            />
-          </div>
-
-          <div>
-            <NavButton 
-              active={activeView === 'ANALYTICS'} 
-              onClick={() => { setActiveView('ANALYTICS'); setIsMobileMenuOpen(false); }}
-              icon={Activity}
-              label="Analytics"
-              subLabel="SLA & Funnel Reports"
-              isCollapsed={isMobileMenuOpen ? false : isMenuCollapsed}
-            />
-          </div>
-
-          <div>
-            <NavButton 
-              active={activeView === 'SETTINGS'} 
-              onClick={() => { setActiveView('SETTINGS'); setIsMobileMenuOpen(false); }}
-              icon={Settings}
-              label="Settings"
-              subLabel="Email & API Setup"
-              isCollapsed={isMobileMenuOpen ? false : isMenuCollapsed}
-            />
-            <AnimatePresence initial={false}>
-              {activeView === 'SETTINGS' && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.25, ease: 'easeInOut' }}
-                  className={`overflow-hidden ml-5 pl-3 border-l border-brand/20 my-1 space-y-1 ${
-                    isMenuCollapsed && !isMobileMenuOpen ? 'pl-0 ml-0 border-l-0' : ''
-                  }`}
-                >
-                  <button
-                    onClick={() => {
-                      setActiveView('SETTINGS');
-                      setIsMobileMenuOpen(false);
-                      setTimeout(() => {
-                        const el = document.getElementById('settings-smtp-card');
-                        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                      }, 120);
-                    }}
-                    className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-xs text-text-muted hover:bg-bg-subtle hover:text-text transition-all cursor-pointer ${
-                      isMenuCollapsed && !isMobileMenuOpen ? 'justify-center p-2' : ''
-                    }`}
-                    title="Configure SMTP Delivery"
-                  >
-                    <Mail className="w-3.5 h-3.5 shrink-0 text-email" />
-                    {(!isMenuCollapsed || isMobileMenuOpen) && <span className="truncate">Email SMTP Setup</span>}
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      setActiveView('SETTINGS');
-                      setIsMobileMenuOpen(false);
-                      setTimeout(() => {
-                        const el = document.getElementById('settings-linkedin-card');
-                        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                      }, 120);
-                    }}
-                    className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-xs text-text-muted hover:bg-bg-subtle hover:text-text transition-all cursor-pointer ${
-                      isMenuCollapsed && !isMobileMenuOpen ? 'justify-center p-2' : ''
-                    }`}
-                    title="Adjust LinkedIn Bridge"
-                  >
-                    <Linkedin className="w-3.5 h-3.5 shrink-0 text-linkedin" />
-                    {(!isMenuCollapsed || isMobileMenuOpen) && <span className="truncate">LinkedIn Bridge</span>}
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      generateProjectPDF();
-                      if (showToast) showToast("Gathering system metadata and printing Architecture Report...", "success");
-                    }}
-                    className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-xs text-text-muted hover:bg-bg-subtle hover:text-text transition-all cursor-pointer ${
-                      isMenuCollapsed && !isMobileMenuOpen ? 'justify-center p-2' : ''
-                    }`}
-                    title="Download System Specs Report"
-                  >
-                    <FileText className="w-3.5 h-3.5 shrink-0 text-brand" />
-                    {(!isMenuCollapsed || isMobileMenuOpen) && <span className="truncate">Systems Specs (PDF)</span>}
-                  </button>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-          
-          {(profile.role === 'org_admin' || profile.role === 'super_admin') && (
-            <div>
-              <NavButton 
-                active={activeView === 'TEAM_ADMIN'} 
-                onClick={() => { setActiveView('TEAM_ADMIN'); setIsMobileMenuOpen(false); }}
-                icon={Users}
-                label="Team Admin"
-                subLabel="Manage Organization"
-                isCollapsed={isMobileMenuOpen ? false : isMenuCollapsed}
-              />
-              <AnimatePresence initial={false}>
-                {activeView === 'TEAM_ADMIN' && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.25, ease: 'easeInOut' }}
-                    className={`overflow-hidden ml-5 pl-3 border-l border-brand/20 my-1 space-y-1 ${
-                      isMenuCollapsed && !isMobileMenuOpen ? 'pl-0 ml-0 border-l-0' : ''
-                    }`}
-                  >
-                    <div className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-xs text-brand bg-brand/10 font-medium ${
-                      isMenuCollapsed && !isMobileMenuOpen ? 'justify-center p-2' : ''
-                    }`}>
-                      <Users className="w-3.5 h-3.5 shrink-0" />
-                      {(!isMenuCollapsed || isMobileMenuOpen) && <span className="truncate">Members Profile</span>}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          )}
-
-          {profile.role === 'super_admin' && (
-            <div>
-              <NavButton 
-                active={activeView === 'SUPER_ADMIN'} 
-                onClick={() => { setActiveView('SUPER_ADMIN'); setIsMobileMenuOpen(false); }}
-                icon={ShieldCheck}
-                label="Super Admin"
-                subLabel="Platform Control"
-                isCollapsed={isMobileMenuOpen ? false : isMenuCollapsed}
-              />
-              <AnimatePresence initial={false}>
-                {activeView === 'SUPER_ADMIN' && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.25, ease: 'easeInOut' }}
-                    className={`overflow-hidden ml-5 pl-3 border-l border-brand/20 my-1 space-y-1 ${
-                      isMenuCollapsed && !isMobileMenuOpen ? 'pl-0 ml-0 border-l-0' : ''
-                    }`}
-                  >
-                    <div className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-xs text-brand bg-brand/10 font-medium ${
-                      isMenuCollapsed && !isMobileMenuOpen ? 'justify-center p-2' : ''
-                    }`}>
-                      <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
-                      {(!isMenuCollapsed || isMobileMenuOpen) && <span className="truncate">Console Registry</span>}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          )}
-
-          {true && (
-            <div className="pt-4 mt-4 border-t border-border-subtle">
-              <button 
-                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-bg-subtle transition-all group text-left cursor-pointer"
-              >
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all shrink-0 ${
-                  theme === 'dark' ? 'bg-brand/10 text-brand' : 'bg-brand-alt/10 text-brand-alt'
-                } ${isMenuCollapsed && !isMobileMenuOpen ? 'mx-auto' : ''}`}>
-                  {theme === 'dark' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
-                </div>
-                {(!isMenuCollapsed || isMobileMenuOpen) && (
-                  <div className="overflow-hidden transition-all duration-300 block">
-                    <div className="text-[10px] font-bold uppercase tracking-wider text-text">Appearance</div>
-                    <div className="text-[8px] text-text-muted uppercase tracking-widest">{theme === 'dark' ? 'Dark Mode' : 'Light Mode'}</div>
-                  </div>
-                )}
-              </button>
-            </div>
-          )}
-        </nav>
+        
+      <SidebarNav 
+        activeView={activeView}
+        setActiveView={setActiveView}
+        isMobileMenuOpen={isMobileMenuOpen}
+        setIsMobileMenuOpen={setIsMobileMenuOpen}
+        isMenuCollapsed={isMenuCollapsed}
+        activeRole={activeRole}
+        setResearchKey={setResearchKey}
+        setCurrentCampaign={setCurrentCampaign}
+        setActivePanel={setActivePanel}
+        currentCampaign={currentCampaign}
+        campaigns={campaigns}
+        leads={leads}
+        messages={messages}
+        generateProjectPDF={generateProjectPDF}
+        showToast={showToast}
+      />
 
         <div className="p-4 border-t border-border-subtle">
           <div className={`flex items-center gap-3 p-2 rounded-2xl bg-bg-subtle ${isMenuCollapsed && !isMobileMenuOpen ? 'justify-center' : ''}`}>
@@ -1935,7 +1639,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
         </div>
       </aside>
 
-      <div className="flex-1 flex flex-col min-h-screen">
+      <div className="flex-1 flex flex-col min-h-screen min-w-0">
         {/* Top Bar (Simplified) */}
         <header className="h-20 border-b border-border-subtle flex items-center justify-between px-4 md:px-8 bg-bg/50 backdrop-blur-md sticky top-0 z-50">
           <div className="flex items-center gap-3 md:gap-4 w-full min-w-0">
@@ -1972,8 +1676,11 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
             )}
           </div>
           
-          <div className="flex items-center gap-4">
-            <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-surface border border-border">
+          <div className="flex items-center gap-3">
+            {/* Interactive Workspace Role Switcher */}
+            <RoleWorkspaceSelector activeRole={activeRole} onRoleChange={handleRoleChange} />
+
+            <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-surface border border-border shrink-0">
               <div className="w-1.5 h-1.5 rounded-full bg-brand-alt animate-pulse" />
               <span className="text-[9px] font-bold text-text-muted uppercase tracking-wider">System Online</span>
             </div>
@@ -1981,224 +1688,31 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
         </header>
 
         <main className="flex-1 p-4 md:p-8 overflow-x-hidden">
-          {activeView === 'SETTINGS' && (
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="max-w-4xl mx-auto space-y-10"
-            >
-              <div className="space-y-1">
-                <h1 className="text-xl md:text-2xl font-bold tracking-tight">Settings</h1>
-                <p className="text-text-muted text-xs md:text-sm">Manage your personal and system-wide configurations.</p>
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-8">
-                {/* Email SMTP Section */}
-                <div id="settings-smtp-card" className="bg-surface border border-border rounded-3xl p-8 space-y-6 glow-brand/5">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3 text-sm font-bold">
-                      <div className="w-8 h-8 rounded-xl bg-email/10 flex items-center justify-center text-email">
-                        <Mail className="w-4 h-4" />
-                      </div>
-                      Email SMTP Setup
-                    </div>
-                    {emAccount?.connected && (
-                      <div className="px-3 py-1 rounded-full bg-brand-alt/10 text-brand-alt text-[9px] font-bold flex items-center gap-2">
-                        <div className="w-1.5 h-1.5 rounded-full bg-brand-alt animate-pulse" />
-                        ACTIVE
-                      </div>
-                    )}
-                  </div>
-
-                  {!emAccount?.connected ? (
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1">
-                          <label className="text-[9px] text-text-muted font-bold uppercase tracking-widest">SMTP Host</label>
-                          <input 
-                            className="w-full bg-surface-alt border border-border rounded-xl p-3 text-xs focus:border-brand outline-none transition-all"
-                            placeholder="smtp.gmail.com"
-                            value={smtpConfig.host}
-                            onChange={e => setSmtpConfig(prev => ({ ...prev, host: e.target.value }))}
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-[9px] text-text-muted font-bold uppercase tracking-widest">Port</label>
-                          <input 
-                            className="w-full bg-surface-alt border border-border rounded-xl p-3 text-xs focus:border-brand outline-none transition-all"
-                            placeholder="587"
-                            value={smtpConfig.port}
-                            onChange={e => setSmtpConfig(prev => ({ ...prev, port: e.target.value }))}
-                          />
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1">
-                          <label className="text-[9px] text-text-muted font-bold uppercase tracking-widest">Username</label>
-                          <input 
-                            className="w-full bg-surface-alt border border-border rounded-xl p-3 text-xs focus:border-brand outline-none transition-all"
-                            placeholder="user@example.com"
-                            value={smtpConfig.user}
-                            onChange={e => setSmtpConfig(prev => ({ ...prev, user: e.target.value }))}
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-[9px] text-text-muted font-bold uppercase tracking-widest">Password</label>
-                          <input 
-                            type="password"
-                            className="w-full bg-surface-alt border border-border rounded-xl p-3 text-xs focus:border-brand outline-none transition-all"
-                            placeholder="••••••••"
-                            value={smtpConfig.pass}
-                            onChange={e => setSmtpConfig(prev => ({ ...prev, pass: e.target.value }))}
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[9px] text-text-muted font-bold uppercase tracking-widest">From Email / Name</label>
-                        <input 
-                          className="w-full bg-surface-alt border border-border rounded-xl p-3 text-xs focus:border-brand outline-none transition-all"
-                          placeholder='"Zyntra AI" <user@example.com>'
-                          value={smtpConfig.from}
-                          onChange={e => setSmtpConfig(prev => ({ ...prev, from: e.target.value }))}
-                        />
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <input 
-                          type="checkbox"
-                          id="smtp-secure-settings"
-                          checked={smtpConfig.secure}
-                          onChange={e => setSmtpConfig(prev => ({ ...prev, secure: e.target.checked }))}
-                          className="w-4 h-4 accent-brand"
-                        />
-                        <label htmlFor="smtp-secure-settings" className="text-[10px] text-text-muted font-bold uppercase tracking-widest cursor-pointer">Use Secure (SSL/TLS)</label>
-                      </div>
-                      <button 
-                        onClick={handleConnectEmail}
-                        disabled={isConnectingEm}
-                        className="w-full bg-email hover:bg-email/90 text-white font-bold py-4 rounded-2xl transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50 shadow-lg shadow-email/20"
-                      >
-                        {isConnectingEm ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-                        Save SMTP Settings
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="space-y-6">
-                      <div className="bg-surface-alt border border-border rounded-2xl p-4 flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-2xl bg-email/10 flex items-center justify-center text-email">
-                          <Mail className="w-6 h-6" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="text-sm font-bold flex items-center gap-2">
-                            {emAccount.email}
-                            <CheckCircle2 className="w-3.5 h-3.5 text-brand-alt" />
-                          </div>
-                          <div className="text-[10px] text-text-muted font-medium">{emAccount.provider} Connected</div>
-                        </div>
-                        <button onClick={handleDisconnectEmail} className="p-3 hover:bg-red-500/10 text-text-muted hover:text-red-500 rounded-xl transition-colors">
-                          <Unlink className="w-5 h-5" />
-                        </button>
-                      </div>
-                      <p className="text-[10px] text-text-muted leading-relaxed italic">
-                        Your email is connected and ready for direct outreach. To change settings, disconnect first.
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                {/* LinkedIn Section */}
-                <div id="settings-linkedin-card" className="bg-surface border border-border rounded-3xl p-8 space-y-6 glow-brand/5">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3 text-sm font-bold">
-                      <div className="w-8 h-8 rounded-xl bg-linkedin/10 flex items-center justify-center text-linkedin">
-                        <Linkedin className="w-4 h-4" />
-                      </div>
-                      LinkedIn Bridge
-                    </div>
-                    {liAccount?.connected && (
-                      <div className="px-3 py-1 rounded-full bg-brand-alt/10 text-brand-alt text-[9px] font-bold flex items-center gap-2">
-                        <div className="w-1.5 h-1.5 rounded-full bg-brand-alt animate-pulse" />
-                        CONNECTED
-                      </div>
-                    )}
-                  </div>
-                  
-                  {!liAccount?.connected ? (
-                    <div className="space-y-4">
-                      <p className="text-xs text-text-muted leading-relaxed">
-                        Connect your profile to enable automated background sending through our secure bridge.
-                      </p>
-                      <div className="p-3 rounded-xl bg-brand/5 border border-brand/10 flex items-start gap-3">
-                        <AlertCircle className="w-4 h-4 text-brand shrink-0 mt-0.5" />
-                        <div className="text-[10px] text-text-muted leading-tight">
-                          <strong>Setup Required:</strong> Ensure LinkedIn is enabled in your <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer" className="text-brand hover:underline">Firebase Console</a> under Authentication &gt; Sign-in method.
-                        </div>
-                      </div>
-                      <button 
-                        onClick={handleConnectLinkedIn}
-                        disabled={isConnectingLi}
-                        className="w-full bg-brand hover:bg-brand/90 text-white font-bold py-4 rounded-2xl transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50 shadow-lg shadow-brand/20"
-                      >
-                        {isConnectingLi ? <Loader2 className="w-5 h-5 animate-spin" /> : <Link2 className="w-5 h-5" />}
-                        Connect LinkedIn
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="bg-surface-alt border border-border rounded-2xl p-4 flex items-center gap-4">
-                      <img src={liAccount.avatar} alt={liAccount.name} className="w-12 h-12 rounded-2xl border border-brand/20" referrerPolicy="no-referrer" />
-                      <div className="flex-1">
-                        <div className="text-sm font-bold flex items-center gap-2">
-                          {liAccount.name}
-                          <CheckCircle2 className="w-3.5 h-3.5 text-brand-alt" />
-                        </div>
-                        <div className="text-[10px] text-text-muted font-medium">Automation Bridge Active</div>
-                      </div>
-                      <button onClick={handleDisconnectLinkedIn} className="p-3 hover:bg-red-500/10 text-text-muted hover:text-red-500 rounded-xl transition-colors">
-                        <Unlink className="w-5 h-5" />
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* System Defaults Info */}
-              <div className="bg-surface-alt/50 border border-border border-dashed rounded-3xl p-8">
-                <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-brand/10 flex items-center justify-center text-brand shrink-0">
-                    <AlertCircle className="w-5 h-5" />
-                  </div>
-                  <div className="space-y-2">
-                    <h3 className="text-sm font-bold">System Defaults</h3>
-                    <p className="text-xs text-text-muted leading-relaxed">
-                      If you don't provide your own SMTP settings, the platform will use the system-wide default email service configured by the administrator. 
-                      Personal SMTP settings are always prioritized for your outreach.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Project Documentation Export */}
-              <div id="settings-docs-card" className="bg-surface border border-border rounded-3xl p-8 space-y-6 glow-brand/5">
-                <div className="flex items-center gap-3 text-sm font-bold">
-                  <div className="w-8 h-8 rounded-xl bg-brand/10 flex items-center justify-center text-brand">
-                    <FileText className="w-4 h-4" />
-                  </div>
-                  Project Documentation
-                </div>
-                <p className="text-xs text-text-muted leading-relaxed">
-                  Generate a complete PDF report of the project architecture, features, and technical specifications.
-                </p>
-                <button 
-                  onClick={generateProjectPDF}
-                  className="w-full bg-surface-alt border border-border hover:border-brand/30 text-text font-bold py-4 rounded-2xl transition-all flex items-center justify-center gap-2 text-sm shadow-sm"
-                >
-                  <Download className="w-5 h-5" />
-                  Download Project Report (PDF)
-                </button>
-              </div>
-
-              {/* REST API Credentials & Webhook Gateway Hub */}
-              <SettingsApiKeysPanel showToast={showToast} />
-            </motion.div>
+          
+          {activeView === 'TEAM_ADMIN' && (
+            <UserManagement />
+          )}
+{activeView === 'SETTINGS' && (
+            <SettingsHub 
+              showToast={showToast}
+              profile={profile!}
+              emAccount={emAccount}
+              liAccount={liAccount}
+              crmAccount={crmAccount}
+              smtpConfig={smtpConfig}
+              setSmtpConfig={setSmtpConfig}
+              isConnectingEm={isConnectingEm}
+              isConnectingLi={isConnectingLi}
+              handleConnectEmail={handleConnectEmail}
+              handleDisconnectEmail={handleDisconnectEmail}
+              handleConnectLinkedIn={handleConnectLinkedIn}
+              handleDisconnectLinkedIn={handleDisconnectLinkedIn}
+              generateProjectPDF={generateProjectPDF}
+              leads={leads}
+              handleDisconnectCRM={handleDisconnectCRM}
+              handlePushCRMData={handlePushCRMData}
+              isCrmPushing={isCrmPushing}
+            />
           )}
 
           {activeView === 'OUTREACH' && (
@@ -3521,10 +3035,23 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
     {activeView === 'JOURNEY' && (
       <CrmPipelineBoard 
         leads={leads}
-        onLeadsUpdated={() => {
-          // trigger trigger refresh
-        }}
+        campaigns={campaigns}
+        currentCampaign={currentCampaign}
+        setCurrentCampaign={setCurrentCampaign}
+        onCreateCampaign={handleCreateCampaign}
+        onDeleteCampaign={handleDeleteCampaign}
         showToast={showToast}
+        messages={messages}
+        config={config}
+        setConfig={setConfig}
+        chState={chState}
+        setChState={setChState}
+        smtpConfig={smtpConfig}
+        profile={profile}
+        user={user}
+        handleUpdateLead={handleUpdateLead}
+        handleDeleteLead={handleDeleteLead}
+        saveLeads={saveLeads}
       />
     )}
     {activeView === 'ANALYTICS' && (

@@ -100,9 +100,9 @@ service cloud.firestore {
          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.orgId == resource.data.orgId && 
          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'org_admin')
       );
-      allow create: if isAuthenticated() && isValidUser(request.resource.data) && (
+      allow create: if isAuthenticated() && (
         isSuperAdmin() || 
-        (isOwner(userId) && request.resource.data.role == 'user')
+        isOwner(userId)
       ); 
       allow update: if isAuthenticated() && (
         isSuperAdmin() || 
@@ -200,6 +200,20 @@ service cloud.firestore {
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.orgId == resource.data.orgId)
       );
+    }
+
+    // LLM Configuration – readable by all authenticated users (for failover chain),
+    // writable only by super_admin
+    match /llm_config/{configId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAuthenticated() && isSuperAdmin();
+    }
+
+    // LLM Logs – any authenticated user can create logs,
+    // only super_admin can read/update/delete
+    match /llm_logs/{logId} {
+      allow create: if isAuthenticated();
+      allow read, update, delete: if isAuthenticated() && isSuperAdmin();
     }
 
     match /payments/{paymentId} {

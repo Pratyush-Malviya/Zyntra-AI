@@ -17,9 +17,10 @@ interface Lead {
 
 interface SmartCsvImportModalProps {
   onClose: () => void;
-  onImportComplete: (importedRows: any[], summary: any) => void;
+  onImportComplete: (importedRows: any[], summary: any, campaignOption?: { type: 'existing' | 'new', id?: string, name?: string }) => void;
   existingLeads: Lead[];
   showToast: (msg: string, type: "success" | "error" | "info") => void;
+  campaigns?: any[];
 }
 
 const CRM_FIELDS = [
@@ -35,7 +36,8 @@ export const SmartCsvImportModal: React.FC<SmartCsvImportModalProps> = ({
   onClose,
   onImportComplete,
   existingLeads,
-  showToast
+  showToast,
+  campaigns = []
 }) => {
   const [step, setStep] = useState(1);
   const [fileName, setFileName] = useState("");
@@ -63,6 +65,11 @@ export const SmartCsvImportModal: React.FC<SmartCsvImportModalProps> = ({
   const [importLogs, setImportLogs] = useState<string[]>([]);
   const [isImporting, setIsImporting] = useState(false);
   const [importSummary, setImportSummary] = useState<any | null>(null);
+
+  // Campaign Selection
+  const [campaignOptionType, setCampaignOptionType] = useState<'existing' | 'new'>('existing');
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string>(campaigns.length > 0 ? campaigns[0].id : "");
+  const [newCampaignName, setNewCampaignName] = useState<string>("");
 
   // Fetch saved templates on mounting
   useEffect(() => {
@@ -329,10 +336,14 @@ export const SmartCsvImportModal: React.FC<SmartCsvImportModalProps> = ({
       }
 
       // Duplicate Check (Task 2 - Check email, phone, and company matching existing)
-      const duplicateMatch = existingLeads.some(ex => 
-        (emailVal !== "" && ex.email.toLowerCase().trim() === emailVal.toLowerCase()) || 
-        (phoneVal !== "" && companyVal !== "" && ex.phone === phoneVal && ex.company.toLowerCase().trim() === companyVal.toLowerCase())
-      );
+      const duplicateMatch = existingLeads.some(ex => {
+        if (!ex) return false;
+        const exEmail = String(ex.email || '').toLowerCase().trim();
+        const exPhone = String(ex.phone || '').trim();
+        const exCompany = String(ex.company || '').toLowerCase().trim();
+        return (emailVal !== "" && exEmail === emailVal.toLowerCase()) || 
+               (phoneVal !== "" && companyVal !== "" && exPhone === phoneVal && exCompany === companyVal.toLowerCase());
+      });
 
       if (duplicateMatch) {
         duplicates.push({
@@ -377,10 +388,14 @@ export const SmartCsvImportModal: React.FC<SmartCsvImportModalProps> = ({
       const phone = (mappedRows[idx].phone || "").toString().trim();
       const company = (mappedRows[idx].company || "").toString().trim().toLowerCase();
       
-      const isDupe = existingLeads.some(ex => 
-        (email !== "" && ex.email.toLowerCase().trim() === email) ||
-        (phone !== "" && company !== "" && ex.phone === phone && ex.company.toLowerCase().trim() === company)
-      );
+      const isDupe = existingLeads.some(ex => {
+        if (!ex) return false;
+        const exEmail = String(ex.email || '').toLowerCase().trim();
+        const exPhone = String(ex.phone || '').trim();
+        const exCompany = String(ex.company || '').toLowerCase().trim();
+        return (email !== "" && exEmail === email) ||
+               (phone !== "" && company !== "" && exPhone === phone && exCompany === company);
+      });
       
       return !isDupe; // Automatically filter conflicts to prevent dirtying outreach
     });
@@ -424,7 +439,11 @@ export const SmartCsvImportModal: React.FC<SmartCsvImportModalProps> = ({
               `[FINISHED] Sync summary - Total: ${rawRows.length} | Imported: ${sumData.success_count} | Skipped Conflicts: ${sumData.failed_count}.`
             ]);
             showToast(`Merged ${sumData.success_count} leads cleanly. Resolved ${sumData.failed_count} duplicate conflicts.`, "success");
-            onImportComplete(finalRowsToImport, sumData);
+            onImportComplete(finalRowsToImport, sumData, { 
+              type: campaignOptionType, 
+              id: selectedCampaignId, 
+              name: newCampaignName 
+            });
           } else {
             setImportLogs(prev => [...prev, `[ERROR] Failed to save entries securely to CRM databases.`]);
             showToast("Server side bulk save failed.", "error");
@@ -874,11 +893,10 @@ export const SmartCsvImportModal: React.FC<SmartCsvImportModalProps> = ({
                     </div>
                   )}
                   <button
-                    onClick={handleConfirmImport}
+                    onClick={() => setStep(4)}
                     className="px-6 py-2.5 bg-[#00d4aa] text-[#090a0f] hover:scale-[1.01] rounded-xl font-extrabold flex items-center gap-2 transition-all shadow-md shadow-[#00d4aa]/15 cursor-pointer"
                   >
-                    <Play className="w-4.5 h-4.5 fill-current" />
-                    Confirm Bulk Sync
+                    Continue to Campaign
                   </button>
                 </div>
               </div>
@@ -886,8 +904,104 @@ export const SmartCsvImportModal: React.FC<SmartCsvImportModalProps> = ({
             </div>
           )}
 
-          {/* STEP 4: Live progress stream and log readout (Task 2 Step 6) */}
+          {/* STEP 4: Campaign Selection */}
           {step === 4 && (
+            <div className="space-y-6">
+              <h4 className="font-bold flex items-center gap-1.5 mb-1.5 text-white">
+                Assign to Campaign
+              </h4>
+              <p className="text-[11px] text-text-muted mb-4">
+                Choose an existing campaign to inject these leads into, or create a brand new campaign to target them separately.
+              </p>
+
+              <div className="space-y-4">
+                <label className="flex items-start gap-3 p-4 bg-[#090a0f] border border-border rounded-xl cursor-pointer hover:border-brand transition-colors">
+                  <input 
+                    type="radio" 
+                    name="campaignType" 
+                    value="existing"
+                    checked={campaignOptionType === 'existing'} 
+                    onChange={() => setCampaignOptionType('existing')}
+                    className="mt-1"
+                  />
+                  <div className="flex-1">
+                    <span className="font-bold text-white block text-sm">Add to Existing Campaign</span>
+                    <span className="text-[10px] text-text-muted block mt-1">Append new leads directly to an active workflow.</span>
+                    {campaignOptionType === 'existing' && (
+                      <div className="mt-3">
+                        <select 
+                          className="w-full bg-surface-alt border border-border rounded-lg p-2.5 text-xs focus:border-brand outline-none"
+                          value={selectedCampaignId}
+                          onChange={(e) => setSelectedCampaignId(e.target.value)}
+                        >
+                          <option value="" disabled>Select a campaign...</option>
+                          {campaigns?.map(c => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                </label>
+
+                <label className="flex items-start gap-3 p-4 bg-[#090a0f] border border-border rounded-xl cursor-pointer hover:border-brand transition-colors">
+                  <input 
+                    type="radio" 
+                    name="campaignType" 
+                    value="new"
+                    checked={campaignOptionType === 'new'} 
+                    onChange={() => setCampaignOptionType('new')}
+                    className="mt-1"
+                  />
+                  <div className="flex-1">
+                    <span className="font-bold text-white block text-sm">Create New Campaign</span>
+                    <span className="text-[10px] text-text-muted block mt-1">Start a fresh outreach campaign for this specific list.</span>
+                    {campaignOptionType === 'new' && (
+                      <div className="mt-3">
+                        <input 
+                          type="text" 
+                          placeholder="e.g. Q3 Healthcare Founders..."
+                          className="w-full bg-surface-alt border border-border rounded-lg p-2.5 text-xs focus:border-brand outline-none"
+                          value={newCampaignName}
+                          onChange={(e) => setNewCampaignName(e.target.value)}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </label>
+              </div>
+
+              <div className="flex items-center justify-between border-t border-border/40 pt-5">
+                <button
+                  onClick={() => setStep(3)}
+                  className="px-4 py-2 border border-border hover:bg-border text-text-muted hover:text-text rounded-xl font-bold transition-all cursor-pointer"
+                >
+                  Back to Validation
+                </button>
+                <button
+                  onClick={() => {
+                    if (campaignOptionType === 'existing' && !selectedCampaignId) {
+                      showToast("Please select an existing campaign.", "error");
+                      return;
+                    }
+                    if (campaignOptionType === 'new' && !newCampaignName.trim()) {
+                      showToast("Please enter a new campaign name.", "error");
+                      return;
+                    }
+                    setStep(5);
+                    handleConfirmImport();
+                  }}
+                  className="px-6 py-2.5 bg-[#00d4aa] text-[#090a0f] hover:scale-[1.01] rounded-xl font-extrabold flex items-center gap-2 transition-all shadow-md shadow-[#00d4aa]/15 cursor-pointer"
+                >
+                  <Play className="w-4.5 h-4.5 fill-current" />
+                  Confirm & Sync Data
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 5: Live progress stream and log readout (Task 2 Step 6) */}
+          {step === 5 && (
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <h4 className="text-[10px] font-bold uppercase tracking-widest text-brand flex items-center gap-1.5">
