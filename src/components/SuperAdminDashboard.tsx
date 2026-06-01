@@ -209,7 +209,7 @@ export function SuperAdminDashboard({
     const defaultConfigsList = [
       { id: "gemini", name: "Gemini 3.5 Flash/Pro", provider: "Google AI", isEnabled: true, priority: 1, apiKey: process.env.GEMINI_API_KEY || "", status: "online", avgLatency: 0, totalTokens: 0, totalCost: 0, selectedModel: "gemini-3.5-flash" },
       { id: "openai", name: "GPT-4o", provider: "OpenAI", isEnabled: true, priority: 2, apiKey: process.env.OPENAI_API_KEY || "", status: "online", avgLatency: 0, totalTokens: 0, totalCost: 0, selectedModel: "gpt-4o" },
-      { id: "nvidia", name: "Nvidia NIM Llama 3.3", provider: "Nvidia Nim", isEnabled: true, priority: 3, apiKey: "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", status: "online", avgLatency: 0, totalTokens: 0, totalCost: 0, selectedModel: "meta/llama-3.3-70b-instruct" },
+      { id: "nvidia", name: "Nvidia NIM Llama 3.3", provider: "Nvidia Nim", isEnabled: true, priority: 3, apiKey: "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", status: "online", avgLatency: 0, totalTokens: 0, totalCost: 0, selectedModel: "meta/llama-3.3-70b-instruct" },
       { id: "openrouter", name: "OpenRouter Free Multi-LLM", provider: "OpenRouter", isEnabled: true, priority: 4, apiKey: process.env.OPENROUTER_API_KEY || "", status: "online", avgLatency: 0, totalTokens: 0, totalCost: 0, selectedModel: "openrouter/free" }
     ];
 
@@ -217,7 +217,7 @@ export function SuperAdminDashboard({
       if (!Array.isArray(list)) return defaultConfigsList;
       const merged = list.map(c => {
         if (c.id === 'nvidia' && c.apiKey === "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") {
-          return { ...c, apiKey: "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" };
+          return { ...c, apiKey: "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" };
         }
         return c;
       });

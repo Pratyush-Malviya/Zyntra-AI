@@ -69,7 +69,7 @@ export function ensureAllDefaultConfigs(list: LLMConfig[]): LLMConfig[] {
       provider: "Nvidia Nim",
       isEnabled: true,
       priority: 3,
-      apiKey: "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",
+      apiKey: "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",
       status: "online",
       avgLatency: 0,
       totalTokens: 0,
@@ -94,7 +94,7 @@ export function ensureAllDefaultConfigs(list: LLMConfig[]): LLMConfig[] {
   if (!Array.isArray(list)) return defaultConfigsList;
   const merged = list.map(c => {
     if (c.id === "nvidia" && c.apiKey === "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") {
-      return { ...c, apiKey: "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" };
+      return { ...c, apiKey: "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" };
     }
     return c;
   });
@@ -148,7 +148,7 @@ export async function initializeLlmConfigs() {
         provider: "Nvidia Nim",
         isEnabled: true,
         priority: 3,
-        apiKey: "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",
+        apiKey: "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",
         status: "online",
         avgLatency: 0,
         totalTokens: 0,
@@ -197,7 +197,7 @@ export async function initializeLlmConfigs() {
           await updateDoc(docRef, {
             name: config.name,
             selectedModel: currentData.selectedModel || config.selectedModel,
-            apiKey: config.apiKey === "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" ? config.apiKey : (currentData.apiKey || config.apiKey)
+            apiKey: config.apiKey === "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" ? config.apiKey : (currentData.apiKey || config.apiKey)
           });
         }
       }

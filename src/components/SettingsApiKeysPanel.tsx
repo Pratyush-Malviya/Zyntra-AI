@@ -113,7 +113,7 @@ export const SettingsHub: React.FC<SettingsHubProps> = ({
   const defaultConfigsList = useMemo(() => [
     { id: "gemini", name: "Gemini 3.5 Flash/Pro", provider: "Google AI", isEnabled: true, priority: 1, apiKey: "", status: "online", avgLatency: 120, totalTokens: 4200, totalCost: 0.002, selectedModel: "gemini-2.5-flash" },
     { id: "openai", name: "GPT-4o", provider: "OpenAI", isEnabled: true, priority: 2, apiKey: "", status: "online", avgLatency: 280, totalTokens: 1800, totalCost: 0.008, selectedModel: "gpt-4o" },
-    { id: "nvidia", name: "Nvidia NIM Llama 3.3", provider: "Nvidia Nim", isEnabled: true, priority: 3, apiKey: "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", status: "online", avgLatency: 180, totalTokens: 9200, totalCost: 0.0, selectedModel: "meta/llama-3.3-70b-instruct" },
+    { id: "nvidia", name: "Nvidia NIM Llama 3.3", provider: "Nvidia Nim", isEnabled: true, priority: 3, apiKey: "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", status: "online", avgLatency: 180, totalTokens: 9200, totalCost: 0.0, selectedModel: "meta/llama-3.3-70b-instruct" },
     { id: "openrouter", name: "OpenRouter Free Multi-LLM", provider: "OpenRouter", isEnabled: true, priority: 4, apiKey: "", status: "online", avgLatency: 350, totalTokens: 0, totalCost: 0.0, selectedModel: "openrouter/free" }
   ], []);
 
@@ -301,7 +301,7 @@ export const SettingsHub: React.FC<SettingsHubProps> = ({
           body: JSON.stringify({
             prompt: "Hello, reply 'pong' in 1 word.",
             systemPrompt: "Health check pinger",
-            apiKey: apiKey || (modelId === "nvidia" ? "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" : ""),
+            apiKey: apiKey || (modelId === "nvidia" ? "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" : ""),
             selectedModel: selectedModel
           })
         });
