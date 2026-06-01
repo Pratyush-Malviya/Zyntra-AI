@@ -302,7 +302,7 @@ async function processKbFileBackground(file: KbFile) {
         });
         const respText = response.content[0].type === "text" ? response.content[0].text : "";
         const cleanJson = respText.replace(/```json/g, "").replace(/```/g, "").trim();
-        result = JSON.parse(cleanJson);
+        result = cleanAndParseJSON(cleanJson);
       } catch (e: any) {
         console.error("Claude extractor failed, trying Gemini:", e.message);
       }
@@ -318,7 +318,7 @@ async function processKbFileBackground(file: KbFile) {
             contents: `${sysPrompt}\n\n${prompt}`,
             config: { responseMimeType: "application/json" }
           });
-          result = JSON.parse(response.text || "{}");
+          result = cleanAndParseJSON(response.text || "{}");
         } catch (gemError: any) {
           console.error("Gemini extractor fallback failed:", gemError.message);
         }
@@ -351,7 +351,7 @@ async function processKbFileBackground(file: KbFile) {
             const data = await response.json();
             const text = data?.choices?.[0]?.message?.content;
             if (text) {
-              result = JSON.parse(text);
+              result = cleanAndParseJSON(text);
               console.log("[NVIDIA NIM Fallback] Server-side extractor fallback succeeded!");
             }
           } else {
@@ -612,6 +612,138 @@ const hashApiKey = (key: string) => {
   return `hash_${hash}`;
 };
 
+// Clean and Parse JSON handles raw control characters / line breaks inside string values in JSON
+function cleanAndParseJSON(jsonStr: string): any {
+  let cleaned = jsonStr.trim();
+  
+  // Remove markdown code fences
+  cleaned = cleaned.replace(/```json/g, "").replace(/```/g, "");
+  cleaned = cleaned.trim();
+
+  // Try standard parse
+  try {
+    return JSON.parse(cleaned);
+  } catch (firstError) {
+    console.warn("[Server] Standard JSON parse failed, attempting block extraction...", firstError);
+
+    // Attempt to extract JSON block (finding first { and last })
+    const startIdx = cleaned.indexOf("{");
+    const endIdx = cleaned.lastIndexOf("}");
+    if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+      cleaned = cleaned.substring(startIdx, endIdx + 1);
+    }
+
+    try {
+      return JSON.parse(cleaned);
+    } catch (secondError) {
+      console.warn("[Server] Extracted JSON parse failed, attempting state-machine sanitization...", secondError);
+      
+      try {
+        const sanitized = sanitizeJsonString(cleaned);
+        return JSON.parse(sanitized);
+      } catch (thirdError) {
+        console.warn("[Server] Sanitization failed, attempting truncation repair...", thirdError);
+        
+        try {
+          const sanitized = sanitizeJsonString(cleaned);
+          const repaired = autoCloseJson(sanitized);
+          // Last repair attempt on trailing commas
+          const trailingCommaCleaned = repaired
+            .replace(/,\s*}/g, "}")
+            .replace(/,\s*]/g, "]");
+          return JSON.parse(trailingCommaCleaned);
+        } catch (fourthError) {
+          console.error("[Server] All JSON parsing and repair attempts failed. Raw length:", jsonStr.length);
+          throw fourthError;
+        }
+      }
+    }
+  }
+}
+
+function sanitizeJsonString(str: string): string {
+  let result = "";
+  let inString = false;
+  let escape = false;
+  for (let i = 0; i < str.length; i++) {
+    const char = str[i];
+    if (escape) {
+      result += char;
+      escape = false;
+      continue;
+    }
+    if (char === '\\') {
+      result += char;
+      escape = true;
+      continue;
+    }
+    if (char === '"') {
+      inString = !inString;
+      result += char;
+      continue;
+    }
+    if (inString) {
+      if (char === '\n') {
+        result += '\\n';
+      } else if (char === '\r') {
+        result += '\\r';
+      } else if (char === '\t') {
+        result += '\\t';
+      } else {
+        result += char;
+      }
+    } else {
+      result += char;
+    }
+  }
+  return result;
+}
+
+function autoCloseJson(str: string): string {
+  let openBraces: string[] = [];
+  let inString = false;
+  let escape = false;
+  for (let i = 0; i < str.length; i++) {
+    const char = str[i];
+    if (escape) {
+      escape = false;
+      continue;
+    }
+    if (char === '\\') {
+      escape = true;
+      continue;
+    }
+    if (char === '"') {
+      inString = !inString;
+      continue;
+    }
+    if (!inString) {
+      if (char === '{' || char === '[') {
+        openBraces.push(char);
+      } else if (char === '}') {
+        if (openBraces[openBraces.length - 1] === '{') {
+          openBraces.pop();
+        }
+      } else if (char === ']') {
+        if (openBraces[openBraces.length - 1] === '[') {
+          openBraces.pop();
+        }
+      }
+    }
+  }
+  
+  let repaired = str;
+  if (inString) {
+    repaired += '"';
+  }
+  while (openBraces.length > 0) {
+    const last = openBraces.pop();
+    if (last === '{') repaired += '}';
+    if (last === '[') repaired += ']';
+  }
+  return repaired;
+}
+
 // Real B2B Sales intelligence background simulator and provider (Task 3 Close Analysis)
 import { GoogleGenAI } from "@google/genai";
 
@@ -655,7 +787,7 @@ async function runAiDealAnalysis(deal: Deal, lead: Lead | undefined, activities:
 
       const text = response.content[0].type === "text" ? response.content[0].text : "";
       const cleanJson = text.replace(/```json/g, "").replace(/```/g, "").trim();
-      return JSON.parse(cleanJson);
+      return cleanAndParseJSON(cleanJson);
     } catch (err: any) {
       console.error("[Claude Close Analyzer] Claude invocation failed, using fallback:", err.message);
     }
@@ -675,7 +807,7 @@ async function runAiDealAnalysis(deal: Deal, lead: Lead | undefined, activities:
         }
       });
       const text = response.text || "";
-      return JSON.parse(text);
+      return cleanAndParseJSON(text);
     } catch (err: any) {
       console.error("[Claude Close Analyzer] Gemini fallback failed:", err.message);
     }
@@ -708,7 +840,7 @@ async function runAiDealAnalysis(deal: Deal, lead: Lead | undefined, activities:
         const text = data?.choices?.[0]?.message?.content;
         if (text) {
           console.log("[NVIDIA NIM Fallback] Deal Analysis fallback succeeded!");
-          return JSON.parse(text);
+          return cleanAndParseJSON(text);
         }
       } else {
         console.warn("NVIDIA NIM deal analysis API responded with code", response.status);
@@ -934,7 +1066,7 @@ async function startServer() {
 
   // Server-side NVIDIA Fallback Proxy to bypass CORS policies and protect private API keys
   app.post("/api/fallback/nvidia", async (req, res) => {
-    const { prompt, systemPrompt, isJson, apiKey, selectedModel } = req.body;
+    const { prompt, systemPrompt, isJson, apiKey, selectedModel, temperature, max_tokens } = req.body;
     const nvidiaKey = apiKey || process.env.NVIDIA_API_KEY;
     if (!nvidiaKey) {
       return res.status(500).json({ error: "NVIDIA_API_KEY is not configured on the server." });
@@ -955,8 +1087,8 @@ async function startServer() {
             ...(systemPrompt ? [{ role: "system", content: systemPrompt }] : []),
             { role: "user", content: prompt }
           ],
-          temperature: 0.15,
-          max_tokens: 8192,
+          temperature: typeof temperature === "number" ? temperature : 0.2,
+          max_tokens: typeof max_tokens === "number" ? max_tokens : 8192,
           ...(isJson ? { response_format: { type: "json_object" } } : {})
         })
       });
@@ -2304,7 +2436,7 @@ async function startServer() {
           });
           const respText = response.content[0].type === "text" ? response.content[0].text : "";
           const cleanJson = respText.replace(/```json/g, "").replace(/```/g, "").trim();
-          outreachPayload = JSON.parse(cleanJson);
+          outreachPayload = cleanAndParseJSON(cleanJson);
           generatedVia = "Anthropic Claude API";
         } catch (e: any) {
           console.error("Claude client error, falling back to Gemini:", e.message);
@@ -2319,7 +2451,7 @@ async function startServer() {
             contents: prompt,
             config: { responseMimeType: "application/json" }
           });
-          outreachPayload = JSON.parse(response.text || "{}");
+          outreachPayload = cleanAndParseJSON(response.text || "{}");
           generatedVia = "Gemini Flash Model";
         } catch (e: any) {
           console.error("Gemini model error:", e);
@@ -2349,7 +2481,7 @@ async function startServer() {
             const data = await response.json();
             const text = data?.choices?.[0]?.message?.content;
             if (text) {
-              outreachPayload = JSON.parse(text);
+              outreachPayload = cleanAndParseJSON(text);
               generatedVia = "NVIDIA Llama Model";
               console.log("[NVIDIA NIM Fallback] Server-driven outreach generation succeeded!");
             }

@@ -508,7 +508,7 @@ async function callNvidiaFallback(prompt: string, systemPrompt?: string, isJson:
   const response = await fetch("/api/fallback/nvidia", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ prompt, systemPrompt, isJson, apiKey, selectedModel })
+    body: JSON.stringify({ prompt, systemPrompt, isJson, apiKey, selectedModel, temperature: 0.2 })
   });
   if (!response.ok) {
     const errorBody = await response.text();
@@ -548,37 +548,47 @@ export interface OutreachMessages {
 // Clean and Parse JSON handles raw control characters / line breaks inside string values in JSON
 function cleanAndParseJSON(jsonStr: string): any {
   let cleaned = jsonStr.trim();
-  if (cleaned.startsWith("```json")) {
-    cleaned = cleaned.substring(7);
-  } else if (cleaned.startsWith("```")) {
-    cleaned = cleaned.substring(3);
-  }
-  if (cleaned.endsWith("```")) {
-    cleaned = cleaned.substring(0, cleaned.length - 3);
-  }
+  
+  // Remove markdown code fences
+  cleaned = cleaned.replace(/```json/g, "").replace(/```/g, "");
   cleaned = cleaned.trim();
 
   // Try standard parse
   try {
     return JSON.parse(cleaned);
   } catch (firstError) {
-    console.warn("Standard JSON parse failed, attempting state-machine sanitization...", firstError);
-    
-    // Attempt state-machine sanitization (escaping newlines/tabs inside strings only)
+    console.warn("Standard JSON parse failed, attempting block extraction...", firstError);
+
+    // Attempt to extract JSON block (finding first { and last })
+    const startIdx = cleaned.indexOf("{");
+    const endIdx = cleaned.lastIndexOf("}");
+    if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+      cleaned = cleaned.substring(startIdx, endIdx + 1);
+    }
+
     try {
-      const sanitized = sanitizeJsonString(cleaned);
-      return JSON.parse(sanitized);
+      return JSON.parse(cleaned);
     } catch (secondError) {
-      console.warn("Sanitization failed, attempting truncation repair...", secondError);
+      console.warn("Extracted JSON parse failed, attempting state-machine sanitization...", secondError);
       
-      // Attempt to repair truncation by auto-closing string quotes and matching open braces
       try {
         const sanitized = sanitizeJsonString(cleaned);
-        const repaired = autoCloseJson(sanitized);
-        return JSON.parse(repaired);
+        return JSON.parse(sanitized);
       } catch (thirdError) {
-        console.error("All JSON parsing and repair attempts failed. Raw length:", cleaned.length);
-        throw thirdError;
+        console.warn("Sanitization failed, attempting truncation repair...", thirdError);
+        
+        try {
+          const sanitized = sanitizeJsonString(cleaned);
+          const repaired = autoCloseJson(sanitized);
+          // Last repair attempt on trailing commas
+          const trailingCommaCleaned = repaired
+            .replace(/,\s*}/g, "}")
+            .replace(/,\s*]/g, "]");
+          return JSON.parse(trailingCommaCleaned);
+        } catch (fourthError) {
+          console.error("All JSON parsing and repair attempts failed. Raw length:", jsonStr.length);
+          throw fourthError;
+        }
       }
     }
   }
@@ -670,7 +680,10 @@ function autoCloseJson(str: string): string {
 export async function generateOutreach(lead: any, config: any): Promise<OutreachMessages> {
   const prompt = `
     You are a B2B sales expert writing omnichannel cold outreach. 
-    Return a structured JSON object.
+    Return ONLY valid minified JSON.
+    Do not include markdown.
+    Do not include explanations.
+    Do not wrap in triple backticks.
 
     Rules:
     - whatsapp: <100 words, observation + value + soft CTA, no links.
@@ -688,7 +701,7 @@ export async function generateOutreach(lead: any, config: any): Promise<Outreach
     Lead: Name=${lead.name}, Role=${lead.role || '?'}, Company=${lead.company || '?'}, Industry=${lead.industry || '?'}, Country=${lead.country || '?'}
   `;
 
-  const fallbackSystemInstruction = "You are a B2B sales expert writing omnichannel cold outreach. Return ONLY a valid JSON object matching this exact schema: { whatsapp, linkedin_connect, linkedin_dm, email_subject, email_body, email_followup }. No markdown, no explanation.";
+  const fallbackSystemInstruction = "You are a B2B sales expert writing omnichannel cold outreach. Return ONLY valid minified JSON. Do not include markdown. Do not include explanations. Do not wrap in triple backticks. Match this exact schema: { whatsapp, linkedin_connect, linkedin_dm, email_subject, email_body, email_followup }.";
 
   const geminiSchemaConfig = {
     responseMimeType: "application/json",
@@ -920,10 +933,15 @@ export async function generateProspectResearch(companyInput: string): Promise<Pr
   // Compact Llama-optimized prompt — no web search, uses training knowledge
   const nvidiaPrompt = `You are an expert B2B enterprise consultant. Generate a complete, detailed JSON consulting report for the company or domain: "${companyInput}".
 
-Use your training knowledge to produce realistic, plausible estimates for all fields. Be specific, professional, and thorough.
+  Use your training knowledge to produce realistic, plausible estimates for all fields. Be specific, professional, and thorough.
 
-Return ONLY a single valid JSON object (no markdown, no explanation) with EXACTLY these fields:
-${jsonSchemaTemplate}`;
+  Return ONLY valid minified JSON.
+  Do not include markdown.
+  Do not include explanations.
+  Do not wrap in triple backticks.
+
+  Schema structure:
+  ${jsonSchemaTemplate}`;
 
   const geminiSchemaConfig = {
     responseMimeType: "application/json",
@@ -1154,7 +1172,7 @@ ${jsonSchemaTemplate}`;
     tools: [{ googleSearch: {} }]
   };
 
-  const sysPrompt = "You are an expert B2B enterprise consultant. Return ONLY valid JSON with no markdown fences, no explanation, and no extra text. Start with { and end with }.";
+  const sysPrompt = "You are an expert B2B enterprise consultant. Return ONLY valid minified JSON. Do not include markdown. Do not include explanations. Do not wrap in triple backticks. Start with { and end with }.";
 
   const openaiFallbackPrompt = `
     You are an elite enterprise B2B management consultant and AI solutions architect.
@@ -1266,7 +1284,7 @@ export async function analyzeBenchmarkDrift(leads: any[]): Promise<BenchmarkDrif
     }
   };
 
-  const sysPrompt = "You are an elite B2B sales strategist. Return ONLY valid JSON, no markdown, no explanation.";
+  const sysPrompt = "You are an elite B2B sales strategist. Return ONLY valid minified JSON. Do not include markdown. Do not include explanations. Do not wrap in triple backticks.";
 
   try {
     const rawContent = await executeDynamicLlmChain(
