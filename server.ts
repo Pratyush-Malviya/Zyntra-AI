@@ -316,7 +316,7 @@ async function processKbFileBackground(file: KbFile) {
         try {
           const ai = new GoogleGenAI({ apiKey: geminiKey });
           const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
+            model: "gemini-3.5-flash",
             contents: `${sysPrompt}\n\n${prompt}`,
             config: { responseMimeType: "application/json" }
           });
@@ -690,7 +690,7 @@ async function runAiDealAnalysis(deal: Deal, lead: Lead | undefined, activities:
       console.log("[Claude Close Analyzer] Invoking Gemini-powered Fallback Engine...");
       const ai = new GoogleGenAI({ apiKey: geminiKey });
       const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-3.5-flash",
         contents: `${sysPrompt}\n\n${prompt}`,
         config: {
           responseMimeType: "application/json"
@@ -2371,7 +2371,7 @@ Raw Rows Data: ${JSON.stringify(rows.slice(0, 50))} (Analyze and clean up to the
         try {
           const ai = new GoogleGenAI({ apiKey: geminiKey });
           const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
+            model: "gemini-3.5-flash",
             contents: prompt,
             config: { responseMimeType: "application/json" }
           });
