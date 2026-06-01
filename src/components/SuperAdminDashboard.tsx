@@ -115,9 +115,9 @@ export function SuperAdminDashboard({
       apiKey: getGeminiApiKey() || 'AIzaSyBtFoPWUBGA7gWALo1!',
       showKey: false,
       enabled: true,
-      healthStatus: 'OFFLINE', // Can be ONLINE, OFFLINE, DISABLED
+      healthStatus: 'ONLINE', // Can be ONLINE, OFFLINE, DISABLED
       latency: 1959,
-      uptime: '0%',
+      uptime: '100%',
       iconColor: 'text-blue-400 border-blue-500/20 bg-blue-500/5'
     },
     {
@@ -909,7 +909,7 @@ export function SuperAdminDashboard({
           nextHealthStatus = 'DISABLED';
         } else {
           // Restore logic
-          if (id === 'gemini') nextHealthStatus = 'OFFLINE';
+          if (id === 'gemini') nextHealthStatus = 'ONLINE';
           if (id === 'nvidia') nextHealthStatus = 'ONLINE';
           if (id === 'gpt4') nextHealthStatus = 'ONLINE'; // default online if turned on
           if (id === 'openrouter') nextHealthStatus = 'OFFLINE';
