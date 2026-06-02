@@ -1,5 +1,25 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
+export function isGeminiEnabled(): boolean {
+  if (typeof window !== "undefined") {
+    const saved = localStorage.getItem("zy_gemini_enabled");
+    if (saved !== null) {
+      return saved === "true";
+    }
+  }
+  return true;
+}
+
+export function isNvidiaEnabled(): boolean {
+  if (typeof window !== "undefined") {
+    const saved = localStorage.getItem("zy_nvidia_enabled");
+    if (saved !== null) {
+      return saved === "true";
+    }
+  }
+  return true;
+}
+
 export function getGeminiApiKey(): string {
   if (typeof window !== "undefined") {
     const saved = localStorage.getItem("zy_gemini_api_key");
@@ -337,6 +357,9 @@ export async function generateOutreach(lead: any, config: any): Promise<Outreach
   `;
 
   try {
+    if (!isGeminiEnabled()) {
+      throw new Error("Gemini API is disabled by Super Admin");
+    }
     const aiClient = getAiClient();
     const activeModel = resolveGeminiModelId(getGeminiSelectedModel());
     const response = await callGeminiWithRetry(() =>
@@ -362,14 +385,22 @@ export async function generateOutreach(lead: any, config: any): Promise<Outreach
     );
     
     const rawText = (response.text || '');
-    return cleanAndParseJSON(rawText) as OutreachMessages;
+    const parsed = cleanAndParseJSON(rawText);
+    if (!parsed || !parsed.whatsapp || !parsed.email_body) {
+      throw new Error("Invalid outreach structure parsed from Gemini");
+    }
+    return parsed as OutreachMessages;
   } catch (error) {
     console.error("Gemini Generation Error:", error);
-    if (isQuotaOrApiKeyError(error) || !process.env.GEMINI_API_KEY) {
+    if (isQuotaOrApiKeyError(error) || !process.env.GEMINI_API_KEY || String(error).includes("structure")) {
       if (nvidiaApiKey) {
         try {
           const nvidiaResponse = await callNvidiaFallback(prompt, "You are a B2B sales expert writing omnichannel cold outreach. Return a structured JSON object matching the requested schema exactly.", true);
-          return cleanAndParseJSON(nvidiaResponse) as OutreachMessages;
+          const parsedNv = cleanAndParseJSON(nvidiaResponse);
+          if (parsedNv && parsedNv.whatsapp && parsedNv.email_body) {
+            return parsedNv as OutreachMessages;
+          }
+          console.warn("NVIDIA response missing required outreach fields, falling back to mock data");
         } catch (nvError) {
           console.error("NVIDIA Fallback failed for outreach:", nvError);
         }
@@ -505,6 +536,9 @@ export async function generateProspectResearch(companyInput: string): Promise<Pr
   `;
 
   try {
+    if (!isGeminiEnabled()) {
+      throw new Error("Gemini API is disabled by Super Admin");
+    }
     const aiClient = getAiClient();
     const activeModel = resolveGeminiModelId(getGeminiSelectedModel());
     const response = await callGeminiWithRetry(() =>
@@ -771,14 +805,22 @@ export async function generateProspectResearch(companyInput: string): Promise<Pr
   );
     
     const rawText = (response.text || '');
-    return { ...cleanAndParseJSON(rawText) } as ProspectResearchReport;
+    const parsed = cleanAndParseJSON(rawText);
+    if (!parsed || !parsed.companyInfo) {
+      throw new Error("Invalid prospect research structure parsed from Gemini");
+    }
+    return { ...parsed } as ProspectResearchReport;
   } catch (error) {
     console.error("Prospect Research Generation Error:", error);
-    if (isQuotaOrApiKeyError(error) || !process.env.GEMINI_API_KEY) {
+    if (isQuotaOrApiKeyError(error) || !process.env.GEMINI_API_KEY || String(error).includes("structure")) {
       if (nvidiaApiKey) {
         try {
           const nvidiaResponse = await callNvidiaFallback(prompt, "You are an elite enterprise B2B management consultant and AI solutions architect. Return a structured consulting report JSON.", true);
-          return { ...cleanAndParseJSON(nvidiaResponse) } as ProspectResearchReport;
+          const parsedNv = cleanAndParseJSON(nvidiaResponse);
+          if (parsedNv && parsedNv.companyInfo) {
+            return { ...parsedNv } as ProspectResearchReport;
+          }
+          console.warn("NVIDIA response missing required fields, falling back to mock data");
         } catch (nvError) {
           console.error("NVIDIA Fallback failed for prospect research:", nvError);
         }
@@ -828,6 +870,9 @@ export async function analyzeBenchmarkDrift(leads: any[]): Promise<BenchmarkDrif
   `;
 
   try {
+    if (!isGeminiEnabled()) {
+      throw new Error("Gemini API is disabled by Super Admin");
+    }
     const aiClient = getAiClient();
     const activeModel = resolveGeminiModelId(getGeminiSelectedModel());
     const response = await callGeminiWithRetry(() =>
@@ -875,14 +920,22 @@ export async function analyzeBenchmarkDrift(leads: any[]): Promise<BenchmarkDrif
   );
 
     const rawText = (response.text || '');
-    return { ...cleanAndParseJSON(rawText) } as BenchmarkDriftAnalysis;
+    const parsed = cleanAndParseJSON(rawText);
+    if (!parsed || !parsed.summary || !parsed.keyIssues) {
+      throw new Error("Invalid benchmark drift structure parsed from Gemini");
+    }
+    return { ...parsed } as BenchmarkDriftAnalysis;
   } catch (error) {
     console.error("Benchmark Drift Analysis Error:", error);
-    if (isQuotaOrApiKeyError(error) || !process.env.GEMINI_API_KEY) {
+    if (isQuotaOrApiKeyError(error) || !process.env.GEMINI_API_KEY || String(error).includes("structure")) {
       if (nvidiaApiKey) {
         try {
           const nvidiaResponse = await callNvidiaFallback(prompt, "You are an elite enterprise B2B sales strategist and CRO consultant. Return a structured JSON report matching the requested schema exactly.", true);
-          return { ...cleanAndParseJSON(nvidiaResponse) } as BenchmarkDriftAnalysis;
+          const parsedNv = cleanAndParseJSON(nvidiaResponse);
+          if (parsedNv && parsedNv.summary && parsedNv.keyIssues) {
+            return { ...parsedNv } as BenchmarkDriftAnalysis;
+          }
+          console.warn("NVIDIA response missing required benchmark drift fields, falling back to mock data");
         } catch (nvError) {
           console.error("NVIDIA Fallback failed for benchmark drift:", nvError);
         }
@@ -909,7 +962,8 @@ function isQuotaOrApiKeyError(err: any): boolean {
     msg.includes("limit") ||
     msg.includes("unauthorized") ||
     msg.includes("fetch") ||
-    msg.includes("cors")
+    msg.includes("cors") ||
+    msg.includes("disabled")
   );
 }
 

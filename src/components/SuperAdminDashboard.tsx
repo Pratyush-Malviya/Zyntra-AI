@@ -33,7 +33,7 @@ import {
   Flame
 } from 'lucide-react';
 import { db, auth } from '../firebase';
-import { getNvidiaApiKey, getNvidiaSelectedModel, getGeminiApiKey, getGeminiSelectedModel } from '../services/geminiService';
+import { getNvidiaApiKey, getNvidiaSelectedModel, getGeminiApiKey, getGeminiSelectedModel, isGeminiEnabled, isNvidiaEnabled } from '../services/geminiService';
 import { 
   collection, 
   query, 
@@ -114,8 +114,8 @@ export function SuperAdminDashboard({
       priority: '1st (Primary)',
       apiKey: getGeminiApiKey() || 'AIzaSyBtFoPWUBGA7gWALo1!',
       showKey: false,
-      enabled: true,
-      healthStatus: 'ONLINE', // Can be ONLINE, OFFLINE, DISABLED
+      enabled: isGeminiEnabled(),
+      healthStatus: isGeminiEnabled() ? 'ONLINE' : 'DISABLED', // Can be ONLINE, OFFLINE, DISABLED
       latency: 1959,
       uptime: '100%',
       iconColor: 'text-blue-400 border-blue-500/20 bg-blue-500/5'
@@ -128,8 +128,8 @@ export function SuperAdminDashboard({
       priority: '2nd Fallback',
       apiKey: getNvidiaApiKey(),
       showKey: false,
-      enabled: true,
-      healthStatus: 'ONLINE',
+      enabled: isNvidiaEnabled(),
+      healthStatus: isNvidiaEnabled() ? 'ONLINE' : 'DISABLED',
       latency: 41361,
       uptime: '100%',
       iconColor: 'bg-indigo-500/5 border-indigo-500/20 text-indigo-400'
@@ -904,6 +904,12 @@ export function SuperAdminDashboard({
     setLlmConfigsState(prev => prev.map(cfg => {
       if (cfg.id === id) {
         const nextEnabled = !cfg.enabled;
+        if (id === 'gemini') {
+          localStorage.setItem('zy_gemini_enabled', String(nextEnabled));
+        }
+        if (id === 'nvidia') {
+          localStorage.setItem('zy_nvidia_enabled', String(nextEnabled));
+        }
         let nextHealthStatus = cfg.healthStatus;
         if (!nextEnabled) {
           nextHealthStatus = 'DISABLED';
