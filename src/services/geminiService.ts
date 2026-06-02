@@ -119,13 +119,64 @@ export interface OutreachMessages {
   email_followup: string;
 }
 
+function repairMalformedJson(text: string): string {
+  // Extract JSON from markdown code blocks if present
+  const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/) || 
+                    text.match(/```\n([\s\S]*?)\n```/);
+  let jsonString = jsonMatch ? jsonMatch[1] : text;
+  
+  // Try to find where JSON ends and truncate
+  const lastValidBrace = jsonString.lastIndexOf('}');
+  if (lastValidBrace !== -1 && lastValidBrace < jsonString.length - 1) {
+    jsonString = jsonString.substring(0, lastValidBrace + 1);
+  }
+  
+  // Close any unclosed brackets/braces
+  let openBraces = (jsonString.match(/{/g) || []).length;
+  let closeBraces = (jsonString.match(/}/g) || []).length;
+  while (openBraces > closeBraces) {
+    jsonString += '}';
+    closeBraces++;
+  }
+  
+  let openBrackets = (jsonString.match(/\[/g) || []).length;
+  let closeBrackets = (jsonString.match(/\]/g) || []).length;
+  while (openBrackets > closeBrackets) {
+    jsonString += ']';
+    closeBrackets++;
+  }
+  
+  return jsonString;
+}
+
+async function callGeminiWithRetry<T>(apiCall: () => Promise<T>): Promise<T> {
+  let lastError: any = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      return await apiCall();
+    } catch (error: any) {
+      const msg = (error.message || String(error)).toLowerCase();
+      const isRateLimit = msg.includes("429") || msg.includes("resource_exhausted") || msg.includes("quota") || msg.includes("limit");
+      if (isRateLimit) {
+        const delay = Math.pow(2, attempt) * 1000;
+        console.warn(`[Gemini API] Quota/Rate limit exceeded (429). Retrying in ${delay}ms... (Attempt ${attempt + 1}/3)`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        lastError = error;
+        continue;
+      }
+      throw error;
+    }
+  }
+  throw lastError;
+}
+
 // Clean and Parse JSON handles raw control characters / line breaks inside string values in JSON and aggressive conversational wrapping repairs
 function cleanAndParseJSON(jsonStr: string): any {
   if (!jsonStr) {
     throw new Error("JSON string is empty or undefined");
   }
 
-  let cleaned = jsonStr.trim();
+  let cleaned = repairMalformedJson(jsonStr).trim();
 
   // 1. Isolate the core JSON object block using first '{' and last '}' to strip exploratory wrappers
   const firstBrace = cleaned.indexOf('{');
@@ -288,25 +339,27 @@ export async function generateOutreach(lead: any, config: any): Promise<Outreach
   try {
     const aiClient = getAiClient();
     const activeModel = resolveGeminiModelId(getGeminiSelectedModel());
-    const response = await aiClient.models.generateContent({
-      model: activeModel,
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            whatsapp: { type: Type.STRING },
-            linkedin_connect: { type: Type.STRING },
-            linkedin_dm: { type: Type.STRING },
-            email_subject: { type: Type.STRING },
-            email_body: { type: Type.STRING },
-            email_followup: { type: Type.STRING },
-          },
-          required: ["whatsapp", "linkedin_connect", "linkedin_dm", "email_subject", "email_body", "email_followup"],
+    const response = await callGeminiWithRetry(() =>
+      aiClient.models.generateContent({
+        model: activeModel,
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              whatsapp: { type: Type.STRING },
+              linkedin_connect: { type: Type.STRING },
+              linkedin_dm: { type: Type.STRING },
+              email_subject: { type: Type.STRING },
+              email_body: { type: Type.STRING },
+              email_followup: { type: Type.STRING },
+            },
+            required: ["whatsapp", "linkedin_connect", "linkedin_dm", "email_subject", "email_body", "email_followup"],
+          }
         }
-      }
-    });
+      })
+    );
     
     const rawText = (response.text || '');
     return cleanAndParseJSON(rawText) as OutreachMessages;
@@ -454,11 +507,12 @@ export async function generateProspectResearch(companyInput: string): Promise<Pr
   try {
     const aiClient = getAiClient();
     const activeModel = resolveGeminiModelId(getGeminiSelectedModel());
-    const response = await aiClient.models.generateContent({
-      model: activeModel,
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
+    const response = await callGeminiWithRetry(() =>
+      aiClient.models.generateContent({
+        model: activeModel,
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
           properties: {
@@ -713,7 +767,8 @@ export async function generateProspectResearch(companyInput: string): Promise<Pr
         },
         tools: [{ googleSearch: {} }]
       }
-    });
+    })
+  );
     
     const rawText = (response.text || '');
     return { ...cleanAndParseJSON(rawText) } as ProspectResearchReport;
@@ -775,11 +830,12 @@ export async function analyzeBenchmarkDrift(leads: any[]): Promise<BenchmarkDrif
   try {
     const aiClient = getAiClient();
     const activeModel = resolveGeminiModelId(getGeminiSelectedModel());
-    const response = await aiClient.models.generateContent({
-      model: activeModel,
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
+    const response = await callGeminiWithRetry(() =>
+      aiClient.models.generateContent({
+        model: activeModel,
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
           properties: {
@@ -815,7 +871,8 @@ export async function analyzeBenchmarkDrift(leads: any[]): Promise<BenchmarkDrif
           required: ["summary", "keyIssues", "actionableImprovements", "reallocationAdvice"]
         }
       }
-    });
+    })
+  );
 
     const rawText = (response.text || '');
     return { ...cleanAndParseJSON(rawText) } as BenchmarkDriftAnalysis;
