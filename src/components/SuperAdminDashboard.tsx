@@ -34,7 +34,6 @@ import {
 } from 'lucide-react';
 import { db, auth } from '../firebase';
 import { getNvidiaApiKey, getNvidiaSelectedModel } from '../services/geminiService';
-import { LlmTelemetryDashboard } from './LlmTelemetryDashboard';
 import { 
   collection, 
   query, 
@@ -2090,9 +2089,6 @@ export function SuperAdminDashboard({
             </div>
 
           </div>
-
-          {/* Real-time LLM Latency & Uptime Status Telemetry Dashboard */}
-          <LlmTelemetryDashboard showToast={showToast} />
 
           {/* Centralized LLM Config Manager Table Card */}
           <div className="bg-[#13151a] border border-zinc-800 rounded-3xl p-6 space-y-6">

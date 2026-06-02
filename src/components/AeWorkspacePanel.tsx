@@ -6,6 +6,19 @@ import {
 } from 'lucide-react';
 import { generateOutreach } from '../services/geminiService';
 
+interface AEOpportunity {
+  id: string;
+  leadId?: string;
+  title: string;
+  leadName: string;
+  company: string;
+  value: number;
+  stage: string;
+  status: 'hot' | 'warm' | 'cold' | 'lost';
+  score: number;
+  reason: string;
+}
+
 export function AeWorkspacePanel({ 
   showToast,
   leads,
@@ -20,12 +33,48 @@ export function AeWorkspacePanel({
   // Interactive Deal Pipeline Board
   const [draggedDealId, setDraggedDealId] = useState<string | null>(null);
   const [selectedDealId, setSelectedDealId] = useState<string | null>('d1');
-  const [deals, setDeals] = useState([
+  const [deals, setDeals] = useState<AEOpportunity[]>([
     { id: 'd1', title: 'TERAWORK Co-Founder Expansion', leadName: 'Femi Taiwo', company: 'TERAWORK', value: 45000, stage: 'qualification', status: 'hot', score: 85, reason: 'VP engaged + Pricing structure aligned with margin requirements.' },
     { id: 'd2', title: 'Caret Recruiting Workflows', leadName: 'Oluwaseyi Agunbiade', company: 'Caret', value: 85000, stage: 'demo', status: 'warm', score: 62, reason: 'Direct communication active with Director, but HubSpot integration verification is outstanding.' },
     { id: 'd3', title: 'TERAWORK Design Cohort', leadName: 'Omilade Olusegun', company: 'TERAWORK', value: 12000, stage: 'proposal', status: 'warm', score: 78, reason: 'Proposal delivered, creative directors indicated compliance, awaiting final signature.' },
     { id: 'd4', title: 'Enterprise staff licensing', leadName: 'Seyi Caret', company: 'Caret', value: 120000, stage: 'negotiation', status: 'cold', score: 35, reason: 'Single-threaded outreach, champion hasn\'t opened security brief in 14 days.' }
   ]);
+
+  // Synchronize leads with "discovery_call" status promoted by SDRs into the AE's opportunity pipeline
+  React.useEffect(() => {
+    if (!leads || leads.length === 0) return;
+    const discoveryLeads = leads.filter(l => l.status === 'discovery_call');
+    if (discoveryLeads.length === 0) return;
+
+    setDeals(prevDeals => {
+      const newDeals = [...prevDeals];
+      let didUpdate = false;
+
+      discoveryLeads.forEach(lead => {
+        const alreadyExists = prevDeals.some(d => d.leadId === lead.id || d.id === lead.id || d.title.includes(lead.name));
+        if (!alreadyExists) {
+          newDeals.push({
+            id: lead.id || 'deal-l-' + Math.random().toString(36).substring(2, 9),
+            leadId: lead.id,
+            title: `${lead.company || lead.name} Outbound Opportunity`,
+            leadName: lead.name,
+            company: lead.company || 'Unknown Company',
+            value: lead.score ? lead.score * 500 : 35000,
+            stage: 'qualification',
+            status: 'hot',
+            score: lead.score || 75,
+            reason: 'SDR outbound sequence completed. Target moved to Discovery stage. High scoring indicators tracked.'
+          });
+          didUpdate = true;
+        }
+      });
+
+      if (didUpdate) {
+        return newDeals;
+      }
+      return prevDeals;
+    });
+  }, [leads]);
 
   // AI Copilot CRM states
   const [copilotMessage, setCopilotMessage] = useState('');

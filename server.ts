@@ -886,6 +886,11 @@ async function triggerOutboundWebhook(eventName: string, data: any, orgId: strin
   }
 }
 
+let customComposioApiKey = "";
+function getComposioApiKey() {
+  return customComposioApiKey || process.env.COMPOSIO_API_KEY || "ak_p4BqouLPkWFbzB3EKi-1";
+}
+
 // Start HTTP and WS server
 async function startServer() {
   const app = express();
@@ -942,6 +947,128 @@ async function startServer() {
   // Health endpoint
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok" });
+  });
+
+  // Composio.dev API Integrations Proxy Routes
+  app.get("/api/composio/key", (req, res) => {
+    const key = getComposioApiKey();
+    const masked = key.length > 8 ? `${key.substring(0, 6)}...${key.substring(key.length - 4)}` : "None";
+    res.json({ keySecret: key, masked });
+  });
+
+  app.post("/api/composio/key", (req, res) => {
+    const { key } = req.body;
+    if (key !== undefined) {
+      customComposioApiKey = key.trim();
+    }
+    const currentKey = getComposioApiKey();
+    const masked = currentKey.length > 8 ? `${currentKey.substring(0, 6)}...${currentKey.substring(currentKey.length - 4)}` : "None";
+    res.json({ success: true, masked, keySecret: currentKey });
+  });
+
+  app.get("/api/composio/connections", async (req, res) => {
+    const apiKey = getComposioApiKey();
+    try {
+      const response = await fetch("https://api.composio.dev/v1/connections", {
+        headers: {
+          "x-api-key": apiKey,
+          "Content-Type": "application/json"
+        }
+      });
+      if (!response.ok) {
+        const errorText = await response.text();
+        return res.status(response.status).json({ error: errorText });
+      }
+      const data = await response.json();
+      res.json(data);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/composio/connections", async (req, res) => {
+    const { appName, redirectUrl } = req.body;
+    if (!appName) {
+      return res.status(400).json({ error: "appName is required" });
+    }
+    const apiKey = getComposioApiKey();
+    try {
+      const response = await fetch("https://api.composio.dev/v1/connections", {
+        method: "POST",
+        headers: {
+          "x-api-key": apiKey,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          appName,
+          redirectUrl: redirectUrl || undefined
+        })
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        return res.status(response.status).json({ error: errText });
+      }
+
+      const data = await response.json();
+      res.json(data);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.delete("/api/composio/connections/:id", async (req, res) => {
+    const apiKey = getComposioApiKey();
+    const connectionId = req.params.id;
+    try {
+      const response = await fetch(`https://api.composio.dev/v1/connections/${connectionId}`, {
+        method: "DELETE",
+        headers: {
+          "x-api-key": apiKey,
+          "Content-Type": "application/json"
+        }
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        return res.status(response.status).json({ error: errText });
+      }
+
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/composio/actions/execute", async (req, res) => {
+    const { actionId, connectionId, input } = req.body;
+    if (!actionId) {
+      return res.status(400).json({ error: "actionId is required" });
+    }
+    const apiKey = getComposioApiKey();
+    try {
+      const response = await fetch(`https://api.composio.dev/v1/actions/${actionId}/execute`, {
+        method: "POST",
+        headers: {
+          "x-api-key": apiKey,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          connectedAccountId: connectionId || undefined,
+          input: input || {}
+        })
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        return res.status(response.status).json({ error: errText });
+      }
+
+      const data = await response.json();
+      res.json(data);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
   });
 
   // REST API: Lead CRUD (Task 3)

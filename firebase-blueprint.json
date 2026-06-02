@@ -182,6 +182,27 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["orgId", "userId", "keyPrefix", "secretHash", "name"]
+    },
+    "GenerationLog": {
+      "title": "GenerationLog",
+      "description": "AI-generated outreach message logging record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "leadId": { "type": "string" },
+        "leadName": { "type": "string" },
+        "leadCompany": { "type": "string" },
+        "campaignId": { "type": "string" },
+        "campaignName": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "orgId": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["success", "fallback"] },
+        "error": { "type": "string" },
+        "messages": { "type": "object" }
+      },
+      "required": ["leadId", "campaignId", "userId", "orgId", "timestamp", "status"]
     }
   },
   "firestore": {
@@ -228,6 +249,10 @@
     "/api_keys/{keyId}": {
       "schema": "ApiKey",
       "description": "Security tokens associated to workspaces"
+    },
+    "/generation_logs/{logId}": {
+      "schema": "GenerationLog",
+      "description": "AI generation execution and audit trail logs"
     }
   }
 }

@@ -1,9 +1,57 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Users, TrendingUp, Check, X, Edit, MessageSquare, Play, 
   Settings, Award, RefreshCw, BarChart2, CheckCircle2, ChevronRight, 
-  HelpCircle, Volume2, ShieldAlert, Cpu, Layers, DollarSign, Calendar
+  HelpCircle, Volume2, ShieldAlert, Cpu, Layers, DollarSign, Calendar, Search, Eye, AlertCircle, FileText, Mail
 } from 'lucide-react';
+import { db, collection, getDocs, query, orderBy, auth } from '../firebase';
+
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string | null;
+    email?: string | null;
+    emailVerified?: boolean | null;
+    isAnonymous?: boolean | null;
+    tenantId?: string | null;
+    providerInfo?: {
+      providerId?: string | null;
+      email?: string | null;
+    }[];
+  }
+}
+
+function handleLocalFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData?.map(provider => ({
+        providerId: provider.providerId,
+        email: provider.email,
+      })) || []
+    },
+    operationType,
+    path
+  };
+  console.error('Firestore Error in Manager panel: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
 
 export function ManagerWorkspacePanel({ 
   showToast,
@@ -14,7 +62,44 @@ export function ManagerWorkspacePanel({
   leads: any[];
   campaigns: any[];
 }) {
-  const [activeTab, setActiveTab] = useState<'stats' | 'approvals' | 'coaching' | 'forecast'>('stats');
+  const [activeTab, setActiveTab] = useState<'stats' | 'approvals' | 'coaching' | 'forecast' | 'audit'>('stats');
+
+  // Generation log states
+  const [logs, setLogs] = useState<any[]>([]);
+  const [loadingLogs, setLoadingLogs] = useState(false);
+  const [selectedLog, setSelectedLog] = useState<any | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'success' | 'fallback'>('all');
+
+  const fetchLogs = async () => {
+    setLoadingLogs(true);
+    try {
+      const q = query(collection(db, 'generation_logs'), orderBy('timestamp', 'desc'));
+      const snap = await getDocs(q);
+      const fetchedLogs = snap.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setLogs(fetchedLogs);
+    } catch (err: any) {
+      console.error("Failed to load generation logs:", err);
+      setLogs([]);
+      showToast("Could not load generation logs list: " + err.message, "error");
+      try {
+        handleLocalFirestoreError(err, OperationType.LIST, 'generation_logs');
+      } catch (innerErr) {
+        // dynamic compliance propagation
+      }
+    } finally {
+      setLoadingLogs(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'audit') {
+      fetchLogs();
+    }
+  }, [activeTab]);
 
   // Stats / Activity Logs
   const [activityFeed, setActivityFeed] = useState([
@@ -146,6 +231,7 @@ export function ManagerWorkspacePanel({
             { id: 'approvals', label: 'Sequence Approval Queue', icon: CheckCircle2 },
             { id: 'coaching', label: 'AI Call Coaching', icon: MessageSquare },
             { id: 'forecast', label: 'Forecast Overrides', icon: TrendingUp },
+            { id: 'audit', label: 'AI Response Audit Logs', icon: Cpu },
           ].map(tab => (
             <button
               key={tab.id}
@@ -475,6 +561,287 @@ export function ManagerWorkspacePanel({
                   ))}
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* AI GENERATION AUDIT LOGS VIEW */}
+      {activeTab === 'audit' && (
+        <div className="space-y-6">
+          <div className="bg-surface border border-border rounded-3xl p-6 md:p-8 space-y-6">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-4 border-b border-border/40">
+              <div className="space-y-1">
+                <h3 className="text-base font-bold font-syne text-white flex items-center gap-2">
+                  <Cpu className="w-5 h-5 text-purple-400" />
+                  AI Response Generation & Audit Logs
+                </h3>
+                <p className="text-xs text-text-muted">
+                  Audit precise AI-generated personalized outreach copy directly populated from live rest runs.
+                </p>
+              </div>
+              <button
+                onClick={fetchLogs}
+                disabled={loadingLogs}
+                className="px-4 py-2 bg-[#0c0d12] hover:bg-[#12131a] border border-border rounded-xl text-xs font-bold font-mono transition-all text-slate-300 flex items-center gap-2 cursor-pointer"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingLogs ? 'animate-spin' : ''}`} />
+                {loadingLogs ? 'Refreshing...' : 'Refresh Logs'}
+              </button>
+            </div>
+
+            {/* Filter controls */}
+            <div className="flex flex-col sm:flex-row gap-4 bg-[#0a0b10] border border-border p-4 rounded-2xl">
+              <div className="flex-1 relative">
+                <Search className="w-4 h-4 text-text-muted absolute left-3 top-3.5" />
+                <input
+                  type="text"
+                  placeholder="Search by lead name, company name, or campaign..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 bg-[#0c0d12] border border-border rounded-xl text-xs text-white focus:outline-none focus:border-purple-500 font-medium"
+                />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-extrabold uppercase text-text-muted tracking-wider">Status:</span>
+                <div className="flex bg-[#0c0d12] border border-border rounded-xl p-0.5">
+                  {(['all', 'success', 'fallback'] as const).map((status) => (
+                    <button
+                      key={status}
+                      onClick={() => setStatusFilter(status)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                        statusFilter === status
+                          ? 'bg-purple-500/10 text-purple-400 border border-purple-500/25'
+                          : 'text-text-muted hover:text-white border border-transparent'
+                      }`}
+                    >
+                      {status}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Content Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+              {/* Logs Table column */}
+              <div className="lg:col-span-12 xl:col-span-7 space-y-4">
+                {loadingLogs ? (
+                  <div className="text-center py-12 space-y-3">
+                    <RefreshCw className="w-8 h-8 text-purple-400 animate-spin mx-auto" />
+                    <p className="text-xs text-text-muted">Querying Firestore 'generation_logs' collection...</p>
+                  </div>
+                ) : logs.length === 0 ? (
+                  <div className="text-center py-12 border border-dashed border-border rounded-2xl space-y-2">
+                    <AlertCircle className="w-8 h-8 text-text-muted mx-auto" />
+                    <p className="text-xs text-text-muted">No generation logs found in database. Start generating messages to record audit logs!</p>
+                  </div>
+                ) : (
+                  (() => {
+                    const filtered = logs.filter(log => {
+                      const matchesSearch = 
+                        (log.leadName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        (log.leadCompany || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        (log.campaignName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        (log.userName || '').toLowerCase().includes(searchTerm.toLowerCase());
+                      const matchesStatus = statusFilter === 'all' || log.status === statusFilter;
+                      return matchesSearch && matchesStatus;
+                    });
+
+                    if (filtered.length === 0) {
+                      return (
+                        <div className="text-center py-12 border border-dashed border-border rounded-2xl">
+                          <p className="text-xs text-text-muted">No logs matching search/filter terms.</p>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="border border-border rounded-2xl overflow-hidden divide-y divide-border/60">
+                        {filtered.map((log) => {
+                          const dateObj = log.timestamp?.toDate ? log.timestamp.toDate() : new Date(log.timestamp);
+                          const formattedDate = dateObj ? dateObj.toLocaleString('en-US', { month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : 'Unknown Date';
+                          const isSelected = selectedLog?.id === log.id;
+
+                          return (
+                            <div 
+                              key={log.id}
+                              onClick={() => setSelectedLog(log)}
+                              className={`p-4 transition-all cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
+                                isSelected 
+                                  ? 'bg-purple-500/5 border-l-2 border-purple-500 pl-3.5' 
+                                  : 'bg-[#0a0b10] hover:bg-[#0c0d12]/50'
+                              }`}
+                            >
+                              <div className="space-y-1 flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap text-left">
+                                  <span className="text-xs font-bold text-white truncate max-w-[150px]">
+                                    {log.leadName}
+                                  </span>
+                                  <span className="text-[10px] text-text-muted font-medium truncate max-w-[150px]">
+                                    @{log.leadCompany}
+                                  </span>
+                                  <span className="text-[8px] font-mono bg-[#0c0d12] border border-border/60 px-1.5 py-0.5 rounded text-zinc-400 capitalize">
+                                    {log.campaignName || 'Internal'}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-3 text-[10px] text-text-muted text-left">
+                                  <span>Rep: <strong className="text-zinc-300 font-semibold">{log.userName || 'System SDR'}</strong></span>
+                                  <span>•</span>
+                                  <span className="font-mono">{formattedDate}</span>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-3 shrink-0 self-end sm:self-center">
+                                <span className={`text-[8px] font-extrabold px-2.5 py-1 rounded uppercase tracking-wider ${
+                                  log.status === 'success' 
+                                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                                    : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
+                                }`}>
+                                  {log.status === 'success' ? 'SUCCESS' : 'FALLBACK'}
+                                </span>
+                                <button className="p-1.5 hover:bg-[#0c0d12] border border-transparent hover:border-border rounded-lg text-text-muted hover:text-white transition-all cursor-pointer">
+                                  <Eye className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()
+                )}
+              </div>
+
+              {/* Single log details audit preview panel */}
+              {selectedLog ? (
+                <div className="lg:col-span-12 xl:col-span-5 bg-[#0a0b10]/80 border border-border rounded-2xl p-5 md:p-6 space-y-6 h-fit shrink-0 text-left">
+                  <div className="border-b border-border/40 pb-4 space-y-2">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <span className="text-[9px] font-extrabold uppercase tracking-widest text-[#a78bfa] bg-purple-500/10 border border-purple-500/25 px-2.5 py-1 rounded-md">
+                          Audit Trail Details
+                        </span>
+                        <h4 className="text-sm font-bold text-white mt-3 font-syne truncate max-w-[200px]">
+                          {selectedLog.leadName}
+                        </h4>
+                        <p className="text-[10px] text-text-muted mt-0.5">
+                          Generated on: {selectedLog.timestamp?.toDate ? selectedLog.timestamp.toDate().toLocaleString() : new Date(selectedLog.timestamp).toLocaleString()}
+                        </p>
+                      </div>
+                      <button 
+                        onClick={() => setSelectedLog(null)}
+                        className="px-2.5 py-1 text-[10px] font-bold text-text-muted hover:text-white border border-border/60 rounded-lg hover:bg-[#0c0d12] transition-colors cursor-pointer"
+                      >
+                        Close
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    {/* Channel selection output preview */}
+                    {selectedLog.messages ? (
+                      <div className="space-y-4 font-sans text-xs">
+                        {/* Email */}
+                        {(selectedLog.messages.email_subject || selectedLog.messages.email_body) && (
+                          <div className="space-y-1.5">
+                            <span className="text-[9px] font-extrabold font-mono text-[#a1a1aa] uppercase tracking-wider flex items-center gap-1">
+                              <Mail className="w-3.5 h-3.5 text-blue-400" />
+                              Email Outreach Body
+                            </span>
+                            <div className="bg-[#0c0d12] border border-border/60 rounded-xl p-3 space-y-2 text-slate-300 font-medium">
+                              {selectedLog.messages.email_subject && (
+                                <div className="border-b border-border/40 pb-1.5 mb-1.5">
+                                  <strong className="text-text-muted text-[10px] mr-1 select-none">Subject:</strong> 
+                                  <span className="text-white font-bold">{selectedLog.messages.email_subject}</span>
+                                </div>
+                              )}
+                              <p className="whitespace-pre-wrap leading-relaxed text-[10.5px]">
+                                {selectedLog.messages.email_body}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* LinkedIn Request */}
+                        {selectedLog.messages.linkedin_connect && (
+                          <div className="space-y-1.5">
+                            <span className="text-[9px] font-extrabold font-mono text-[#a1a1aa] uppercase tracking-wider flex items-center gap-1">
+                              <Layers className="w-3.5 h-3.5 text-indigo-400" />
+                              LinkedIn Connection Intro Note
+                            </span>
+                            <div className="bg-[#0c0d12] border border-border/60 rounded-xl p-3 text-slate-300 font-medium whitespace-pre-wrap leading-relaxed text-[10.5px]">
+                              {selectedLog.messages.linkedin_connect}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* LinkedIn DM */}
+                        {selectedLog.messages.linkedin_dm && (
+                          <div className="space-y-1.5">
+                            <span className="text-[9px] font-extrabold font-mono text-[#a1a1aa] uppercase tracking-wider flex items-center gap-1">
+                              <MessageSquare className="w-3.5 h-3.5 text-purple-400" />
+                              LinkedIn DM Sequence Step
+                            </span>
+                            <div className="bg-[#0c0d12] border border-border/60 rounded-xl p-3 text-slate-300 font-medium whitespace-pre-wrap leading-relaxed text-[10.5px]">
+                              {selectedLog.messages.linkedin_dm}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* WhatsApp message */}
+                        {selectedLog.messages.whatsapp && (
+                          <div className="space-y-1.5">
+                            <span className="text-[9px] font-extrabold font-mono text-[#a1a1aa] uppercase tracking-wider flex items-center gap-1">
+                              <MessageSquare className="w-3.5 h-3.5 text-emerald-400" />
+                              WhatsApp Quick Intro
+                            </span>
+                            <div className="bg-[#0c0d12] border border-border/60 rounded-xl p-3 text-slate-300 font-medium whitespace-pre-wrap leading-relaxed text-[10.5px]">
+                              {selectedLog.messages.whatsapp}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="p-6 text-center border border-dashed border-border rounded-xl">
+                        <p className="text-xs text-text-muted">No generated messages associated. Check status failure notes.</p>
+                      </div>
+                    )}
+
+                    {/* Rationale Failures */}
+                    {selectedLog.error && (
+                      <div className="p-3 bg-rose-500/5 border border-rose-500/20 text-rose-400 text-xs rounded-xl space-y-1">
+                        <div className="font-extrabold text-[9px] tracking-widest uppercase flex items-center gap-1 text-rose-400">
+                          <ShieldAlert className="w-4 h-4 text-rose-500" />
+                          Failure Traceback Logs
+                        </div>
+                        <p className="font-mono text-[10px] break-all">
+                          {selectedLog.error}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Compliance Checkbox */}
+                    <div className="bg-[#0c0d12]/60 border border-border/80 rounded-xl p-3 space-y-2 text-[10px] text-text-muted font-mono leading-relaxed">
+                      <div className="font-extrabold text-white uppercase text-[8px] tracking-wider flex items-center gap-1">
+                        <FileText className="w-3.5 h-3.5 text-purple-400" />
+                        Compliance Rationale
+                      </div>
+                      <p>
+                        This audit trace complies with EU-GDPR and security logs constraints. Direct outreach is generated with organizational credentials.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="lg:col-span-12 xl:col-span-5 border border-dashed border-border rounded-2xl p-8 text-center flex flex-col justify-center items-center gap-3 h-80">
+                  <Cpu className="w-8 h-8 text-[#a78bfa]/40 animate-pulse" />
+                  <p className="text-xs text-text-muted max-w-xs font-medium">
+                    No log coordinates chosen. Select any generation entry on the left column to run the full copy audit.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -68,13 +68,13 @@ import { SuperAdminDashboard as SuperAdminPanel } from './components/SuperAdminD
 import { CrmSyncLogsPanel } from './components/CrmSyncLogsPanel';
 import { SmartCsvImportModal } from './components/SmartCsvImportModal';
 import { SettingsApiKeysPanel } from './components/SettingsApiKeysPanel';
+import { ComposioIntegrationCenter } from './components/ComposioIntegrationCenter';
 import { CrmPipelineBoard } from './components/CrmPipelineBoard';
 import { LeadJourneyAnalytics } from './components/LeadJourneyAnalytics';
 import { OrgAdminPanel } from './components/OrgAdminPanel';
 import { ManagerWorkspacePanel } from './components/ManagerWorkspacePanel';
 import { AeWorkspacePanel } from './components/AeWorkspacePanel';
 import { SdrWorkspacePanel } from './components/SdrWorkspacePanel';
-import { OnboardingGuide } from './components/OnboardingGuide';
 import { 
   auth, 
   db, 
@@ -1805,6 +1805,27 @@ function MainApp({ user, profile, theme, setTheme, isMobileDevice }: { user: Use
           orgId: profile.orgId,
           updatedAt: Timestamp.now()
         });
+
+        try {
+          await addDoc(collection(db, 'generation_logs'), {
+            leadId: lead.id,
+            leadName: lead.name || 'Unknown',
+            leadCompany: lead.company || 'Unknown',
+            campaignId: currentCampaign.id,
+            campaignName: currentCampaign.name || 'Unknown Campaign',
+            userId: user.uid,
+            userName: profile?.displayName || user.email || 'Unknown User',
+            orgId: profile?.orgId || '',
+            timestamp: Timestamp.now(),
+            status: 'success',
+            error: null,
+            messages: result
+          });
+        } catch (logErr) {
+          console.error("Failed to write success to generation_logs:", logErr);
+          handleFirestoreError(logErr, OperationType.WRITE, 'generation_logs');
+        }
+
         setGenLog(prev => [...prev, `  ✓ 3 messages ready`]);
       } catch (e) {
         const fallback = getFallback(lead, config);
@@ -1816,6 +1837,27 @@ function MainApp({ user, profile, theme, setTheme, isMobileDevice }: { user: Use
           orgId: profile.orgId,
           updatedAt: Timestamp.now()
         });
+
+        try {
+          await addDoc(collection(db, 'generation_logs'), {
+            leadId: lead.id,
+            leadName: lead.name || 'Unknown',
+            leadCompany: lead.company || 'Unknown',
+            campaignId: currentCampaign.id,
+            campaignName: currentCampaign.name || 'Unknown Campaign',
+            userId: user.uid,
+            userName: profile?.displayName || user.email || 'Unknown User',
+            orgId: profile?.orgId || '',
+            timestamp: Timestamp.now(),
+            status: 'fallback',
+            error: e instanceof Error ? e.message : String(e),
+            messages: fallback
+          });
+        } catch (logErr) {
+          console.error("Failed to write fallback to generation_logs:", logErr);
+          handleFirestoreError(logErr, OperationType.WRITE, 'generation_logs');
+        }
+
         setGenLog(prev => [...prev, `  ⚠ Used fallback template`]);
       }
       
@@ -2257,6 +2299,17 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
             </div>
           )}
 
+          <div className="pt-2 mt-2 border-t border-border-subtle">
+            <NavButton 
+              active={activeView === 'SETTINGS'} 
+              onClick={() => { setActiveView('SETTINGS'); setIsMobileMenuOpen(false); }}
+              icon={Settings}
+              label="Settings & Labs"
+              subLabel="Integrations & API keys"
+              isCollapsed={isMenuCollapsed}
+            />
+          </div>
+
           {true && (
             <div className="pt-4 mt-4 border-t border-border-subtle">
               <button 
@@ -2576,6 +2629,9 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                   Download Project Report (PDF)
                 </button>
               </div>
+
+              {/* Composio AI Integrations Command Hub */}
+              <ComposioIntegrationCenter showToast={showToast} />
 
               {/* REST API Credentials & Webhook Gateway Hub */}
               <SettingsApiKeysPanel showToast={showToast} />
@@ -4031,38 +4087,6 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
           </div>
 
           <div className="grid gap-6">
-            {isBulkSending && (
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="bg-brand/10 border border-brand/30 rounded-3xl p-8 space-y-6 glow-brand/10"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3 text-lg font-syne font-bold text-brand">
-                    <Zap className="w-6 h-6 animate-pulse fill-current" />
-                    BULK OUTREACH IN PROGRESS
-                  </div>
-                  <div className="text-sm font-bold text-brand">{Math.round(bulkProgress)}%</div>
-                </div>
-                <div className="h-3 w-full bg-surface-alt rounded-full overflow-hidden border border-brand/20">
-                  <motion.div 
-                    className="h-full bg-gradient-to-r from-brand to-brand-alt"
-                    initial={{ width: 0 }}
-                    animate={{ width: `${bulkProgress}%` }}
-                  />
-                </div>
-                <div className="bg-bg-subtle border border-brand/20 rounded-2xl p-5 h-48 overflow-y-auto font-mono text-[11px] text-text-muted space-y-2 custom-scrollbar">
-                  {bulkLog.map((log, i) => (
-                    <div key={i} className={`flex items-start gap-2 ${log.includes('✓') ? 'text-brand-alt' : log.includes('🎉') ? 'text-brand font-bold' : ''}`}>
-                      <span className="opacity-30">[{new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'})}]</span>
-                      {log}
-                    </div>
-                  ))}
-                  <div ref={bulkLogEndRef} />
-                </div>
-              </motion.div>
-            )}
-
             <div className="grid md:grid-cols-2 gap-6">
               {liAccount?.connected && (
                 <div className="md:col-span-2 bg-brand/5 border border-brand/20 rounded-3xl p-8 space-y-6 glow-brand/5">
@@ -4113,38 +4137,11 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                   <div className="flex gap-3">
                     <button 
                       onClick={() => exportCSV(ex.id as any)}
-                      className="flex-1 py-4 rounded-2xl text-sm font-bold transition-all flex items-center justify-center gap-2 border border-border hover:bg-surface-alt"
+                      className="flex-1 py-4 rounded-2xl text-sm font-bold transition-all flex items-center justify-center gap-2 bg-surface border border-border hover:bg-surface-alt hover:border-brand/30 cursor-pointer"
                     >
                       <Download className="w-4 h-4" />
                       Download
                     </button>
-                    {ex.id === 'whatsapp' && (
-                      <button 
-                        onClick={() => startBulkSend('wa')}
-                        disabled={isBulkSending}
-                        className="px-6 py-4 rounded-2xl bg-whatsapp text-white text-sm font-bold hover:bg-whatsapp/80 transition-all disabled:opacity-50 shadow-lg shadow-whatsapp/20"
-                      >
-                        <Zap className="w-5 h-5 fill-current" />
-                      </button>
-                    )}
-                    {ex.id === 'linkedin' && liAccount?.connected && (
-                      <button 
-                        onClick={() => startBulkSend('li')}
-                        disabled={isBulkSending}
-                        className="px-6 py-4 rounded-2xl bg-linkedin text-white text-sm font-bold hover:bg-linkedin/80 transition-all disabled:opacity-50 shadow-lg shadow-linkedin/20"
-                      >
-                        <Zap className="w-5 h-5 fill-current" />
-                      </button>
-                    )}
-                    {ex.id === 'email' && emAccount?.connected && (
-                      <button 
-                        onClick={() => startBulkSend('em')}
-                        disabled={isBulkSending}
-                        className="px-6 py-4 rounded-2xl bg-email text-white text-sm font-bold hover:bg-email/80 transition-all disabled:opacity-50 shadow-lg shadow-email/20"
-                      >
-                        <Zap className="w-5 h-5 fill-current" />
-                      </button>
-                    )}
                   </div>
 
                   {ex.id === 'linkedin' && liAccount?.connected && (
@@ -4370,6 +4367,10 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
     {(activeView === 'SDR_DAILY' || activeView === 'SDR_STATS') && (
       <SdrWorkspacePanel 
         showToast={showToast}
+        leads={leads}
+        campaigns={campaigns}
+        profile={profile}
+        user={user}
       />
     )}
 
@@ -4442,9 +4443,6 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
         showToast={showToast} 
       />
     )}
-
-    {/* Zyntra AI Interactive Walkthrough Onboarding Co-Pilot */}
-    <OnboardingGuide activeView={activeView} superAdminTab={superAdminTab} />
   </main>
   <footer className="py-8 border-t border-border-subtle/50 mt-auto">
     <div className="max-w-6xl mx-auto px-4 md:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-text-muted">
