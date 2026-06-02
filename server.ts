@@ -316,7 +316,7 @@ async function processKbFileBackground(file: KbFile) {
         try {
           const ai = new GoogleGenAI({ apiKey: geminiKey });
           const response = await ai.models.generateContent({
-            model: "gemini-3.5-flash",
+            model: "gemini-2.5-flash",
             contents: `${sysPrompt}\n\n${prompt}`,
             config: { responseMimeType: "application/json" }
           });
@@ -690,7 +690,7 @@ async function runAiDealAnalysis(deal: Deal, lead: Lead | undefined, activities:
       console.log("[Claude Close Analyzer] Invoking Gemini-powered Fallback Engine...");
       const ai = new GoogleGenAI({ apiKey: geminiKey });
       const response = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
+        model: "gemini-2.5-flash",
         contents: `${sysPrompt}\n\n${prompt}`,
         config: {
           responseMimeType: "application/json"
@@ -893,31 +893,6 @@ async function startServer() {
 
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
-
-  app.post("/api/llm/nvidia-chat", async (req, res) => {
-    const apiKey = (req.headers["x-nvidia-api-key"] as string) || process.env.NVIDIA_API_KEY;
-    if (!apiKey) {
-      return res.status(500).json({ error: "NVIDIA_API_KEY is not configured on the server." });
-    }
-
-    try {
-      const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify(req.body),
-      });
-
-      const text = await response.text();
-      res.status(response.status);
-      res.type(response.headers.get("Content-Type") || "application/json");
-      res.send(text);
-    } catch (error: any) {
-      res.status(502).json({ error: error?.message || "NVIDIA proxy request failed." });
-    }
-  });
 
   // API Authentication Middleware supporting standard API keys, session roles and impersonation
   const authenticateApiKey = (req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -2396,7 +2371,7 @@ Raw Rows Data: ${JSON.stringify(rows.slice(0, 50))} (Analyze and clean up to the
         try {
           const ai = new GoogleGenAI({ apiKey: geminiKey });
           const response = await ai.models.generateContent({
-            model: "gemini-3.5-flash",
+            model: "gemini-2.5-flash",
             contents: prompt,
             config: { responseMimeType: "application/json" }
           });

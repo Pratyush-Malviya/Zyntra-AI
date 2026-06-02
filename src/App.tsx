@@ -74,6 +74,7 @@ import { OrgAdminPanel } from './components/OrgAdminPanel';
 import { ManagerWorkspacePanel } from './components/ManagerWorkspacePanel';
 import { AeWorkspacePanel } from './components/AeWorkspacePanel';
 import { SdrWorkspacePanel } from './components/SdrWorkspacePanel';
+import { OnboardingGuide } from './components/OnboardingGuide';
 import { 
   auth, 
   db, 
@@ -4441,6 +4442,9 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
         showToast={showToast} 
       />
     )}
+
+    {/* Zyntra AI Interactive Walkthrough Onboarding Co-Pilot */}
+    <OnboardingGuide activeView={activeView} superAdminTab={superAdminTab} />
   </main>
   <footer className="py-8 border-t border-border-subtle/50 mt-auto">
     <div className="max-w-6xl mx-auto px-4 md:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-text-muted">
