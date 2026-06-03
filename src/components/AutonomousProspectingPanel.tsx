@@ -11,13 +11,31 @@ export default function AutonomousProspectingPanel({ leads, showToast }: Autonom
   const [autonomousAgentStatus, setAutonomousAgentStatus] = useState<'running' | 'stopped'>('stopped');
   const [togglingAgent, setTogglingAgent] = useState(false);
   const [agentLogs, setAgentLogs] = useState<string[]>([]);
+  const [fetchedLeads, setFetchedLeads] = useState<any[]>([]);
 
   useEffect(() => {
     fetch('/api/agents/autonomous-prospecting/status')
       .then(res => res.json())
       .then(data => setAutonomousAgentStatus(data.status))
       .catch(console.error);
+
+    const fetchGeneratedLeads = () => {
+      fetch('/api/leads')
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            setFetchedLeads(data.filter(l => l.status === 'generated'));
+          }
+        })
+        .catch(console.error);
+    };
+
+    fetchGeneratedLeads();
+    const interval = setInterval(fetchGeneratedLeads, 3000);
+    return () => clearInterval(interval);
   }, []);
+
+  const displayLeads = fetchedLeads.length > 0 ? fetchedLeads : leads;
 
   const toggleAutonomousAgent = async () => {
     setTogglingAgent(true);
@@ -94,7 +112,7 @@ export default function AutonomousProspectingPanel({ leads, showToast }: Autonom
             {/* Metrics */}
             <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border">
               <div className="bg-bg border border-border p-4 rounded-2xl">
-                <div className="text-2xl font-syne font-bold text-brand">{leads.length}</div>
+                <div className="text-2xl font-syne font-bold text-brand">{displayLeads.length}</div>
                 <div className="text-[9px] uppercase tracking-widest font-bold text-text-muted mt-1">Leads Found</div>
               </div>
               <div className="bg-bg border border-border p-4 rounded-2xl">
@@ -113,11 +131,11 @@ export default function AutonomousProspectingPanel({ leads, showToast }: Autonom
                 <Database className="w-5 h-5 text-brand" />
                 <h3 className="text-sm font-bold uppercase tracking-wider">Generated Leads Feed</h3>
               </div>
-              <span className="text-xs text-text-muted">{leads.length} records</span>
+              <span className="text-xs text-text-muted">{displayLeads.length} records</span>
             </div>
 
             <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
-              {leads.length === 0 ? (
+              {displayLeads.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-50 py-12">
                   <Database className="w-12 h-12 text-text-muted" />
                   <div>
@@ -127,7 +145,7 @@ export default function AutonomousProspectingPanel({ leads, showToast }: Autonom
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {leads.map((lead, idx) => (
+                  {displayLeads.map((lead, idx) => (
                     <motion.div 
                       key={lead.id || idx}
                       initial={{ opacity: 0, y: 10 }}
