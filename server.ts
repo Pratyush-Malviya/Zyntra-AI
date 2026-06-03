@@ -9,6 +9,9 @@ import { WebSocketServer, WebSocket } from "ws";
 
 dotenv.config();
 
+let autonomousAgentInterval: NodeJS.Timeout | null = null;
+let autonomousAgentStatus: "running" | "stopped" = "stopped";
+
 // Define Types
 interface Lead {
   id: string;
@@ -1191,6 +1194,67 @@ async function startServer() {
 
     deals.splice(idx, 1);
     res.json({ success: true, message: "Deal removed." });
+  });
+
+  // REST API: Autonomous Prospecting Agent
+  app.get("/api/agents/autonomous-prospecting/status", authenticateApiKey, (req, res) => {
+    res.json({ status: autonomousAgentStatus });
+  });
+
+  app.post("/api/agents/autonomous-prospecting/start", authenticateApiKey, (req, res) => {
+    const orgId = (req.headers["x-org-id"] as string) || "org-default";
+    const userId = (req.headers["x-user-id"] as string) || "user-default";
+
+    if (autonomousAgentStatus === "running") {
+      return res.status(400).json({ error: "Agent is already running." });
+    }
+
+    autonomousAgentStatus = "running";
+    
+    const targetIndustries = ["SaaS", "Fintech", "Healthcare", "E-commerce", "Logistics", "AI Tools"];
+    const targetRoles = ["CEO", "VP of RevOps", "CTO", "Head of Sales", "Founder"];
+
+    autonomousAgentInterval = setInterval(() => {
+      const industry = targetIndustries[Math.floor(Math.random() * targetIndustries.length)];
+      const role = targetRoles[Math.floor(Math.random() * targetRoles.length)];
+      const nameStr = Math.random().toString(36).substring(7);
+      const companyStr = industry + " " + Math.random().toString(36).substring(5) + " LLC";
+
+      const newLead: Lead = {
+        id: "lead-" + Math.random().toString(36).substr(2, 9),
+        orgId,
+        userId,
+        campaignId: "camp-default",
+        name: "Auto " + nameStr,
+        email: "contact@" + companyStr.replace(/\s+/g, '').toLowerCase() + ".com",
+        phone: "+1 " + Math.floor(1000000000 + Math.random() * 9000000000).toString(),
+        company: companyStr,
+        role: role,
+        status: "generated", 
+        score: Math.floor(60 + Math.random() * 40),
+        assignedAgent: "AI Agent",
+        industry: industry,
+        country: "United States",
+        linkedin_url: "https://linkedin.com/in/auto-" + nameStr
+      };
+      
+      leads.unshift(newLead);
+      writeAuditLog(orgId, "system", "AI Autonomous Agent", "Lead Discovered", `Agent discovered lead: ${newLead.name} (${newLead.company})`);
+      triggerOutboundWebhook("lead.created", newLead, orgId);
+      broadcastToWorkspace(orgId, "lead:created", newLead);
+      console.log(`[Autonomous Agent] Discovered new lead: ${newLead.name}`);
+    }, 15000); // every 15 seconds for demo
+
+    res.json({ success: true, message: "Autonomous Agent started." });
+  });
+
+  app.post("/api/agents/autonomous-prospecting/stop", authenticateApiKey, (req, res) => {
+    if (autonomousAgentInterval) {
+      clearInterval(autonomousAgentInterval);
+      autonomousAgentInterval = null;
+    }
+    autonomousAgentStatus = "stopped";
+    res.json({ success: true, message: "Autonomous Agent stopped." });
   });
 
   // REST API: Custom Pipelines

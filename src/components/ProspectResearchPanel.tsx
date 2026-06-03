@@ -125,6 +125,37 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
     return localStorage.getItem('zyntra-research-full-width') === 'true';
   });
 
+  const [autonomousAgentStatus, setAutonomousAgentStatus] = useState<'running' | 'stopped'>('stopped');
+  const [togglingAgent, setTogglingAgent] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/agents/autonomous-prospecting/status')
+      .then(res => res.json())
+      .then(data => setAutonomousAgentStatus(data.status))
+      .catch(console.error);
+  }, []);
+
+  const toggleAutonomousAgent = async () => {
+    setTogglingAgent(true);
+    try {
+      const endpoint = autonomousAgentStatus === 'running' 
+        ? '/api/agents/autonomous-prospecting/stop' 
+        : '/api/agents/autonomous-prospecting/start';
+      
+      const res = await fetch(endpoint, { method: 'POST' });
+      if (res.ok) {
+        setAutonomousAgentStatus(autonomousAgentStatus === 'running' ? 'stopped' : 'running');
+        showToast(autonomousAgentStatus === 'running' ? 'Autonomous Agent stopped' : 'Autonomous Agent started!', 'success');
+      } else {
+        showToast('Failed to toggle agent state', 'error');
+      }
+    } catch (err) {
+      showToast('Error toggling agent', 'error');
+    } finally {
+      setTogglingAgent(false);
+    }
+  };
+
   const toggleFullWidth = () => {
     const newVal = !isFullWidth;
     setIsFullWidth(newVal);
@@ -574,6 +605,46 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
                 Launch Research Sprint
               </button>
             </div>
+          </div>
+
+          {/* Autonomous Lead Generation Agent Card */}
+          <div className="bg-surface border border-border rounded-[24px] md:rounded-[32px] p-5 md:p-8 space-y-5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Target className="w-5 h-5 text-brand" />
+                <h3 className="text-sm font-bold uppercase tracking-wider">Autonomous Agent</h3>
+              </div>
+              <span className={`px-2.5 py-1 rounded-full border text-[10px] font-mono font-bold ${
+                autonomousAgentStatus === 'running' ? 'bg-green-500/10 text-green-500 border-green-500/30' : 'bg-bg text-text-muted border-border'
+              }`}>
+                {autonomousAgentStatus === 'running' ? 'ACTIVE' : 'IDLE'}
+              </span>
+            </div>
+            
+            <p className="text-xs text-text-muted leading-relaxed">
+              Enable the background autonomous agent to continuously prospect target verticals and generate ideal leads for your campaigns using LLM intelligence.
+            </p>
+
+            <button
+              onClick={toggleAutonomousAgent}
+              disabled={togglingAgent}
+              className={`w-full font-bold py-3.5 rounded-2xl transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50 cursor-pointer ${
+                autonomousAgentStatus === 'running' 
+                  ? 'bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/30' 
+                  : 'bg-surface-alt border border-brand/40 text-brand hover:bg-brand/10'
+              }`}
+            >
+              {togglingAgent ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : autonomousAgentStatus === 'running' ? (
+                <>Stop Autonomous Prospecting</>
+              ) : (
+                <>
+                  <Cpu className="w-4 h-4" />
+                  Start Autonomous Prospecting
+                </>
+              )}
+            </button>
           </div>
 
           {/* Past Researches History Column */}
