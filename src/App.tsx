@@ -61,6 +61,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { motion, AnimatePresence } from 'motion/react';
 import { generateOutreach, OutreachMessages } from './services/geminiService';
+import AutonomousProspectingPanel from './components/AutonomousProspectingPanel';
 import ProspectResearchPanel from './components/ProspectResearchPanel';
 import LeadScoreHistogram from './components/LeadScoreHistogram';
 import LandingPage from './components/LandingPage';
@@ -2171,6 +2172,14 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                 icon={Globe}
                 label="Prospect Intel"
                 subLabel="ICP Research & Dossiers"
+                isCollapsed={isMenuCollapsed}
+              />
+              <NavButton 
+                active={activeView === 'AUTONOMOUS'} 
+                onClick={() => { setActiveView('AUTONOMOUS'); setIsMobileMenuOpen(false); }}
+                icon={Cpu}
+                label="Auto Prospecting"
+                subLabel="Background Agent Engine"
                 isCollapsed={isMenuCollapsed}
               />
               <NavButton 
@@ -4442,6 +4451,14 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
         campaigns={campaigns} 
         showToast={showToast} 
       />
+    )}
+    {activeView === 'AUTONOMOUS' && (
+      <div className="bg-surface border border-border rounded-[24px] md:rounded-[32px] p-5 md:p-8 space-y-6 glow-brand/5 max-w-7xl mx-auto">
+        <AutonomousProspectingPanel 
+          leads={leads.filter(l => l.status === 'generated')} 
+          showToast={showToast} 
+        />
+      </div>
     )}
   </main>
   <footer className="py-8 border-t border-border-subtle/50 mt-auto">
