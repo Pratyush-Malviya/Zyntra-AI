@@ -225,5 +225,9 @@ service cloud.firestore {
     match /api_keys/{keyId} {
       allow read, write: if isAuthenticated();
     }
+
+    match /generation_logs/{logId} {
+      allow read, write: if isAuthenticated();
+    }
   }
 }

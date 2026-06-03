@@ -3,7 +3,7 @@ import {
   Kanban, List, Plus, Search, Filter, RefreshCw, Sparkles, AlertCircle, 
   MapPin, Clock, Calendar, Briefcase, User, UserCheck, Tag, Trash2, 
   CheckCircle, ChevronRight, Activity, FileText, Check, MoreVertical, 
-  ArrowRight, ShieldAlert, BarChart3, Mail, Phone, Users, History, TrendingUp, X, Flag
+  ArrowRight, ShieldAlert, BarChart3, Mail, Phone, Users, History, TrendingUp, X, Flag, Layers
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { motion } from "motion/react";
@@ -112,6 +112,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
   // States
   const [viewType, setViewType] = useState<"kanban" | "list">("kanban");
   const [deals, setDeals] = useState<Deal[]>([]);
+  const [pulsingColumnId, setPulsingColumnId] = useState<string | null>(null);
   const [pipelinesList, setPipelinesList] = useState<Pipeline[]>([]);
   const [activePipeline, setActivePipeline] = useState<Pipeline | null>(null);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
@@ -317,34 +318,77 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
   };
 
   // Handle Drop Card Stage shift
-  const handleDrop = async (e: React.DragEvent, targetStageId: string) => {
+  const handleDrop = async (e: React.DragEvent, targetStageId: string, targetPriority?: "high" | "medium" | "low") => {
     e.preventDefault();
     const dealId = e.dataTransfer.getData("text/plain");
     const draggedDeal = deals.find(d => d.id === dealId);
     
-    if (draggedDeal && draggedDeal.stage !== targetStageId) {
-      // Optimistic state
-      const updatedDeals = deals.map(d => d.id === dealId ? { ...d, stage: targetStageId } : d);
-      setDeals(updatedDeals);
+    if (draggedDeal) {
+      const isStageChanged = draggedDeal.stage !== targetStageId;
+      let isPriorityChanged = false;
+      let newPriority: "low" | "medium" | "high" | "urgent" | "none" | undefined = undefined;
 
-      try {
-        const res = await fetch(`/api/deals/${dealId}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ stage: targetStageId, agentName: draggedDeal.assignedAgent || "Workspace Agent" })
+      if (targetPriority) {
+        if (targetPriority === "high" && draggedDeal.priority !== "high" && draggedDeal.priority !== "urgent") {
+          newPriority = "high";
+          isPriorityChanged = true;
+        } else if (targetPriority === "medium" && draggedDeal.priority !== "medium") {
+          newPriority = "medium";
+          isPriorityChanged = true;
+        } else if (targetPriority === "low" && draggedDeal.priority !== "low" && draggedDeal.priority !== "none" && draggedDeal.priority !== undefined) {
+          newPriority = "low";
+          isPriorityChanged = true;
+        }
+      }
+
+      if (isStageChanged || isPriorityChanged) {
+        // Optimistic state
+        const updatedDeals = deals.map(d => {
+          if (d.id === dealId) {
+            return {
+              ...d,
+              ...(isStageChanged ? { stage: targetStageId } : {}),
+              ...(isPriorityChanged ? { priority: newPriority } : {})
+            };
+          }
+          return d;
         });
-        
-        if (res.ok) {
-          showToast(`Deal promoted & stage changed to "${targetStageId}"!`, "success");
-          if (onLeadsUpdated) onLeadsUpdated();
-          refreshDbState();
-        } else {
-          showToast("Failed to drag deal to new pipeline stage.", "error");
+        setDeals(updatedDeals);
+        setPulsingColumnId(targetStageId);
+        setTimeout(() => {
+          setPulsingColumnId(null);
+        }, 1200);
+
+        try {
+          const putParams: any = {};
+          if (isStageChanged) putParams.stage = targetStageId;
+          if (isPriorityChanged) putParams.priority = newPriority;
+          putParams.agentName = draggedDeal.assignedAgent || "Workspace Agent";
+
+          const res = await fetch(`/api/deals/${dealId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(putParams)
+          });
+          
+          if (res.ok) {
+            if (isStageChanged && isPriorityChanged) {
+              showToast(`Deal promoted & set to ${newPriority} priority!`, "success");
+            } else if (isStageChanged) {
+              showToast(`Deal promoted & stage changed to "${targetStageId}"!`, "success");
+            } else if (isPriorityChanged) {
+              showToast(`Deal set to ${newPriority} priority!`, "success");
+            }
+            if (onLeadsUpdated) onLeadsUpdated();
+            refreshDbState();
+          } else {
+            showToast("Failed to update deal parameters in CRM.", "error");
+            refreshDbState();
+          }
+        } catch (err) {
+          showToast("Communication loss updating deal.", "error");
           refreshDbState();
         }
-      } catch (err) {
-        showToast("Communication loss updating deal stage.", "error");
-        refreshDbState();
       }
     }
   };
@@ -961,6 +1005,22 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
             Team Activity
           </button>
 
+          {/* Swimlane Toggle Button */}
+          {viewType === "kanban" && (
+            <button 
+              onClick={() => setSwimlaneMode(!swimlaneMode)}
+              className={`px-3.5 py-1.5 rounded-xl border text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs ${
+                swimlaneMode 
+                  ? "border-amber-500/35 bg-amber-500/10 text-amber-500 font-bold" 
+                  : "border-border bg-surface text-text-muted hover:text-text hover:border-border-subtle"
+              }`}
+              title="Toggle horizontal swimlanes categorized by Lead Priority"
+            >
+              <Layers className="w-4 h-4 text-amber-500" />
+              <span>Swimlanes {swimlaneMode ? "ON" : "OFF"}</span>
+            </button>
+          )}
+
           {/* Toggle switcher layout state */}
           <div className="flex items-center bg-surface-alt p-1 rounded-xl border border-border">
             <button
@@ -1078,18 +1138,18 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
           <div className="space-y-6 w-full text-left">
             {(() => {
               const swimlanes = [
-                { key: "hot", label: "Hot Priority", colorClass: "text-rose-600 dark:text-rose-400", bgClass: "bg-rose-500/10 border-rose-500/20", icon: "🔥" },
-                { key: "warm", label: "Warm Priority", colorClass: "text-amber-600 dark:text-amber-400", bgClass: "bg-amber-500/10 border-amber-500/20", icon: "⚡" },
-                { key: "cold", label: "Cold & Others", colorClass: "text-text-muted", bgClass: "bg-surface-alt border-border", icon: "❄️" }
+                { key: "high", label: "High Lead Priority", colorClass: "text-rose-600 dark:text-rose-400", bgClass: "bg-rose-500/10 border-rose-500/20", icon: "🔥" },
+                { key: "medium", label: "Medium Lead Priority", colorClass: "text-amber-600 dark:text-amber-400", bgClass: "bg-amber-500/10 border-amber-500/20", icon: "⚡" },
+                { key: "low", label: "Low / No Lead Priority", colorClass: "text-text-muted", bgClass: "bg-surface-alt border-border", icon: "❄️" }
               ];
 
               return (
                 <div className="space-y-6 w-full">
                   {swimlanes.map((lane) => {
                     const laneDeals = filteredDeals.filter(d => {
-                      if (lane.key === "hot") return d.status === "hot";
-                      if (lane.key === "warm") return d.status === "warm";
-                      return d.status === "cold" || d.status === "lost" || !d.status;
+                      if (lane.key === "high") return d.priority === "high" || d.priority === "urgent";
+                      if (lane.key === "medium") return d.priority === "medium";
+                      return d.priority === "low" || d.priority === "none" || !d.priority;
                     });
 
                     const totalValue = laneDeals.reduce((sum, d) => sum + d.value, 0);
@@ -1119,14 +1179,20 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                             const cumulativeStageValue = stageLaneDeals.reduce((sum, d) => sum + d.value, 0);
 
                             return (
-                              <div 
+                              <motion.div 
                                 key={stage.id}
                                 onDragOver={handleDragOver}
-                                onDrop={(e) => handleDrop(e, stage.id)}
-                                className="flex flex-col bg-surface-alt/75 border border-border p-3 rounded-xl min-w-[245px] lg:min-w-0 lg:w-auto shrink-0 min-h-[180px]"
+                                onDrop={(e) => handleDrop(e, stage.id, lane.key as any)}
+                                animate={pulsingColumnId === stage.id ? { scale: [1, 1.015, 1], borderColor: ["var(--border)", "var(--brand)", "var(--border)"] } : {}}
+                                transition={{ duration: 0.8 }}
+                                className={`flex flex-col bg-surface-alt/75 border p-3 rounded-xl min-w-[245px] lg:min-w-0 lg:w-auto shrink-0 min-h-[180px] ${pulsingColumnId === stage.id ? "border-brand shadow-md" : "border-border"}`}
                               >
                                 {/* Stage name Inside Swimlane */}
-                                <div className="flex items-center justify-between border-b border-border/60 pb-1.5 mb-2.5">
+                                <motion.div 
+                                  animate={pulsingColumnId === stage.id ? { y: [0, -3, 0], opacity: [1, 0.7, 1] } : {}}
+                                  transition={{ duration: 0.8 }}
+                                  className="flex items-center justify-between border-b border-border/60 pb-1.5 mb-2.5"
+                                >
                                   <div className="flex items-center gap-1 min-w-0">
                                     <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: stage.color }} />
                                     <span className="text-[10px] font-bold text-text truncate uppercase" title={stage.name}>
@@ -1136,7 +1202,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                                   <span className="text-[9px] font-bold font-mono text-amber-600 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded">
                                     ${cumulativeStageValue.toLocaleString()}
                                   </span>
-                                </div>
+                                </motion.div>
 
                                 {/* Render stage lane deals */}
                                 <div className="flex-1 space-y-2 overflow-y-auto pr-1 scrollbar-thin max-h-[250px]">
@@ -1153,6 +1219,8 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                                       return (
                                         <motion.div
                                           key={deal.id}
+                                          initial={{ opacity: 0, x: -15 }}
+                                          animate={{ opacity: 1, x: 0 }}
                                           layout
                                           transition={{ type: "spring", stiffness: 300, damping: 30 }}
                                           draggable
@@ -1280,7 +1348,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                                     })
                                   )}
                                 </div>
-                              </div>
+                              </motion.div>
                             );
                           })}
                         </div>
@@ -1339,17 +1407,23 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                 const theme = getStageHeaderStyles(stage.name, stage.color);
 
                 return (
-                  <div 
+                  <motion.div 
                     key={stage.id}
                     onDragOver={handleDragOver}
                     onDrop={(e) => handleDrop(e, stage.id)}
-                    className={`flex flex-col bg-surface-alt/40 border border-border/90 rounded-2xl min-w-[300px] max-w-[325px] shrink-0 h-[640px] shadow-sm select-none transition-all ${
+                    animate={pulsingColumnId === stage.id ? { scale: [1, 1.015, 1] } : {}}
+                    transition={{ duration: 0.8 }}
+                    className={`flex flex-col bg-surface-alt/40 border rounded-2xl min-w-[300px] max-w-[325px] shrink-0 h-[640px] shadow-sm select-none transition-all ${
+                      pulsingColumnId === stage.id ? "border-brand shadow-lg" : "border-border/90"
+                    } ${
                       isMobileHidden ? "hidden md:flex" : "flex w-full max-w-full md:max-w-[325px]"
                     }`}
                   >
                   {/* Dynamic Colored Stage Header */}
-                  <div 
-                    className={`flex items-center justify-between text-white font-bold text-xs px-4 py-3 rounded-t-2xl shadow-xs ${theme.headerBg}`}
+                  <motion.div 
+                    animate={pulsingColumnId === stage.id ? { opacity: [1, 0.4, 1] } : {}}
+                    transition={{ duration: 0.8 }}
+                    className={`flex items-center justify-between text-white font-bold text-xs px-4 py-3 rounded-t-2xl shadow-xs transition-all ${theme.headerBg} ${pulsingColumnId === stage.id ? "animate-pulse" : ""}`}
                     style={theme.headerStyle}
                   >
                     <div className="flex items-center gap-1.5 min-w-0">
@@ -1377,7 +1451,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                         </button>
                       )}
                     </div>
-                  </div>
+                  </motion.div>
 
                   <div className="p-3 flex-1 flex flex-col min-h-0 bg-surface rounded-b-2xl border-t border-border">
                     <div className="text-[10px] text-text-muted font-mono mb-2 flex items-center justify-between px-2.5 bg-surface-alt border border-border py-1 rounded-lg">
@@ -1402,6 +1476,8 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                           return (
                             <motion.div
                               key={deal.id}
+                              initial={{ opacity: 0, x: -15 }}
+                              animate={{ opacity: 1, x: 0 }}
                               layout
                               transition={{ type: "spring", stiffness: 300, damping: 30 }}
                               draggable
@@ -1651,7 +1727,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                       )}
                     </div>
                   </div>
-                </div>
+                </motion.div>
               );
             })}
 

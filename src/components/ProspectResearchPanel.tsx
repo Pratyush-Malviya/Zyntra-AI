@@ -222,10 +222,6 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
       setSprintPhase(4);
 
       // Save to Firebase
-      if (!report || !report.companyInfo) {
-        throw new Error("Invalid research data structure returned from service");
-      }
-
       const payload = {
         companyName: report.companyInfo.name || company,
         userId: user.uid,

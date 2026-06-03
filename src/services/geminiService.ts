@@ -1,74 +1,22 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
-export function isGeminiEnabled(): boolean {
-  if (typeof window !== "undefined") {
-    const saved = localStorage.getItem("zy_gemini_enabled");
-    if (saved !== null) {
-      return saved === "true";
+const ai = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_KEY || "",
+  httpOptions: {
+    headers: {
+      'User-Agent': 'aistudio-build',
     }
   }
-  return true;
-}
+});
 
-export function isNvidiaEnabled(): boolean {
-  if (typeof window !== "undefined") {
-    const saved = localStorage.getItem("zy_nvidia_enabled");
-    if (saved !== null) {
-      return saved === "true";
-    }
-  }
-  return true;
-}
-
-export function getGeminiApiKey(): string {
-  if (typeof window !== "undefined") {
-    const saved = localStorage.getItem("zy_gemini_api_key");
-    if (saved) return saved;
-  }
-  return process.env.GEMINI_API_KEY || "";
-}
-
-export function getGeminiSelectedModel(): string {
-  if (typeof window !== "undefined") {
-    const saved = localStorage.getItem("zy_gemini_selected_model");
-    if (saved) return saved;
-  }
-  return "Gemini 1.5 Flash";
-}
-
-export function resolveGeminiModelId(name: string): string {
-  const clean = name.trim().toLowerCase();
-  if (clean.includes("1.5") && clean.includes("pro")) return "gemini-1.5-pro";
-  if (clean.includes("1.5") && clean.includes("flash")) return "gemini-1.5-flash";
-  if (clean.includes("2.0") && clean.includes("pro")) return "gemini-2.0-pro-exp-02-05";
-  if (clean.includes("2.0") && clean.includes("flash")) return "gemini-2.0-flash";
-  if (clean.includes("2.5") && clean.includes("pro")) return "gemini-2.5-pro";
-  if (clean.includes("2.5") && clean.includes("flash")) return "gemini-2.5-flash";
-  if (clean.includes("3.5") && clean.includes("pro")) return "gemini-3.5-pro";
-  if (clean.includes("3.5") && clean.includes("flash")) return "gemini-3.5-flash";
-  
-  if (name.startsWith("gemini-")) return name;
-  return "gemini-1.5-flash";
-}
-
-function getAiClient(): GoogleGenAI {
-  return new GoogleGenAI({
-    apiKey: getGeminiApiKey(),
-    httpOptions: {
-      headers: {
-        'User-Agent': 'aistudio-build',
-      }
-    }
-  });
-}
+const DEFAULT_NVIDIA_API_KEY = "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";
 
 export function getNvidiaApiKey(): string {
   if (typeof window !== "undefined") {
     const saved = localStorage.getItem("zy_nvidia_api_key");
     if (saved) return saved;
-    return "";
   }
-  return process.env.NVIDIA_API_KEY || "";
+  return process.env.NVIDIA_API_KEY || DEFAULT_NVIDIA_API_KEY;
 }
 
 export function getNvidiaSelectedModel(): string {
@@ -83,24 +31,18 @@ const nvidiaApiKey = "DYNAMIC_LOADED";
 
 async function callNvidiaFallback(prompt: string, systemPrompt?: string, isJson: boolean = false): Promise<string> {
   const currentKey = getNvidiaApiKey();
-  if (!currentKey && typeof window === "undefined") {
+  if (!currentKey) {
     throw new Error("NVIDIA_API_KEY is not configured.");
   }
   
   const currentModel = getNvidiaSelectedModel();
   console.log(`[NVIDIA NIM Fallback] Invoking ${currentModel} via NVIDIA API...`);
   
-  const endpoint = typeof window !== "undefined"
-    ? "/api/llm/nvidia-chat"
-    : "https://integrate.api.nvidia.com/v1/chat/completions";
-
-  const response = await fetch(endpoint, {
+  const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      ...(typeof window === "undefined"
-        ? { "Authorization": `Bearer ${currentKey}` }
-        : currentKey ? { "x-nvidia-api-key": currentKey } : {})
+      "Authorization": `Bearer ${currentKey}`
     },
     body: JSON.stringify({
       model: currentModel,
@@ -139,64 +81,13 @@ export interface OutreachMessages {
   email_followup: string;
 }
 
-function repairMalformedJson(text: string): string {
-  // Extract JSON from markdown code blocks if present
-  const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/) || 
-                    text.match(/```\n([\s\S]*?)\n```/);
-  let jsonString = jsonMatch ? jsonMatch[1] : text;
-  
-  // Try to find where JSON ends and truncate
-  const lastValidBrace = jsonString.lastIndexOf('}');
-  if (lastValidBrace !== -1 && lastValidBrace < jsonString.length - 1) {
-    jsonString = jsonString.substring(0, lastValidBrace + 1);
-  }
-  
-  // Close any unclosed brackets/braces
-  let openBraces = (jsonString.match(/{/g) || []).length;
-  let closeBraces = (jsonString.match(/}/g) || []).length;
-  while (openBraces > closeBraces) {
-    jsonString += '}';
-    closeBraces++;
-  }
-  
-  let openBrackets = (jsonString.match(/\[/g) || []).length;
-  let closeBrackets = (jsonString.match(/\]/g) || []).length;
-  while (openBrackets > closeBrackets) {
-    jsonString += ']';
-    closeBrackets++;
-  }
-  
-  return jsonString;
-}
-
-async function callGeminiWithRetry<T>(apiCall: () => Promise<T>): Promise<T> {
-  let lastError: any = null;
-  for (let attempt = 0; attempt < 3; attempt++) {
-    try {
-      return await apiCall();
-    } catch (error: any) {
-      const msg = (error.message || String(error)).toLowerCase();
-      const isRateLimit = msg.includes("429") || msg.includes("resource_exhausted") || msg.includes("quota") || msg.includes("limit");
-      if (isRateLimit) {
-        const delay = Math.pow(2, attempt) * 1000;
-        console.warn(`[Gemini API] Quota/Rate limit exceeded (429). Retrying in ${delay}ms... (Attempt ${attempt + 1}/3)`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-        lastError = error;
-        continue;
-      }
-      throw error;
-    }
-  }
-  throw lastError;
-}
-
 // Clean and Parse JSON handles raw control characters / line breaks inside string values in JSON and aggressive conversational wrapping repairs
 function cleanAndParseJSON(jsonStr: string): any {
   if (!jsonStr) {
     throw new Error("JSON string is empty or undefined");
   }
 
-  let cleaned = repairMalformedJson(jsonStr).trim();
+  let cleaned = jsonStr.trim();
 
   // 1. Isolate the core JSON object block using first '{' and last '}' to strip exploratory wrappers
   const firstBrace = cleaned.indexOf('{');
@@ -357,50 +248,35 @@ export async function generateOutreach(lead: any, config: any): Promise<Outreach
   `;
 
   try {
-    if (!isGeminiEnabled()) {
-      throw new Error("Gemini API is disabled by Super Admin");
-    }
-    const aiClient = getAiClient();
-    const activeModel = resolveGeminiModelId(getGeminiSelectedModel());
-    const response = await callGeminiWithRetry(() =>
-      aiClient.models.generateContent({
-        model: activeModel,
-        contents: prompt,
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              whatsapp: { type: Type.STRING },
-              linkedin_connect: { type: Type.STRING },
-              linkedin_dm: { type: Type.STRING },
-              email_subject: { type: Type.STRING },
-              email_body: { type: Type.STRING },
-              email_followup: { type: Type.STRING },
-            },
-            required: ["whatsapp", "linkedin_connect", "linkedin_dm", "email_subject", "email_body", "email_followup"],
-          }
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            whatsapp: { type: Type.STRING },
+            linkedin_connect: { type: Type.STRING },
+            linkedin_dm: { type: Type.STRING },
+            email_subject: { type: Type.STRING },
+            email_body: { type: Type.STRING },
+            email_followup: { type: Type.STRING },
+          },
+          required: ["whatsapp", "linkedin_connect", "linkedin_dm", "email_subject", "email_body", "email_followup"],
         }
-      })
-    );
+      }
+    });
     
     const rawText = (response.text || '');
-    const parsed = cleanAndParseJSON(rawText);
-    if (!parsed || !parsed.whatsapp || !parsed.email_body) {
-      throw new Error("Invalid outreach structure parsed from Gemini");
-    }
-    return parsed as OutreachMessages;
+    return cleanAndParseJSON(rawText) as OutreachMessages;
   } catch (error) {
     console.error("Gemini Generation Error:", error);
-    if (isQuotaOrApiKeyError(error) || !process.env.GEMINI_API_KEY || String(error).includes("structure")) {
+    if (isQuotaOrApiKeyError(error) || !process.env.GEMINI_API_KEY) {
       if (nvidiaApiKey) {
         try {
           const nvidiaResponse = await callNvidiaFallback(prompt, "You are a B2B sales expert writing omnichannel cold outreach. Return a structured JSON object matching the requested schema exactly.", true);
-          const parsedNv = cleanAndParseJSON(nvidiaResponse);
-          if (parsedNv && parsedNv.whatsapp && parsedNv.email_body) {
-            return parsedNv as OutreachMessages;
-          }
-          console.warn("NVIDIA response missing required outreach fields, falling back to mock data");
+          return cleanAndParseJSON(nvidiaResponse) as OutreachMessages;
         } catch (nvError) {
           console.error("NVIDIA Fallback failed for outreach:", nvError);
         }
@@ -536,17 +412,11 @@ export async function generateProspectResearch(companyInput: string): Promise<Pr
   `;
 
   try {
-    if (!isGeminiEnabled()) {
-      throw new Error("Gemini API is disabled by Super Admin");
-    }
-    const aiClient = getAiClient();
-    const activeModel = resolveGeminiModelId(getGeminiSelectedModel());
-    const response = await callGeminiWithRetry(() =>
-      aiClient.models.generateContent({
-        model: activeModel,
-        contents: prompt,
-        config: {
-          responseMimeType: "application/json",
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
           properties: {
@@ -801,26 +671,17 @@ export async function generateProspectResearch(companyInput: string): Promise<Pr
         },
         tools: [{ googleSearch: {} }]
       }
-    })
-  );
+    });
     
     const rawText = (response.text || '');
-    const parsed = cleanAndParseJSON(rawText);
-    if (!parsed || !parsed.companyInfo) {
-      throw new Error("Invalid prospect research structure parsed from Gemini");
-    }
-    return { ...parsed } as ProspectResearchReport;
+    return { ...cleanAndParseJSON(rawText) } as ProspectResearchReport;
   } catch (error) {
     console.error("Prospect Research Generation Error:", error);
-    if (isQuotaOrApiKeyError(error) || !process.env.GEMINI_API_KEY || String(error).includes("structure")) {
+    if (isQuotaOrApiKeyError(error) || !process.env.GEMINI_API_KEY) {
       if (nvidiaApiKey) {
         try {
           const nvidiaResponse = await callNvidiaFallback(prompt, "You are an elite enterprise B2B management consultant and AI solutions architect. Return a structured consulting report JSON.", true);
-          const parsedNv = cleanAndParseJSON(nvidiaResponse);
-          if (parsedNv && parsedNv.companyInfo) {
-            return { ...parsedNv } as ProspectResearchReport;
-          }
-          console.warn("NVIDIA response missing required fields, falling back to mock data");
+          return { ...cleanAndParseJSON(nvidiaResponse) } as ProspectResearchReport;
         } catch (nvError) {
           console.error("NVIDIA Fallback failed for prospect research:", nvError);
         }
@@ -870,17 +731,11 @@ export async function analyzeBenchmarkDrift(leads: any[]): Promise<BenchmarkDrif
   `;
 
   try {
-    if (!isGeminiEnabled()) {
-      throw new Error("Gemini API is disabled by Super Admin");
-    }
-    const aiClient = getAiClient();
-    const activeModel = resolveGeminiModelId(getGeminiSelectedModel());
-    const response = await callGeminiWithRetry(() =>
-      aiClient.models.generateContent({
-        model: activeModel,
-        contents: prompt,
-        config: {
-          responseMimeType: "application/json",
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
           properties: {
@@ -916,26 +771,17 @@ export async function analyzeBenchmarkDrift(leads: any[]): Promise<BenchmarkDrif
           required: ["summary", "keyIssues", "actionableImprovements", "reallocationAdvice"]
         }
       }
-    })
-  );
+    });
 
     const rawText = (response.text || '');
-    const parsed = cleanAndParseJSON(rawText);
-    if (!parsed || !parsed.summary || !parsed.keyIssues) {
-      throw new Error("Invalid benchmark drift structure parsed from Gemini");
-    }
-    return { ...parsed } as BenchmarkDriftAnalysis;
+    return { ...cleanAndParseJSON(rawText) } as BenchmarkDriftAnalysis;
   } catch (error) {
     console.error("Benchmark Drift Analysis Error:", error);
-    if (isQuotaOrApiKeyError(error) || !process.env.GEMINI_API_KEY || String(error).includes("structure")) {
+    if (isQuotaOrApiKeyError(error) || !process.env.GEMINI_API_KEY) {
       if (nvidiaApiKey) {
         try {
           const nvidiaResponse = await callNvidiaFallback(prompt, "You are an elite enterprise B2B sales strategist and CRO consultant. Return a structured JSON report matching the requested schema exactly.", true);
-          const parsedNv = cleanAndParseJSON(nvidiaResponse);
-          if (parsedNv && parsedNv.summary && parsedNv.keyIssues) {
-            return { ...parsedNv } as BenchmarkDriftAnalysis;
-          }
-          console.warn("NVIDIA response missing required benchmark drift fields, falling back to mock data");
+          return { ...cleanAndParseJSON(nvidiaResponse) } as BenchmarkDriftAnalysis;
         } catch (nvError) {
           console.error("NVIDIA Fallback failed for benchmark drift:", nvError);
         }
@@ -962,8 +808,7 @@ function isQuotaOrApiKeyError(err: any): boolean {
     msg.includes("limit") ||
     msg.includes("unauthorized") ||
     msg.includes("fetch") ||
-    msg.includes("cors") ||
-    msg.includes("disabled")
+    msg.includes("cors")
   );
 }
 
