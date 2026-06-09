@@ -316,7 +316,7 @@ export default function App() {
 
   if (!user) {
     if (showLanding) {
-      return <LandingPage onLaunchApp={() => setShowLanding(false)} onGoogleLogin={handleGoogleLogin} onDemoLogin={handleDemoLogin} isAuthenticated={false} theme={theme} setTheme={setTheme} />;
+      return <LandingPage onLaunchApp={handleGoogleLogin} onGoogleLogin={handleGoogleLogin} onDemoLogin={handleDemoLogin} isAuthenticated={false} theme={theme} setTheme={setTheme} />;
     }
     return (
       <div className="min-h-screen bg-bg-primary flex items-center justify-center p-4">
