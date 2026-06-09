@@ -46,22 +46,31 @@ function MainApp({ user, profile, theme, setTheme }: { user: any; profile: UserP
   const [showToast, setShowToast] = useState<{ msg: string; type: string } | null>(null);
   const [campaignName, setCampaignName] = useState('');
   const [showImport, setShowImport] = useState(false);
+  const [showAddLead, setShowAddLead] = useState(false);
+  const [newLead, setNewLead] = useState({ name: '', email: '', company: '', role: '', phone: '', score: 50 });
   const [importData, setImportData] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => { if (showToast) setTimeout(() => setShowToast(null), 3000); }, [showToast]);
   const toast = (msg: string, type = 'success') => setShowToast({ msg, type });
 
-  // Load campaigns and leads from Firestore
+  const loadLeads = async () => {
+    try {
+      const res = await fetch('/api/leads');
+      if (res.ok) { const data = await res.json(); setLeads(data); }
+    } catch {}
+  };
+
+  // Load leads from API on mount
+  useEffect(() => { loadLeads(); }, []);
+
+  // Load campaigns from Firestore for authenticated users
   useEffect(() => {
     if (!user?.uid || user?.isAnonymous) return;
     const unsubCampaigns = onSnapshot(query(collection(db, 'campaigns'), where('userId', '==', user.uid)), snap => {
       setCampaigns(snap.docs.map(d => ({ id: d.id, ...d.data() } as Campaign)));
     });
-    const unsubLeads = onSnapshot(query(collection(db, 'leads'), where('userId', '==', user.uid)), snap => {
-      setLeads(snap.docs.map(d => ({ id: d.id, ...d.data() } as Lead)));
-    });
-    return () => { unsubCampaigns(); unsubLeads(); };
+    return () => { unsubCampaigns(); };
   }, [user]);
 
   const createCampaign = async () => {
@@ -73,6 +82,22 @@ function MainApp({ user, profile, theme, setTheme }: { user: any; profile: UserP
       setCampaigns([...campaigns, newCamp]);
     }
     setCampaignName(''); toast('Campaign created');
+  };
+
+  const addLead = async () => {
+    if (!newLead.name || !newLead.email) { toast('Name and email required', 'error'); return; }
+    try {
+      const res = await fetch('/api/leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...newLead, score: Number(newLead.score), status: 'imported' }),
+      });
+      if (res.ok) {
+        toast('Lead added!'); setShowAddLead(false);
+        setNewLead({ name: '', email: '', company: '', role: '', phone: '', score: 50 });
+        loadLeads();
+      } else { toast('Failed to add lead', 'error'); }
+    } catch { toast('Network error', 'error'); }
   };
 
   const deleteCampaign = async (id: string) => {
@@ -193,25 +218,67 @@ function MainApp({ user, profile, theme, setTheme }: { user: any; profile: UserP
 
             {activeView === 'LEADS' && (
               <PanelWrapper>
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-bold">Leads</h3>
-                  <div className="relative w-64">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
-                    <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search leads..." className="w-full pl-9 pr-4 py-2 bg-bg-primary border border-border rounded-lg text-sm" />
+                <div className="flex items-center justify-between gap-4 flex-wrap">
+                  <h3 className="text-lg font-bold">Leads ({filteredLeads.length})</h3>
+                  <div className="flex items-center gap-2">
+                    <div className="relative w-56">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
+                      <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search leads..." className="w-full pl-9 pr-4 py-2 bg-bg-primary border border-border rounded-lg text-sm" />
+                    </div>
+                    <button onClick={() => setShowAddLead(true)} className="px-4 py-2 bg-brand text-white rounded-lg text-sm font-bold flex items-center gap-1.5"><Plus className="w-4 h-4" /> Add Lead</button>
+                    <button onClick={() => setShowImport(true)} className="px-4 py-2 bg-bg-primary border border-border rounded-lg text-sm hover:border-brand">Import CSV</button>
                   </div>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead><tr className="text-xs text-text-muted border-b border-border"><th className="text-left py-3 px-2">Name</th><th className="text-left py-3 px-2">Company</th><th className="text-left py-3 px-2">Email</th><th className="text-left py-3 px-2">Status</th><th className="text-left py-3 px-2">Score</th></tr></thead>
                     <tbody>
-                      {filteredLeads.map(l => (
+                      {filteredLeads.length === 0 ? (
+                        <tr><td colSpan={5} className="py-8 text-center text-sm text-text-muted">No leads yet. Click "Add Lead" or import a CSV.</td></tr>
+                      ) : filteredLeads.map(l => (
                         <tr key={l.id} className="border-b border-border hover:bg-bg-secondary/50"><td className="py-3 px-2 font-medium">{l.name}</td><td className="py-3 px-2 text-text-muted">{l.company}</td><td className="py-3 px-2 text-text-muted">{l.email}</td><td className="py-3 px-2"><span className={`px-2 py-0.5 rounded text-xs ${l.status === 'sent' ? 'bg-green-500/20 text-green-400' : l.status === 'generated' ? 'bg-blue-500/20 text-blue-400' : 'bg-gray-500/20 text-gray-400'}`}>{l.status}</span></td><td className="py-3 px-2"><span className="text-brand font-bold">{l.score}</span></td></tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
-                <button onClick={() => setShowImport(true)} className="px-4 py-2 bg-bg-primary border border-border rounded-lg text-sm hover:border-brand">Import CSV</button>
               </PanelWrapper>
+            )}
+
+            {/* Add Lead Modal */}
+            {showAddLead && (
+              <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+                <div className="bg-surface border border-border rounded-2xl max-w-md w-full p-6 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-bold"><Plus className="w-4 h-4 inline" /> New Lead</h3>
+                    <button onClick={() => setShowAddLead(false)} className="p-1"><X className="w-4 h-4" /></button>
+                  </div>
+                  <input value={newLead.name} onChange={e => setNewLead({ ...newLead, name: e.target.value })} placeholder="Full Name *" className="w-full px-3 py-2 bg-bg-primary border border-border rounded-lg text-sm" />
+                  <input value={newLead.email} onChange={e => setNewLead({ ...newLead, email: e.target.value })} placeholder="Email *" className="w-full px-3 py-2 bg-bg-primary border border-border rounded-lg text-sm" />
+                  <div className="grid grid-cols-2 gap-3">
+                    <input value={newLead.company} onChange={e => setNewLead({ ...newLead, company: e.target.value })} placeholder="Company" className="w-full px-3 py-2 bg-bg-primary border border-border rounded-lg text-sm" />
+                    <input value={newLead.role} onChange={e => setNewLead({ ...newLead, role: e.target.value })} placeholder="Job Title" className="w-full px-3 py-2 bg-bg-primary border border-border rounded-lg text-sm" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <input value={newLead.phone} onChange={e => setNewLead({ ...newLead, phone: e.target.value })} placeholder="Phone" className="w-full px-3 py-2 bg-bg-primary border border-border rounded-lg text-sm" />
+                    <div><label className="text-xs text-text-muted block mb-1">Score: {newLead.score}</label>
+                    <input type="range" min="0" max="100" value={newLead.score} onChange={e => setNewLead({ ...newLead, score: Number(e.target.value) })} className="w-full" /></div>
+                  </div>
+                  <div className="flex justify-end gap-2 pt-2">
+                    <button onClick={() => setShowAddLead(false)} className="px-4 py-2 rounded-lg bg-bg-secondary text-sm">Cancel</button>
+                    <button onClick={addLead} className="px-4 py-2 rounded-lg bg-brand text-white text-sm font-bold">Add Lead</button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* CSV Import Modal */}
+            {showImport && (
+              <SmartCsvImportModal
+                onClose={() => setShowImport(false)}
+                onImportComplete={(rows, summary) => { toast(`Imported ${rows.length} leads`); setShowImport(false); loadLeads(); }}
+                existingLeads={leads}
+                showToast={toast}
+              />
             )}
 
             {activeView === 'CONTACTS' && (
