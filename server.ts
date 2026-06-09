@@ -953,6 +953,45 @@ async function startServer() {
   });
 
   // Composio.dev API Integrations Proxy Routes
+  // Proxy route for NVIDIA NIM API (bypasses browser CORS)
+  app.post("/api/ai/nvidia", express.json(), async (req, res) => {
+    const nvidiaKey = process.env.NVIDIA_API_KEY;
+    if (!nvidiaKey) {
+      return res.status(400).json({ error: "NVIDIA_API_KEY not configured on server" });
+    }
+    const { model, messages, systemPrompt, temperature, max_tokens, top_p, frequency_penalty, presence_penalty, response_format } = req.body;
+    try {
+      const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${nvidiaKey}`,
+        },
+        body: JSON.stringify({
+          model: model || "google/gemma-3n-e2b-it",
+          messages: [
+            ...(systemPrompt ? [{ role: "system", content: systemPrompt }] : []),
+            ...(messages || []),
+          ],
+          ...(temperature !== undefined ? { temperature } : { temperature: 0.20 }),
+          ...(max_tokens !== undefined ? { max_tokens } : { max_tokens: 3000 }),
+          ...(top_p !== undefined ? { top_p } : {}),
+          ...(frequency_penalty !== undefined ? { frequency_penalty } : {}),
+          ...(presence_penalty !== undefined ? { presence_penalty } : {}),
+          ...(response_format ? { response_format } : {}),
+        }),
+      });
+      if (!response.ok) {
+        const errorBody = await response.text();
+        return res.status(response.status).json({ error: errorBody });
+      }
+      const data = await response.json();
+      res.json(data);
+    } catch (err: any) {
+      res.status(502).json({ error: err.message || "NVIDIA proxy failed" });
+    }
+  });
+
   app.get("/api/composio/key", (req, res) => {
     const key = getComposioApiKey();
     const masked = key.length > 8 ? `${key.substring(0, 6)}...${key.substring(key.length - 4)}` : "None";

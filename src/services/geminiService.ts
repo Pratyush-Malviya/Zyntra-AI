@@ -30,26 +30,16 @@ export function getNvidiaSelectedModel(): string {
 const nvidiaApiKey = "DYNAMIC_LOADED";
 
 async function callNvidiaFallback(prompt: string, systemPrompt?: string, isJson: boolean = false): Promise<string> {
-  const currentKey = getNvidiaApiKey();
-  if (!currentKey) {
-    throw new Error("NVIDIA_API_KEY is not configured.");
-  }
-  
   const currentModel = getNvidiaSelectedModel();
-  console.log(`[NVIDIA NIM Fallback] Invoking ${currentModel} via NVIDIA API...`);
+  console.log(`[NVIDIA NIM Fallback] Invoking ${currentModel} via server proxy...`);
   
-  const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+  const response = await fetch("/api/ai/nvidia", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${currentKey}`
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       model: currentModel,
-      messages: [
-        ...(systemPrompt ? [{ role: "system", content: systemPrompt }] : []),
-        { role: "user", content: prompt }
-      ],
+      messages: [{ role: "user", content: prompt }],
+      systemPrompt,
       temperature: 0.20,
       max_tokens: 3000,
       top_p: 0.70,
@@ -61,12 +51,12 @@ async function callNvidiaFallback(prompt: string, systemPrompt?: string, isJson:
 
   if (!response.ok) {
     const errorBody = await response.text();
-    throw new Error(`NVIDIA API response error (${response.status}): ${errorBody}`);
+    throw new Error(`NVIDIA proxy response error (${response.status}): ${errorBody}`);
   }
 
   const data = await response.json();
   if (!data?.choices?.[0]?.message?.content) {
-    throw new Error("Invalid response format received from NVIDIA API.");
+    throw new Error("Invalid response format received from NVIDIA proxy.");
   }
 
   return data.choices[0].message.content;
