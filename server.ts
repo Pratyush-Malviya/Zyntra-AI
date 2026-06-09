@@ -48,6 +48,7 @@ interface Deal {
   leadId: string;
   title: string;
   value: number;
+  currency?: string;
   stage: string; // custom stages are dynamic now
   createdAt: string;
   assignedAgent?: string;
@@ -508,9 +509,21 @@ let leads: Lead[] = [
 ];
 
 let deals: Deal[] = [
-  { id: "deal-1", orgId: "org-default", leadId: "lead-1", title: "Enterprise Outreach Partnership", value: 45000, stage: "stage-lead", createdAt: new Date().toISOString(), assignedAgent: "sarah@growthco.io", tags: ["B2B"], status: "hot" },
-  { id: "deal-2", orgId: "org-default", leadId: "lead-3", title: "Global Sales Outsourcing Bundle", value: 120000, stage: "stage-active", createdAt: new Date().toISOString(), assignedAgent: "james@nairobistaff.co.ke", tags: ["Recruiting"], status: "warm" }
+  { id: "deal-1", orgId: "org-default", leadId: "lead-1", title: "Enterprise Outreach Partnership", value: 45000, currency: "USD", stage: "stage-lead", createdAt: new Date().toISOString(), assignedAgent: "sarah@growthco.io", tags: ["B2B"], status: "hot" },
+  { id: "deal-2", orgId: "org-default", leadId: "lead-3", title: "Global Sales Outsourcing Bundle", value: 120000, currency: "USD", stage: "stage-active", createdAt: new Date().toISOString(), assignedAgent: "james@nairobistaff.co.ke", tags: ["Recruiting"], status: "warm" }
 ];
+
+interface DbAccount { id: string; name: string; industry: string; website: string; phone: string; email: string; city: string; country: string; employees: number; createdAt: string; }
+interface DbContact { id: string; firstName: string; lastName: string; email: string; phone: string; jobTitle: string; company: string; linkedin: string; city: string; country: string; status: string; createdAt: string; }
+interface DbCase { id: string; subject: string; status: string; priority: string; type: string; contactName: string; accountName: string; createdAt: string; }
+interface DbProject { id: string; name: string; status: string; priority: string; owner: string; progress: number; targetDate: string; createdAt: string; }
+interface DbQuote { id: string; number: string; type: string; title: string; accountName: string; amount: number; currency: string; status: string; dueDate: string; createdAt: string; }
+
+let dbAccounts: DbAccount[] = [];
+let dbContacts: DbContact[] = [];
+let dbCases: DbCase[] = [];
+let dbProjects: DbProject[] = [];
+let dbQuotes: DbQuote[] = [];
 
 let pipelines: Pipeline[] = [
   {
@@ -1695,6 +1708,91 @@ async function startServer() {
 
     apiKeys.splice(idx, 1);
     res.json({ success: true, message: "API Credentials revoked permanently." });
+  });
+
+  // REST API: Accounts CRUD
+  app.get("/api/accounts", (req, res) => res.json(dbAccounts));
+  app.post("/api/accounts", (req, res) => {
+    const acc: DbAccount = { id: "acc-" + Date.now(), ...req.body, createdAt: new Date().toISOString() };
+    dbAccounts.push(acc); res.status(201).json(acc);
+  });
+  app.put("/api/accounts/:id", (req, res) => {
+    const idx = dbAccounts.findIndex(a => a.id === req.params.id);
+    if (idx === -1) return res.status(404).json({ error: "Not found" });
+    dbAccounts[idx] = { ...dbAccounts[idx], ...req.body };
+    res.json(dbAccounts[idx]);
+  });
+  app.delete("/api/accounts/:id", (req, res) => {
+    dbAccounts = dbAccounts.filter(a => a.id !== req.params.id);
+    res.json({ success: true });
+  });
+
+  // REST API: Contacts CRUD
+  app.get("/api/contacts", (req, res) => res.json(dbContacts));
+  app.post("/api/contacts", (req, res) => {
+    const c: DbContact = { id: "con-" + Date.now(), ...req.body, createdAt: new Date().toISOString() };
+    dbContacts.push(c); res.status(201).json(c);
+  });
+  app.put("/api/contacts/:id", (req, res) => {
+    const idx = dbContacts.findIndex(c => c.id === req.params.id);
+    if (idx === -1) return res.status(404).json({ error: "Not found" });
+    dbContacts[idx] = { ...dbContacts[idx], ...req.body };
+    res.json(dbContacts[idx]);
+  });
+  app.delete("/api/contacts/:id", (req, res) => {
+    dbContacts = dbContacts.filter(c => c.id !== req.params.id);
+    res.json({ success: true });
+  });
+
+  // REST API: Cases CRUD
+  app.get("/api/cases", (req, res) => res.json(dbCases));
+  app.post("/api/cases", (req, res) => {
+    const c: DbCase = { id: "case-" + Date.now(), ...req.body, createdAt: new Date().toISOString() };
+    dbCases.push(c); res.status(201).json(c);
+  });
+  app.put("/api/cases/:id", (req, res) => {
+    const idx = dbCases.findIndex(c => c.id === req.params.id);
+    if (idx === -1) return res.status(404).json({ error: "Not found" });
+    dbCases[idx] = { ...dbCases[idx], ...req.body };
+    res.json(dbCases[idx]);
+  });
+  app.delete("/api/cases/:id", (req, res) => {
+    dbCases = dbCases.filter(c => c.id !== req.params.id);
+    res.json({ success: true });
+  });
+
+  // REST API: Projects CRUD
+  app.get("/api/projects", (req, res) => res.json(dbProjects));
+  app.post("/api/projects", (req, res) => {
+    const p: DbProject = { id: "proj-" + Date.now(), ...req.body, createdAt: new Date().toISOString() };
+    dbProjects.push(p); res.status(201).json(p);
+  });
+  app.put("/api/projects/:id", (req, res) => {
+    const idx = dbProjects.findIndex(p => p.id === req.params.id);
+    if (idx === -1) return res.status(404).json({ error: "Not found" });
+    dbProjects[idx] = { ...dbProjects[idx], ...req.body };
+    res.json(dbProjects[idx]);
+  });
+  app.delete("/api/projects/:id", (req, res) => {
+    dbProjects = dbProjects.filter(p => p.id !== req.params.id);
+    res.json({ success: true });
+  });
+
+  // REST API: Quotes CRUD
+  app.get("/api/quotes", (req, res) => res.json(dbQuotes));
+  app.post("/api/quotes", (req, res) => {
+    const q: DbQuote = { id: "qte-" + Date.now(), ...req.body, createdAt: new Date().toISOString() };
+    dbQuotes.push(q); res.status(201).json(q);
+  });
+  app.put("/api/quotes/:id", (req, res) => {
+    const idx = dbQuotes.findIndex(q => q.id === req.params.id);
+    if (idx === -1) return res.status(404).json({ error: "Not found" });
+    dbQuotes[idx] = { ...dbQuotes[idx], ...req.body };
+    res.json(dbQuotes[idx]);
+  });
+  app.delete("/api/quotes/:id", (req, res) => {
+    dbQuotes = dbQuotes.filter(q => q.id !== req.params.id);
+    res.json({ success: true });
   });
 
   // REST API: CRM Sync Logs (Task 1)

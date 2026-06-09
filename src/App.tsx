@@ -55,7 +55,8 @@ import {
   Cpu,
   List,
   Kanban,
-  Search
+  Search,
+  GitBranch
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -77,6 +78,15 @@ const OrgAdminPanel = React.lazy(() => import('./components/OrgAdminPanel').then
 const ManagerWorkspacePanel = React.lazy(() => import('./components/ManagerWorkspacePanel').then(m => ({ default: m.ManagerWorkspacePanel })));
 const AeWorkspacePanel = React.lazy(() => import('./components/AeWorkspacePanel').then(m => ({ default: m.AeWorkspacePanel })));
 const SdrWorkspacePanel = React.lazy(() => import('./components/SdrWorkspacePanel').then(m => ({ default: m.SdrWorkspacePanel })));
+const WebhooksPanel = React.lazy(() => import('./components/WebhooksPanel').then(m => ({ default: m.WebhooksPanel })));
+const KnowledgeBasePanel = React.lazy(() => import('./components/KnowledgeBasePanel').then(m => ({ default: m.KnowledgeBasePanel })));
+const AccountsPanel = React.lazy(() => import('./components/AccountsPanel').then(m => ({ default: m.AccountsPanel })));
+const ContactsPanel = React.lazy(() => import('./components/ContactsPanel').then(m => ({ default: m.ContactsPanel })));
+const CasesPanel = React.lazy(() => import('./components/CasesPanel').then(m => ({ default: m.CasesPanel })));
+const ProjectsPanel = React.lazy(() => import('./components/ProjectsPanel').then(m => ({ default: m.ProjectsPanel })));
+const QuotesPanel = React.lazy(() => import('./components/QuotesPanel').then(m => ({ default: m.QuotesPanel })));
+const WorkflowPanel = React.lazy(() => import('./components/WorkflowPanel').then(m => ({ default: m.WorkflowPanel })));
+const PortalPreview = React.lazy(() => import('./components/PortalPreview').then(m => ({ default: m.PortalPreview })));
 import { 
   auth, 
   db, 
@@ -2349,6 +2359,22 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
             </div>
           )}
 
+          {/* TIER 5 — SuiteCRM Features (always visible) */}
+          <div className="space-y-1.5">
+            <div className="px-3 py-1 text-[8px] font-extrabold text-[#34d399] uppercase tracking-widest bg-emerald-500/10 border border-emerald-500/20 rounded-md mb-2 text-center">
+              MODULES — Accounts & CRM
+            </div>
+            <NavButton active={activeView === 'ACCOUNTS'} onClick={() => { setActiveView('ACCOUNTS'); setIsMobileMenuOpen(false); }} icon={Building} label="Accounts" subLabel="Organizations & companies" isCollapsed={isMenuCollapsed} />
+            <NavButton active={activeView === 'CONTACTS'} onClick={() => { setActiveView('CONTACTS'); setIsMobileMenuOpen(false); }} icon={Users} label="Contacts" subLabel="People directory" isCollapsed={isMenuCollapsed} />
+            <NavButton active={activeView === 'CASES'} onClick={() => { setActiveView('CASES'); setIsMobileMenuOpen(false); }} icon={MessageSquare} label="Cases" subLabel="Support tickets" isCollapsed={isMenuCollapsed} />
+            <NavButton active={activeView === 'PROJECTS'} onClick={() => { setActiveView('PROJECTS'); setIsMobileMenuOpen(false); }} icon={FileText} label="Projects" subLabel="Task & milestone tracker" isCollapsed={isMenuCollapsed} />
+            <NavButton active={activeView === 'QUOTES'} onClick={() => { setActiveView('QUOTES'); setIsMobileMenuOpen(false); }} icon={DollarSign} label="Quotes & Billing" subLabel="Quotes, invoices, contracts" isCollapsed={isMenuCollapsed} />
+            <NavButton active={activeView === 'WORKFLOWS'} onClick={() => { setActiveView('WORKFLOWS'); setIsMobileMenuOpen(false); }} icon={GitBranch} label="Workflows" subLabel="Automation rules" isCollapsed={isMenuCollapsed} />
+            <NavButton active={activeView === 'WEBHOOKS'} onClick={() => { setActiveView('WEBHOOKS'); setIsMobileMenuOpen(false); }} icon={Globe} label="Webhooks" subLabel="HTTP callbacks" isCollapsed={isMenuCollapsed} />
+            <NavButton active={activeView === 'KNOWLEDGE_BASE'} onClick={() => { setActiveView('KNOWLEDGE_BASE'); setIsMobileMenuOpen(false); }} icon={Database} label="Knowledge Base" subLabel="AI context docs" isCollapsed={isMenuCollapsed} />
+            <NavButton active={activeView === 'PORTAL'} onClick={() => { setActiveView('PORTAL'); setIsMobileMenuOpen(false); }} icon={ExternalLink} label="Customer Portal" subLabel="Self-service preview" isCollapsed={isMenuCollapsed} />
+          </div>
+
           <div className="pt-2 mt-2 border-t border-border-subtle">
             <NavButton 
               active={activeView === 'SETTINGS'} 
@@ -2425,7 +2451,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
             <div className="hidden xs:block md:hidden w-px h-5 bg-border-subtle shrink-0" />
 
             <h2 className="text-xs md:text-sm font-bold uppercase tracking-[0.1em] md:tracking-[0.2em] text-text-muted truncate min-w-0 flex-1 md:flex-none">
-              {activeView === 'OUTREACH' ? 'Outreach' : activeView === 'RESEARCH' ? 'Research' : activeView === 'ANALYTICS' ? 'Pipeline Health' : activeView === 'TEAM_ADMIN' ? 'Team' : activeView === 'SETTINGS' ? 'Settings' : 'Admin'}
+              {activeView === 'OUTREACH' ? 'Outreach' : activeView === 'RESEARCH' ? 'Research' : activeView === 'ANALYTICS' ? 'Pipeline Health' : activeView === 'TEAM_ADMIN' ? 'Team' : activeView === 'SETTINGS' ? 'Settings' : activeView === 'ACCOUNTS' ? 'Accounts' : activeView === 'CONTACTS' ? 'Contacts' : activeView === 'CASES' ? 'Cases' : activeView === 'PROJECTS' ? 'Projects' : activeView === 'QUOTES' ? 'Quotes & Billing' : activeView === 'WORKFLOWS' ? 'Workflows' : activeView === 'WEBHOOKS' ? 'Webhooks' : activeView === 'KNOWLEDGE_BASE' ? 'Knowledge Base' : activeView === 'PORTAL' ? 'Customer Portal' : 'Admin'}
             </h2>
             {activeView === 'OUTREACH' && currentCampaign && (
               <>
@@ -4536,6 +4562,15 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
         </div>
       </ErrorBoundary>
     )}
+    {activeView === 'ACCOUNTS' && <ErrorBoundary key="accounts"><div className="bg-surface border border-border rounded-[24px] md:rounded-[32px] p-5 md:p-8 max-w-7xl mx-auto"><AccountsPanel showToast={showToast} /></div></ErrorBoundary>}
+    {activeView === 'CONTACTS' && <ErrorBoundary key="contacts"><div className="bg-surface border border-border rounded-[24px] md:rounded-[32px] p-5 md:p-8 max-w-7xl mx-auto"><ContactsPanel showToast={showToast} /></div></ErrorBoundary>}
+    {activeView === 'CASES' && <ErrorBoundary key="cases"><div className="bg-surface border border-border rounded-[24px] md:rounded-[32px] p-5 md:p-8 max-w-7xl mx-auto"><CasesPanel showToast={showToast} /></div></ErrorBoundary>}
+    {activeView === 'PROJECTS' && <ErrorBoundary key="projects"><div className="bg-surface border border-border rounded-[24px] md:rounded-[32px] p-5 md:p-8 max-w-7xl mx-auto"><ProjectsPanel showToast={showToast} /></div></ErrorBoundary>}
+    {activeView === 'QUOTES' && <ErrorBoundary key="quotes"><div className="bg-surface border border-border rounded-[24px] md:rounded-[32px] p-5 md:p-8 max-w-7xl mx-auto"><QuotesPanel showToast={showToast} /></div></ErrorBoundary>}
+    {activeView === 'WORKFLOWS' && <ErrorBoundary key="workflows"><div className="bg-surface border border-border rounded-[24px] md:rounded-[32px] p-5 md:p-8 max-w-7xl mx-auto"><WorkflowPanel showToast={showToast} /></div></ErrorBoundary>}
+    {activeView === 'WEBHOOKS' && <ErrorBoundary key="webhooks"><div className="bg-surface border border-border rounded-[24px] md:rounded-[32px] p-5 md:p-8 max-w-7xl mx-auto"><WebhooksPanel showToast={showToast} /></div></ErrorBoundary>}
+    {activeView === 'KNOWLEDGE_BASE' && <ErrorBoundary key="knowledge"><div className="bg-surface border border-border rounded-[24px] md:rounded-[32px] p-5 md:p-8 max-w-7xl mx-auto"><KnowledgeBasePanel showToast={showToast} /></div></ErrorBoundary>}
+    {activeView === 'PORTAL' && <ErrorBoundary key="portal"><div className="bg-surface border border-border rounded-[24px] md:rounded-[32px] p-5 md:p-8 max-w-7xl mx-auto"><PortalPreview showToast={showToast} /></div></ErrorBoundary>}
   </Suspense>
   </main>
   <footer className="py-8 border-t border-border-subtle/50 mt-auto">
