@@ -1,4 +1,7 @@
 {
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "devCommand": "npm run dev",
   "functions": {
     "api/index.js": {
       "runtime": "@vercel/node@3"
