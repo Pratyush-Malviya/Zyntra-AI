@@ -1,11 +1,14 @@
 {
-  "builds": [
-    {
-      "src": "dist/server.cjs",
-      "use": "@vercel/node"
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "functions": {
+    "api/index.js": {
+      "runtime": "@vercel/node@3"
     }
-  ],
+  },
   "routes": [
-    { "src": "/(.*)", "dest": "dist/server.cjs" }
+    { "src": "/favicon.ico", "dest": "/favicon.ico" },
+    { "src": "/api/(.*)", "dest": "api/index.js" },
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }

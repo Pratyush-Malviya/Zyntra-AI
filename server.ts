@@ -2878,3 +2878,4 @@ Raw Rows Data: ${JSON.stringify(rows.slice(0, 50))} (Analyze and clean up to the
 
 startServer();
 export default app;
+module.exports = app; // CJS export for esbuild bundle (used by Vercel)
