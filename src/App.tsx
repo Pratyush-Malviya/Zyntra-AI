@@ -4457,6 +4457,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
         <AutonomousProspectingPanel 
           leads={leads.filter(l => l.status === 'generated')} 
           showToast={showToast} 
+          currentCampaignId={currentCampaign?.id}
         />
       </div>
     )}

@@ -1313,31 +1313,47 @@ async function startServer() {
 
     autonomousAgentStatus = "running";
     
-    const targetIndustries = ["SaaS", "Fintech", "Healthcare", "E-commerce", "Logistics", "AI Tools"];
-    const targetRoles = ["CEO", "VP of RevOps", "CTO", "Head of Sales", "Founder"];
+    const defaultIndustries = ["SaaS", "Fintech", "Healthcare", "E-commerce", "Logistics", "AI Tools"];
+    const defaultRoles = ["CEO", "VP of RevOps", "CTO", "Head of Sales", "Founder"];
+
+    const targetIndustries = (req.body.industries && req.body.industries.length > 0) ? req.body.industries : defaultIndustries;
+    const targetRoles = (req.body.roles && req.body.roles.length > 0) ? req.body.roles : defaultRoles;
+
+    const firstNames = ["James", "Emma", "Liam", "Olivia", "Noah", "Ava", "William", "Sophia", "Lucas", "Isabella", "Benjamin", "Mia", "Alexander", "Charlotte", "Henry", "Amelia", "Michael", "Evelyn", "Daniel", "Abigail", "Matthew", "Harper", "Samuel", "Emily", "David", "Elizabeth"];
+    const lastNames = ["Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis", "Rodriguez", "Martinez", "Hernandez", "Lopez", "Gonzalez", "Wilson", "Anderson", "Thomas", "Taylor", "Moore", "Jackson", "Martin", "Lee", "Perez", "Thompson", "White", "Harris"];
+    const companyPrefixes = ["Acme", "Global", "Nova", "Apex", "Zenith", "Quantum", "Nexus", "Summit", "Vanguard", "Pinnacle", "Elevate", "Synergy", "Catalyst", "Horizon", "Strata", "Aurora", "Echo", "Lumina"];
+    const companySuffixes = ["Solutions", "Technologies", "Systems", "Corp", "Inc", "Group", "Dynamics", "Partners", "Innovations", "Networks", "Enterprises", "Consulting", "Ventures", "Digital", "Data"];
 
     autonomousAgentInterval = setInterval(() => {
       const industry = targetIndustries[Math.floor(Math.random() * targetIndustries.length)];
       const role = targetRoles[Math.floor(Math.random() * targetRoles.length)];
-      const nameStr = Math.random().toString(36).substring(7);
-      const companyStr = industry + " " + Math.random().toString(36).substring(5) + " LLC";
+      
+      const fn = firstNames[Math.floor(Math.random() * firstNames.length)];
+      const ln = lastNames[Math.floor(Math.random() * lastNames.length)];
+      const nameStr = `${fn} ${ln}`;
+      
+      const cp = companyPrefixes[Math.floor(Math.random() * companyPrefixes.length)];
+      const cs = companySuffixes[Math.floor(Math.random() * companySuffixes.length)];
+      const companyStr = `${cp} ${cs}`;
+
+      const domain = `${cp.toLowerCase()}${cs.toLowerCase()}.com`;
 
       const newLead: Lead = {
         id: "lead-" + Math.random().toString(36).substr(2, 9),
         orgId,
         userId,
         campaignId: "camp-default",
-        name: "Auto " + nameStr,
-        email: "contact@" + companyStr.replace(/\s+/g, '').toLowerCase() + ".com",
+        name: nameStr,
+        email: `${fn.toLowerCase()}.${ln.toLowerCase()}@${domain}`,
         phone: "+1 " + Math.floor(1000000000 + Math.random() * 9000000000).toString(),
         company: companyStr,
         role: role,
         status: "generated", 
-        score: Math.floor(60 + Math.random() * 40),
+        score: Math.floor(65 + Math.random() * 35),
         assignedAgent: "AI Agent",
         industry: industry,
         country: "United States",
-        linkedin_url: "https://linkedin.com/in/auto-" + nameStr
+        linkedin_url: `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(nameStr + ' ' + companyStr)}`
       };
       
       leads.unshift(newLead);

@@ -1,17 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { Target, Cpu, Loader2, Database, ExternalLink, CheckCircle2, UserCheck, ShieldCheck } from 'lucide-react';
+import { Target, Cpu, Loader2, Database, ExternalLink, Plus } from 'lucide-react';
 import { motion } from 'motion/react';
+import { db } from '../firebase';
+import { collection, addDoc } from 'firebase/firestore';
 
 interface AutonomousProspectingPanelProps {
   leads: any[];
   showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void;
+  currentCampaignId?: string;
 }
 
-export default function AutonomousProspectingPanel({ leads, showToast }: AutonomousProspectingPanelProps) {
+export default function AutonomousProspectingPanel({ leads, showToast, currentCampaignId }: AutonomousProspectingPanelProps) {
   const [autonomousAgentStatus, setAutonomousAgentStatus] = useState<'running' | 'stopped'>('stopped');
   const [togglingAgent, setTogglingAgent] = useState(false);
   const [agentLogs, setAgentLogs] = useState<string[]>([]);
   const [fetchedLeads, setFetchedLeads] = useState<any[]>([]);
+  const [icpIndustries, setIcpIndustries] = useState('SaaS, Fintech, AI');
+  const [icpRoles, setIcpRoles] = useState('CEO, CTO, VP of RevOps');
 
   useEffect(() => {
     fetch('/api/agents/autonomous-prospecting/status')
@@ -37,6 +42,25 @@ export default function AutonomousProspectingPanel({ leads, showToast }: Autonom
 
   const displayLeads = fetchedLeads.length > 0 ? fetchedLeads : leads;
 
+  const handleAddToLeadList = async (lead: any) => {
+    try {
+      await addDoc(collection(db, 'leads'), {
+        ...lead,
+        campaignId: currentCampaignId || 'camp-default',
+        status: 'imported', // move from 'generated' to 'imported' to show in main pipeline
+        createdAt: new Date().toISOString()
+      });
+      showToast(`${lead.name} added to your product lead list!`, 'success');
+      
+      // Remove from backend generated feed
+      await fetch(`/api/leads/${lead.id}`, { method: 'DELETE' });
+      setFetchedLeads(prev => prev.filter(l => l.id !== lead.id));
+    } catch (err) {
+      console.error(err);
+      showToast(`Failed to add lead: ${lead.name}`, 'error');
+    }
+  };
+
   const toggleAutonomousAgent = async () => {
     setTogglingAgent(true);
     try {
@@ -44,7 +68,14 @@ export default function AutonomousProspectingPanel({ leads, showToast }: Autonom
         ? '/api/agents/autonomous-prospecting/stop' 
         : '/api/agents/autonomous-prospecting/start';
       
-      const res = await fetch(endpoint, { method: 'POST' });
+      const res = await fetch(endpoint, { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          industries: icpIndustries.split(',').map(s => s.trim()).filter(Boolean),
+          roles: icpRoles.split(',').map(s => s.trim()).filter(Boolean)
+        })
+      });
       if (res.ok) {
         setAutonomousAgentStatus(autonomousAgentStatus === 'running' ? 'stopped' : 'running');
         showToast(autonomousAgentStatus === 'running' ? 'Autonomous Agent stopped' : 'Autonomous Agent started!', 'success');
@@ -87,6 +118,29 @@ export default function AutonomousProspectingPanel({ leads, showToast }: Autonom
             <p className="text-xs text-text-muted leading-relaxed">
               Enable the background autonomous agent to continuously prospect target verticals and generate ideal leads for your campaigns using LLM intelligence. Data syncs directly to your workspace.
             </p>
+
+            <div className="space-y-4 pb-2 border-t border-border pt-4">
+              <div className="space-y-1.5">
+                <label className="text-[10px] text-text-muted font-bold uppercase tracking-widest">Ideal Customer Profile: Industries</label>
+                <input 
+                  value={icpIndustries} 
+                  onChange={e => setIcpIndustries(e.target.value)} 
+                  disabled={autonomousAgentStatus === 'running'}
+                  className="w-full bg-bg border border-border focus:border-brand rounded-xl p-3 text-sm outline-none transition-all placeholder:text-text-muted/50 disabled:opacity-50" 
+                  placeholder="e.g. SaaS, Fintech"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] text-text-muted font-bold uppercase tracking-widest">Ideal Customer Profile: Roles</label>
+                <input 
+                  value={icpRoles} 
+                  onChange={e => setIcpRoles(e.target.value)} 
+                  disabled={autonomousAgentStatus === 'running'}
+                  className="w-full bg-bg border border-border focus:border-brand rounded-xl p-3 text-sm outline-none transition-all placeholder:text-text-muted/50 disabled:opacity-50" 
+                  placeholder="e.g. CEO, CTO"
+                />
+              </div>
+            </div>
 
             <button
               onClick={toggleAutonomousAgent}
@@ -144,40 +198,48 @@ export default function AutonomousProspectingPanel({ leads, showToast }: Autonom
                   </div>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {displayLeads.map((lead, idx) => (
-                    <motion.div 
-                      key={lead.id || idx}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="bg-bg border border-border hover:border-brand/40 transition-all p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-                    >
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-bold text-sm">{lead.name}</span>
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-brand/10 text-brand font-bold uppercase">
-                            Score: {lead.score || 0}
-                          </span>
-                        </div>
-                        <div className="text-xs text-text-muted flex flex-wrap items-center gap-x-2 gap-y-1">
-                          <span className="font-medium text-slate-300">{lead.role}</span>
-                          <span className="text-[10px] opacity-40">•</span>
-                          <span>{lead.company}</span>
-                          <span className="text-[10px] opacity-40">•</span>
-                          <span>{lead.industry}</span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-3 text-xs shrink-0">
-                        <div className="flex flex-col items-end">
-                          <span className="text-text-muted">{lead.email}</span>
-                          <a href={lead.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-brand hover:underline flex items-center gap-1 mt-0.5">
-                            LinkedIn Profile <ExternalLink className="w-3 h-3" />
-                          </a>
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
+                <div className="w-full overflow-x-auto rounded-xl border border-border custom-scrollbar">
+                  <table className="w-full text-left text-sm whitespace-nowrap">
+                    <thead className="bg-surface-alt text-xs uppercase text-text-muted">
+                      <tr>
+                        <th className="px-4 py-3 font-medium">Name</th>
+                        <th className="px-4 py-3 font-medium">Role</th>
+                        <th className="px-4 py-3 font-medium">Company</th>
+                        <th className="px-4 py-3 font-medium">Industry</th>
+                        <th className="px-4 py-3 font-medium text-center">Score</th>
+                        <th className="px-4 py-3 font-medium text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {displayLeads.map((lead, idx) => (
+                        <tr key={lead.id || idx} className="hover:bg-brand/5 transition-colors">
+                          <td className="px-4 py-3 font-medium flex items-center gap-2">
+                            {lead.name}
+                            <a href={lead.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-brand hover:text-brand-alt" title="LinkedIn Profile">
+                              <ExternalLink className="w-3 h-3" />
+                            </a>
+                          </td>
+                          <td className="px-4 py-3 text-text-muted">{lead.role}</td>
+                          <td className="px-4 py-3">{lead.company}</td>
+                          <td className="px-4 py-3 text-text-muted">{lead.industry}</td>
+                          <td className="px-4 py-3 text-center">
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-brand/10 text-brand font-bold uppercase">
+                              {lead.score || 0}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <button
+                              onClick={() => handleAddToLeadList(lead)}
+                              className="bg-surface-alt hover:bg-brand/20 text-brand border border-brand/30 px-3 py-1.5 rounded-lg text-xs font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer"
+                            >
+                              <Plus className="w-3 h-3" />
+                              Add
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>
