@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, Component } from 'react';
+import React, { useState, useEffect, useRef, Suspense, Component } from 'react';
 import * as XLSX from 'xlsx';
 import { 
   Settings, 
@@ -61,21 +61,22 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { motion, AnimatePresence } from 'motion/react';
 import { generateOutreach, OutreachMessages } from './services/geminiService';
-import AutonomousProspectingPanel from './components/AutonomousProspectingPanel';
-import ProspectResearchPanel from './components/ProspectResearchPanel';
-import LeadScoreHistogram from './components/LeadScoreHistogram';
 import LandingPage from './components/LandingPage';
-import { SuperAdminDashboard as SuperAdminPanel } from './components/SuperAdminDashboard';
-import { CrmSyncLogsPanel } from './components/CrmSyncLogsPanel';
-import { SmartCsvImportModal } from './components/SmartCsvImportModal';
-import { SettingsApiKeysPanel } from './components/SettingsApiKeysPanel';
-import { ComposioIntegrationCenter } from './components/ComposioIntegrationCenter';
-import { CrmPipelineBoard } from './components/CrmPipelineBoard';
-import { LeadJourneyAnalytics } from './components/LeadJourneyAnalytics';
-import { OrgAdminPanel } from './components/OrgAdminPanel';
-import { ManagerWorkspacePanel } from './components/ManagerWorkspacePanel';
-import { AeWorkspacePanel } from './components/AeWorkspacePanel';
-import { SdrWorkspacePanel } from './components/SdrWorkspacePanel';
+
+const AutonomousProspectingPanel = React.lazy(() => import('./components/AutonomousProspectingPanel'));
+const ProspectResearchPanel = React.lazy(() => import('./components/ProspectResearchPanel'));
+const LeadScoreHistogram = React.lazy(() => import('./components/LeadScoreHistogram'));
+const SuperAdminPanel = React.lazy(() => import('./components/SuperAdminDashboard').then(m => ({ default: m.SuperAdminDashboard })));
+const CrmSyncLogsPanel = React.lazy(() => import('./components/CrmSyncLogsPanel').then(m => ({ default: m.CrmSyncLogsPanel })));
+const SmartCsvImportModal = React.lazy(() => import('./components/SmartCsvImportModal').then(m => ({ default: m.SmartCsvImportModal })));
+const SettingsApiKeysPanel = React.lazy(() => import('./components/SettingsApiKeysPanel').then(m => ({ default: m.SettingsApiKeysPanel })));
+const ComposioIntegrationCenter = React.lazy(() => import('./components/ComposioIntegrationCenter').then(m => ({ default: m.ComposioIntegrationCenter })));
+const CrmPipelineBoard = React.lazy(() => import('./components/CrmPipelineBoard').then(m => ({ default: m.CrmPipelineBoard })));
+const LeadJourneyAnalytics = React.lazy(() => import('./components/LeadJourneyAnalytics').then(m => ({ default: m.LeadJourneyAnalytics })));
+const OrgAdminPanel = React.lazy(() => import('./components/OrgAdminPanel').then(m => ({ default: m.OrgAdminPanel })));
+const ManagerWorkspacePanel = React.lazy(() => import('./components/ManagerWorkspacePanel').then(m => ({ default: m.ManagerWorkspacePanel })));
+const AeWorkspacePanel = React.lazy(() => import('./components/AeWorkspacePanel').then(m => ({ default: m.AeWorkspacePanel })));
+const SdrWorkspacePanel = React.lazy(() => import('./components/SdrWorkspacePanel').then(m => ({ default: m.SdrWorkspacePanel })));
 import { 
   auth, 
   db, 
@@ -387,6 +388,34 @@ const ReviewCard: React.FC<{
     </div>
   );
 };
+
+// --- Error Boundary ---
+class ErrorBoundary extends Component<{ children: React.ReactNode, fallback?: React.ReactNode }, { hasError: boolean, error: Error | null }> {
+  constructor(props: { children: React.ReactNode, fallback?: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback || (
+        <div className="bg-surface border border-border rounded-3xl p-8 max-w-4xl mx-auto text-center space-y-4">
+          <div className="text-lg font-syne font-bold text-text-muted">This panel encountered an error</div>
+          <p className="text-xs text-text-muted">Try switching views or refreshing the page.</p>
+          <button 
+            onClick={() => this.setState({ hasError: false, error: null })}
+            className="px-4 py-2 bg-brand text-white rounded-xl text-xs font-bold cursor-pointer"
+          >
+            Retry
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 // --- Utilities ---
 const calculateLeadScore = (lead: Lead): number => {
@@ -2424,6 +2453,14 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
         </header>
 
         <main className="flex-1 p-4 md:p-8 overflow-x-hidden">
+          <Suspense fallback={
+            <div className="flex items-center justify-center min-h-[60vh]">
+              <div className="flex flex-col items-center gap-4">
+                <Loader2 className="w-10 h-10 text-brand animate-spin" />
+                <span className="text-xs text-text-muted font-bold uppercase tracking-widest animate-pulse">Loading workspace...</span>
+              </div>
+            </div>
+          }>
           {activeView === 'SETTINGS' && (
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
@@ -2640,10 +2677,14 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
               </div>
 
               {/* Composio AI Integrations Command Hub */}
-              <ComposioIntegrationCenter showToast={showToast} />
+              <ErrorBoundary key="composio">
+                <ComposioIntegrationCenter showToast={showToast} />
+              </ErrorBoundary>
 
               {/* REST API Credentials & Webhook Gateway Hub */}
-              <SettingsApiKeysPanel showToast={showToast} />
+              <ErrorBoundary key="api-keys">
+                <SettingsApiKeysPanel showToast={showToast} />
+              </ErrorBoundary>
             </motion.div>
           )}
 
@@ -3084,14 +3125,16 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
               className="space-y-6 mt-10"
             >
               {/* Campaign Lead Score Distribution Histogram */}
-              <LeadScoreHistogram 
-                leads={leads} 
-                showToast={showToast} 
-                scoreFilter={scoreFilter}
-                setScoreFilter={setScoreFilter}
-                highlightElite={highlightElite}
-                setHighlightElite={setHighlightElite}
-              />
+              <ErrorBoundary key="histogram">
+                <LeadScoreHistogram 
+                  leads={leads} 
+                  showToast={showToast} 
+                  scoreFilter={scoreFilter}
+                  setScoreFilter={setScoreFilter}
+                  highlightElite={highlightElite}
+                  setHighlightElite={setHighlightElite}
+                />
+              </ErrorBoundary>
 
               <div className="flex items-center justify-between">
                 <div className="text-lg font-syne font-bold flex items-center gap-3">
@@ -3917,7 +3960,9 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
           })()}
               
               {/* Automated Realtime CRM Sync Status Pipelines */}
-              <CrmSyncLogsPanel leads={leads as any} showToast={showToast} />
+              <ErrorBoundary key="sync-logs">
+                <CrmSyncLogsPanel leads={leads as any} showToast={showToast} />
+              </ErrorBoundary>
               
               <motion.button 
                 whileHover={{ scale: 1.02 }}
@@ -4348,39 +4393,47 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
     
     {/* Dynamic Org Admin views */}
     {(activeView === 'ORG_DASHBOARD' || activeView === 'ORG_MEMBERS' || activeView === 'ORG_BRANDING' || activeView === 'ORG_DOMAIN' || activeView === 'ORG_BILLING' || activeView === 'ORG_FEATURES' || activeView === 'ORG_SECURITY') && (
-      <OrgAdminPanel 
-        showToast={showToast}
-        profile={profile}
-        users={[]}
-      />
+      <ErrorBoundary key="org-admin">
+        <OrgAdminPanel 
+          showToast={showToast}
+          profile={profile}
+          users={[]}
+        />
+      </ErrorBoundary>
     )}
 
     {/* Dynamic Manager views */}
     {(activeView === 'MGR_DASHBOARD' || activeView === 'MGR_APPROVALS' || activeView === 'MGR_CALLS' || activeView === 'MGR_FORECAST') && (
-      <ManagerWorkspacePanel 
-        showToast={showToast}
-        leads={leads}
-        campaigns={campaigns}
-      />
+      <ErrorBoundary key="manager">
+        <ManagerWorkspacePanel 
+          showToast={showToast}
+          leads={leads}
+          campaigns={campaigns}
+        />
+      </ErrorBoundary>
     )}
 
     {/* Dynamic AE views */}
     {(activeView === 'AE_PIPELINE' || activeView === 'AE_HEALTH' || activeView === 'AE_COPILOT' || activeView === 'AE_BRIEFS') && (
-      <AeWorkspacePanel 
-        showToast={showToast}
-        leads={leads}
-      />
+      <ErrorBoundary key="ae">
+        <AeWorkspacePanel 
+          showToast={showToast}
+          leads={leads}
+        />
+      </ErrorBoundary>
     )}
 
     {/* Dynamic SDR views */}
     {(activeView === 'SDR_DAILY' || activeView === 'SDR_STATS') && (
-      <SdrWorkspacePanel 
-        showToast={showToast}
-        leads={leads}
-        campaigns={campaigns}
-        profile={profile}
-        user={user}
-      />
+      <ErrorBoundary key="sdr">
+        <SdrWorkspacePanel 
+          showToast={showToast}
+          leads={leads}
+          campaigns={campaigns}
+          profile={profile}
+          user={user}
+        />
+      </ErrorBoundary>
     )}
 
     {/* Dynamic Reader/Viewer views */}
@@ -4418,49 +4471,60 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
     )}
 
     {activeView === 'SUPER_ADMIN' && (
-      <SuperAdminPanel 
-        showToast={showToast} 
-        externalActiveTab={superAdminTab}
-        externalSetActiveTab={setSuperAdminTab}
-      />
+      <ErrorBoundary key="super-admin">
+        <SuperAdminPanel 
+          showToast={showToast} 
+          externalActiveTab={superAdminTab}
+          externalSetActiveTab={setSuperAdminTab}
+        />
+      </ErrorBoundary>
     )}
     {activeView === 'JOURNEY' && (
-      <CrmPipelineBoard 
-        leads={leads as any}
-        onLeadsUpdated={() => {
-          // trigger trigger refresh
-        }}
-        showToast={showToast}
-        profile={profile}
-      />
+      <ErrorBoundary key="journey">
+        <CrmPipelineBoard 
+          leads={leads as any}
+          onLeadsUpdated={() => {
+            // trigger trigger refresh
+          }}
+          showToast={showToast}
+          profile={profile}
+        />
+      </ErrorBoundary>
     )}
     {activeView === 'ANALYTICS' && (
-      <LeadJourneyAnalytics 
-        showToast={showToast} 
-        profile={profile}
-        user={user}
-        db={db}
-        campaigns={campaigns}
-      />
+      <ErrorBoundary key="analytics">
+        <LeadJourneyAnalytics 
+          showToast={showToast} 
+          profile={profile}
+          user={user}
+          db={db}
+          campaigns={campaigns}
+        />
+      </ErrorBoundary>
     )}
     {activeView === 'RESEARCH' && (
-      <ProspectResearchPanel 
-        key={researchKey}
-        user={user} 
-        profile={profile} 
-        campaigns={campaigns} 
-        showToast={showToast} 
-      />
+      <ErrorBoundary key="research">
+        <ProspectResearchPanel 
+          key={researchKey}
+          user={user} 
+          profile={profile} 
+          campaigns={campaigns} 
+          showToast={showToast} 
+        />
+      </ErrorBoundary>
     )}
     {activeView === 'AUTONOMOUS' && (
-      <div className="bg-surface border border-border rounded-[24px] md:rounded-[32px] p-5 md:p-8 space-y-6 glow-brand/5 max-w-7xl mx-auto">
-        <AutonomousProspectingPanel 
-          leads={leads.filter(l => l.status === 'generated')} 
-          showToast={showToast} 
-          currentCampaignId={currentCampaign?.id}
-        />
-      </div>
+      <ErrorBoundary key="autonomous">
+        <div className="bg-surface border border-border rounded-[24px] md:rounded-[32px] p-5 md:p-8 space-y-6 glow-brand/5 max-w-7xl mx-auto">
+          <AutonomousProspectingPanel 
+            leads={leads.filter(l => l.status === 'generated')} 
+            showToast={showToast} 
+            currentCampaignId={currentCampaign?.id}
+          />
+        </div>
+      </ErrorBoundary>
     )}
+  </Suspense>
   </main>
   <footer className="py-8 border-t border-border-subtle/50 mt-auto">
     <div className="max-w-6xl mx-auto px-4 md:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-text-muted">
@@ -4595,12 +4659,14 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
         )}
 
         {showSmartImportModal && (
-          <SmartCsvImportModal 
-            onClose={() => setShowSmartImportModal(false)}
-            onImportComplete={handleSmartImportComplete}
-            existingLeads={leads as any}
-            showToast={showToast}
-          />
+          <ErrorBoundary key="smart-import">
+            <SmartCsvImportModal 
+              onClose={() => setShowSmartImportModal(false)}
+              onImportComplete={handleSmartImportComplete}
+              existingLeads={leads as any}
+              showToast={showToast}
+            />
+          </ErrorBoundary>
         )}
 
         {showBulkEditModal && (
