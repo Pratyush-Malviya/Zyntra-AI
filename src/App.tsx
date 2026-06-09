@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { generateOutreach, OutreachMessages } from './services/geminiService';
 import LandingPage from './components/LandingPage';
 import { SmartCsvImportModal } from './components/SmartCsvImportModal';
+import ProspectResearchPanel from './components/ProspectResearchPanel';
 
 const CrmPipelineBoard = React.lazy(() => import('./components/CrmPipelineBoard').then(m => ({ default: m.CrmPipelineBoard })));
 
@@ -88,6 +89,7 @@ function MainApp({ user, profile, theme, setTheme }: { user: any; profile: UserP
     { id: 'CAMPAIGNS', icon: Target, label: 'Campaigns' },
     { id: 'LEADS', icon: Users, label: 'Leads' },
     { id: 'CONTACTS', icon: Mail, label: 'Contacts' },
+    { id: 'RESEARCH', icon: Sparkles, label: 'Research' },
     { id: 'QUOTES', icon: DollarSign, label: 'Quotes' },
     { id: 'SETTINGS', icon: Settings, label: 'Settings' },
   ];
@@ -225,6 +227,12 @@ function MainApp({ user, profile, theme, setTheme }: { user: any; profile: UserP
                   ))}
                 </div>
               </PanelWrapper>
+            )}
+
+            {activeView === 'RESEARCH' && (
+              <ErrorBoundary key="research">
+                <ProspectResearchPanel user={user} profile={profile} campaigns={campaigns} showToast={toast} />
+              </ErrorBoundary>
             )}
 
             {activeView === 'QUOTES' && (
