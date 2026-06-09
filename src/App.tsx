@@ -6,6 +6,7 @@ import autoTable from 'jspdf-autotable';
 import { motion, AnimatePresence } from 'motion/react';
 import { generateOutreach, OutreachMessages } from './services/geminiService';
 import LandingPage from './components/LandingPage';
+import { SmartCsvImportModal } from './components/SmartCsvImportModal';
 
 const CrmPipelineBoard = React.lazy(() => import('./components/CrmPipelineBoard').then(m => ({ default: m.CrmPipelineBoard })));
 
@@ -315,7 +316,7 @@ export default function App() {
 
   if (!user) {
     if (showLanding) {
-      return <LandingPage onGetStarted={() => setShowLanding(false)} onGoogleLogin={handleGoogleLogin} onDemoLogin={handleDemoLogin} />;
+      return <LandingPage onLaunchApp={() => setShowLanding(false)} onGoogleLogin={handleGoogleLogin} onDemoLogin={handleDemoLogin} isAuthenticated={false} theme={theme} setTheme={setTheme} />;
     }
     return (
       <div className="min-h-screen bg-bg-primary flex items-center justify-center p-4">
