@@ -9,6 +9,15 @@ import { WebSocketServer, WebSocket } from "ws";
 
 dotenv.config();
 
+const app = express();
+const PORT = 3000;
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
+
+// Production static file serving (also used by Vercel serverless)
+const distPath = path.join(process.cwd(), "dist");
+app.use(express.static(distPath));
+
 let autonomousAgentInterval: NodeJS.Timeout | null = null;
 let autonomousAgentStatus: "running" | "stopped" = "stopped";
 
@@ -896,12 +905,6 @@ function getComposioApiKey() {
 
 // Start HTTP and WS server
 async function startServer() {
-  const app = express();
-  const PORT = 3000;
-
-  app.use(express.json({ limit: "50mb" }));
-  app.use(express.urlencoded({ limit: "50mb", extended: true }));
-
   // API Authentication Middleware supporting standard API keys, session roles and impersonation
   const authenticateApiKey = (req: express.Request, res: express.Response, next: express.NextFunction) => {
     const authHeader = req.header("Authorization");
@@ -2806,75 +2809,72 @@ Raw Rows Data: ${JSON.stringify(rows.slice(0, 50))} (Analyze and clean up to the
     }
   });
 
-  // Vite development middleware or static production fallback
+  // Vite development middleware (dev mode only)
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
     });
     app.use(vite.middlewares);
-  } else {
-    const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath));
-    app.get("*", (req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
-    });
   }
 
-  // Create HTTP server wrappers to support upgrades
-  const server = http.createServer(app);
-  const wss = new WebSocketServer({ noServer: true });
+  // SPA catch-all (after all API routes)
+  app.get("*", (req, res) => {
+    res.sendFile(path.join(distPath, "index.html"));
+  });
 
-  // Handle upgrade protocol
-  server.on("upgrade", (request, socket, head) => {
-    const urlParts = request.url ? request.url.split("/") : [];
-    // Path: ws://[host]/crm-sync/{workspace_id}
-    const isSyncChannel = request.url && request.url.includes("/crm-sync/");
-    
-    if (isSyncChannel) {
-      const workspaceId = urlParts[urlParts.length - 1] || "org-default";
+  // Local-only: HTTP server, WebSocket, listen
+  if (process.env.VERCEL !== '1') {
+    const server = http.createServer(app);
+    const wss = new WebSocketServer({ noServer: true });
+
+    server.on("upgrade", (request, socket, head) => {
+      const urlParts = request.url ? request.url.split("/") : [];
+      const isSyncChannel = request.url && request.url.includes("/crm-sync/");
       
-      wss.handleUpgrade(request, socket, head, (ws) => {
-        wss.emit("connection", ws, request, workspaceId);
-      });
-    } else {
-      socket.destroy();
-    }
-  });
-
-  // WS Connection Logic
-  wss.on("connection", (ws: WebSocket, req, workspaceId: string) => {
-    console.log(`[WebSocket Connected] Workspace registered: ${workspaceId}`);
-    
-    if (!connectedClients.has(workspaceId)) {
-      connectedClients.set(workspaceId, []);
-    }
-    connectedClients.get(workspaceId)!.push(ws);
-
-    // Initial message
-    ws.send(JSON.stringify({ 
-      event: "connected", 
-      payload: { message: `Secure real-time CRM channel registered for workspace ${workspaceId}` } 
-    }));
-
-    ws.on("close", () => {
-      const list = connectedClients.get(workspaceId);
-      if (list) {
-        const idx = list.indexOf(ws);
-        if (idx !== -1) {
-          list.splice(idx, 1);
-        }
-        if (list.length === 0) {
-          connectedClients.delete(workspaceId);
-        }
+      if (isSyncChannel) {
+        const workspaceId = urlParts[urlParts.length - 1] || "org-default";
+        wss.handleUpgrade(request, socket, head, (ws) => {
+          wss.emit("connection", ws, request, workspaceId);
+        });
+      } else {
+        socket.destroy();
       }
-      console.log(`[WebSocket Disconnected] Workspace key: ${workspaceId}`);
     });
-  });
 
-  server.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://0.0.0.0:${PORT}`);
-  });
+    wss.on("connection", (ws: WebSocket, req, workspaceId: string) => {
+      console.log(`[WebSocket Connected] Workspace registered: ${workspaceId}`);
+      
+      if (!connectedClients.has(workspaceId)) {
+        connectedClients.set(workspaceId, []);
+      }
+      connectedClients.get(workspaceId)!.push(ws);
+
+      ws.send(JSON.stringify({ 
+        event: "connected", 
+        payload: { message: `Secure real-time CRM channel registered for workspace ${workspaceId}` } 
+      }));
+
+      ws.on("close", () => {
+        const list = connectedClients.get(workspaceId);
+        if (list) {
+          const idx = list.indexOf(ws);
+          if (idx !== -1) {
+            list.splice(idx, 1);
+          }
+          if (list.length === 0) {
+            connectedClients.delete(workspaceId);
+          }
+        }
+        console.log(`[WebSocket Disconnected] Workspace key: ${workspaceId}`);
+      });
+    });
+
+    server.listen(PORT, "0.0.0.0", () => {
+      console.log(`Server running on http://0.0.0.0:${PORT}`);
+    });
+  }
 }
 
 startServer();
+export default app;

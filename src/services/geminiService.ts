@@ -239,7 +239,7 @@ export async function generateOutreach(lead: any, config: any): Promise<Outreach
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
+      model: "gemini-2.5-flash",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -403,7 +403,7 @@ export async function generateProspectResearch(companyInput: string): Promise<Pr
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
+      model: "gemini-2.5-flash",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -722,7 +722,7 @@ export async function analyzeBenchmarkDrift(leads: any[]): Promise<BenchmarkDrif
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
+      model: "gemini-2.5-flash",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
