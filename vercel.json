@@ -3,12 +3,12 @@
   "outputDirectory": "dist",
   "devCommand": "npm run dev",
   "functions": {
-    "api/index.js": {
+    "api/index.cjs": {
       "runtime": "@vercel/node@3"
     }
   },
   "routes": [
-    { "src": "/api/(.*)", "dest": "api/index.js" },
+    { "src": "/api/(.*)", "dest": "api/index.cjs" },
     { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]
