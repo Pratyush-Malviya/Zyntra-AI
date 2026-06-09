@@ -83,6 +83,7 @@ import {
   googleProvider, 
   signInWithPopup, 
   signOut, 
+  signInAnonymously,
   onAuthStateChanged, 
   doc, 
   setDoc, 
@@ -437,9 +438,11 @@ export default function App() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [showLanding, setShowLanding] = useState(true);
+  const demoLoginInProgress = useRef(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (u) => {
+      if (demoLoginInProgress.current) return;
       setUser(u);
       if (u) {
         try {
@@ -534,21 +537,17 @@ export default function App() {
 
   const handleDemoLogin = async (demo: { uid: string, email: string, displayName: string, role: string, orgId: string, orgName: string, tierLimit?: string }) => {
     setLoading(true);
-    const mockUser = {
-      uid: demo.uid,
-      email: demo.email,
-      displayName: demo.displayName,
-      photoURL: `https://picsum.photos/seed/${demo.uid}/150`,
-      emailVerified: true
-    } as any;
+    demoLoginInProgress.current = true;
     
     try {
-      const userRef = doc(db, 'users', demo.uid);
+      const cred = await signInAnonymously(auth);
+      const uid = cred.user.uid;
+      const userRef = doc(db, 'users', uid);
       const newProfile: UserProfile = {
-        uid: demo.uid,
+        uid,
         email: demo.email,
         displayName: demo.displayName,
-        photoURL: `https://picsum.photos/seed/${demo.uid}/150`,
+        photoURL: `https://picsum.photos/seed/${uid}/150`,
         role: demo.role as any,
         orgId: demo.orgId,
         orgName: demo.orgName,
@@ -556,10 +555,17 @@ export default function App() {
         lastLogin: Timestamp.now()
       };
       await setDoc(userRef, newProfile, { merge: true });
-      setUser(mockUser);
+      setUser(cred.user);
       setProfile(newProfile);
     } catch (e) {
-      console.warn("Firestore seed failed during demo login, using local fallback state:", e);
+      console.warn("Demo login failed, using local fallback state:", e);
+      const mockUser = {
+        uid: demo.uid,
+        email: demo.email,
+        displayName: demo.displayName,
+        photoURL: `https://picsum.photos/seed/${demo.uid}/150`,
+        emailVerified: true
+      } as any;
       setUser(mockUser);
       setProfile({
         uid: demo.uid,
@@ -573,6 +579,7 @@ export default function App() {
         lastLogin: Timestamp.now()
       } as any);
     } finally {
+      demoLoginInProgress.current = false;
       setLoading(false);
       setShowLanding(false);
     }
@@ -982,9 +989,11 @@ function MainApp({ user, profile, theme, setTheme, isMobileDevice }: { user: Use
     if (profile.linkedinAccount) setLiAccount(profile.linkedinAccount);
   }, [profile.smtpConfig, profile.linkedinAccount]);
 
-  // --- Firestore Sync ---
+  // --- Firestore Sync (skip for demo users without Firebase Auth) ---
+  const hasFirebaseAuth = !!auth.currentUser;
+
   useEffect(() => {
-    if (!user || !profile?.orgId) return;
+    if (!user || !profile?.orgId || !hasFirebaseAuth) return;
     const q = query(
       collection(db, 'campaigns'), 
       where('orgId', '==', profile.orgId)
@@ -996,10 +1005,10 @@ function MainApp({ user, profile, theme, setTheme, isMobileDevice }: { user: Use
       handleFirestoreError(error, OperationType.LIST, 'campaigns');
     });
     return unsubscribe;
-  }, [user, profile?.orgId]);
+  }, [user, profile?.orgId, hasFirebaseAuth]);
 
   useEffect(() => {
-    if (!currentCampaign || !user || !profile?.orgId) return;
+    if (!currentCampaign || !user || !profile?.orgId || !hasFirebaseAuth) return;
     const qLeads = query(
       collection(db, 'leads'), 
       where('orgId', '==', profile.orgId),
@@ -1027,22 +1036,22 @@ function MainApp({ user, profile, theme, setTheme, isMobileDevice }: { user: Use
     if (currentCampaign.config) setConfig(currentCampaign.config);
 
     return () => { unsubscribeLeads(); unsubscribeMsg(); };
-  }, [currentCampaign, user, profile?.orgId]);
+  }, [currentCampaign, user, profile?.orgId, hasFirebaseAuth]);
 
 
 
   useEffect(() => {
-    if (currentCampaign?.id && user) {
+    if (currentCampaign?.id && user && hasFirebaseAuth) {
       const timer = setTimeout(async () => {
         try {
           await updateDoc(doc(db, 'campaigns', currentCampaign.id), { config });
         } catch (err) {
           handleFirestoreError(err, OperationType.UPDATE, `campaigns/${currentCampaign.id}`);
         }
-      }, 1000);
+      }, 2000);
       return () => clearTimeout(timer);
     }
-  }, [config, currentCampaign?.id, user]);
+  }, [config, currentCampaign?.id, user, hasFirebaseAuth]);
 
   useEffect(() => {
     if (logEndRef.current) {
@@ -4874,7 +4883,7 @@ function TeamAdminPanel({ profile }: { profile: UserProfile }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!profile.orgId) return;
+    if (!profile.orgId || !auth.currentUser) return;
     const q = query(collection(db, 'users'), where('orgId', '==', profile.orgId));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setUsers(snapshot.docs.map(doc => doc.data() as UserProfile));
