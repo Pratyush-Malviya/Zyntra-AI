@@ -278,7 +278,7 @@ export async function generateOutreach(lead: any, config: any): Promise<Outreach
           const nvidiaResponse = await callNvidiaFallback(prompt, "You are a B2B sales expert writing omnichannel cold outreach. Return a structured JSON object matching the requested schema exactly.", true);
           return cleanAndParseJSON(nvidiaResponse) as OutreachMessages;
         } catch (nvError) {
-          console.error("NVIDIA Fallback failed for outreach:", nvError);
+          console.debug("NVIDIA Fallback failed for outreach (CORS expected):", nvError);
         }
       }
       console.warn("Activating high-fidelity fallback for outreach generation");
@@ -683,7 +683,7 @@ export async function generateProspectResearch(companyInput: string): Promise<Pr
           const nvidiaResponse = await callNvidiaFallback(prompt, "You are an elite enterprise B2B management consultant and AI solutions architect. Return a structured consulting report JSON.", true);
           return { ...cleanAndParseJSON(nvidiaResponse) } as ProspectResearchReport;
         } catch (nvError) {
-          console.error("NVIDIA Fallback failed for prospect research:", nvError);
+          console.debug("NVIDIA Fallback failed for prospect research (CORS expected):", nvError);
         }
       }
       console.warn("Activating high-fidelity fallback for prospect research");
@@ -783,7 +783,7 @@ export async function analyzeBenchmarkDrift(leads: any[]): Promise<BenchmarkDrif
           const nvidiaResponse = await callNvidiaFallback(prompt, "You are an elite enterprise B2B sales strategist and CRO consultant. Return a structured JSON report matching the requested schema exactly.", true);
           return { ...cleanAndParseJSON(nvidiaResponse) } as BenchmarkDriftAnalysis;
         } catch (nvError) {
-          console.error("NVIDIA Fallback failed for benchmark drift:", nvError);
+          console.debug("NVIDIA Fallback failed for benchmark drift (CORS expected):", nvError);
         }
       }
       console.warn("Activating high-fidelity fallback for benchmark drift analysis");

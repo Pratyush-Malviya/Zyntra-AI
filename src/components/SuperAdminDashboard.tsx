@@ -242,7 +242,7 @@ export function SuperAdminDashboard({
         setPayOrgId(prev => prev || orgList[0].id);
       }
     }, (error) => {
-      console.error("Organizations load error", error);
+      if (!auth.currentUser?.isAnonymous) console.error("Organizations load error", error);
     });
 
     // 2. Subscribe to Users
@@ -250,7 +250,7 @@ export function SuperAdminDashboard({
     const unsubscribeUsers = onSnapshot(qUsers, (snapshot) => {
       setUsers(snapshot.docs.map(doc => doc.data() as UserProfile));
     }, (error) => {
-      console.error("Users load error", error);
+      if (!auth.currentUser?.isAnonymous) console.error("Users load error", error);
     });
 
     // 3. Subscribe to Global Leads
@@ -258,7 +258,7 @@ export function SuperAdminDashboard({
     const unsubscribeLeads = onSnapshot(qLeads, (snapshot) => {
       setGlobalLeads(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     }, (error) => {
-      console.error("Global leads subscription error", error);
+      if (!auth.currentUser?.isAnonymous) console.error("Global leads subscription error", error);
     });
 
     return () => {
@@ -329,7 +329,7 @@ export function SuperAdminDashboard({
         }
       }
     }, (error) => {
-      console.error("Payments listener error", error);
+      if (!auth.currentUser?.isAnonymous) console.error("Payments listener error", error);
     });
 
     return () => unsubscribePayments();

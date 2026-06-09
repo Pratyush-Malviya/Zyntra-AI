@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Target, Cpu, Loader2, Database, ExternalLink, Plus } from 'lucide-react';
 import { motion } from 'motion/react';
-import { db } from '../firebase';
+import { auth, db } from '../firebase';
 import { collection, addDoc } from 'firebase/firestore';
 
 interface AutonomousProspectingPanelProps {
@@ -56,7 +56,7 @@ export default function AutonomousProspectingPanel({ leads, showToast, currentCa
       await fetch(`/api/leads/${lead.id}`, { method: 'DELETE' });
       setFetchedLeads(prev => prev.filter(l => l.id !== lead.id));
     } catch (err) {
-      console.error(err);
+      if (!auth.currentUser?.isAnonymous) console.error(err);
       showToast(`Failed to add lead: ${lead.name}`, 'error');
     }
   };

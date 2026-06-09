@@ -38,7 +38,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
 import { generateProspectResearch, ProspectResearchReport } from '../services/geminiService';
-import { db, Timestamp } from '../firebase';
+import { auth, db, Timestamp } from '../firebase';
 import { collection, addDoc, getDocs, query, where, deleteDoc, doc, updateDoc, writeBatch } from 'firebase/firestore';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -153,7 +153,7 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
       list.sort((a: any, b: any) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
       setResearches(list);
     } catch (err) {
-      console.error("Error fetching researches:", err);
+      if (!auth.currentUser?.isAnonymous) console.error("Error fetching researches:", err);
     } finally {
       setLoadingHistory(false);
     }
@@ -210,7 +210,7 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
       showToast('Research Sprint completed successfully! Report compiled.', 'success');
     } catch (err: any) {
       clearInterval(intervalTime);
-      console.error(err);
+      if (!auth.currentUser?.isAnonymous) console.error(err);
       showToast(`Research failed: ${err.message || err}`, 'error');
     } finally {
       setLoading(false);
@@ -237,7 +237,7 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
       setConfirmDeleteId(null);
       showToast('Research report deleted.', 'success');
     } catch (err) {
-      console.error(err);
+      if (!auth.currentUser?.isAnonymous) console.error(err);
       showToast('Failed to delete report.', 'error');
     }
   };
@@ -295,7 +295,7 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
 
       showToast(`Added decision maker from ${info.name || 'Company'} as a Lead to selected campaign!`, 'success');
     } catch (err: any) {
-      console.error(err);
+      if (!auth.currentUser?.isAnonymous) console.error(err);
       showToast(`Export failed: ${err.message}`, 'error');
     } finally {
       setExportingLead(false);

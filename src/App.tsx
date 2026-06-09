@@ -134,6 +134,9 @@ interface FirestoreErrorInfo {
 }
 
 function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const isExpectedAnonymous = !auth.currentUser || auth.currentUser.isAnonymous;
+  if (isExpectedAnonymous) return;
+  
   const errInfo: FirestoreErrorInfo = {
     error: error instanceof Error ? error.message : String(error),
     authInfo: {
@@ -989,8 +992,8 @@ function MainApp({ user, profile, theme, setTheme, isMobileDevice }: { user: Use
     if (profile.linkedinAccount) setLiAccount(profile.linkedinAccount);
   }, [profile.smtpConfig, profile.linkedinAccount]);
 
-  // --- Firestore Sync (skip for demo users without Firebase Auth) ---
-  const hasFirebaseAuth = !!auth.currentUser;
+  // --- Firestore Sync (skip for demo/anonymous users — rules block list ops) ---
+  const hasFirebaseAuth = !!auth.currentUser && !auth.currentUser.isAnonymous;
 
   useEffect(() => {
     if (!user || !profile?.orgId || !hasFirebaseAuth) return;
