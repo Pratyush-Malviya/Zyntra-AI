@@ -489,6 +489,8 @@ function isQuotaOrApiKeyError(err: any): boolean {
   const msg = (err.message || String(err)).toLowerCase();
   return (
     msg.includes("429") ||
+    msg.includes("503") ||
+    msg.includes("unavailable") ||
     msg.includes("resource_exhausted") ||
     msg.includes("quota") ||
     msg.includes("api key") ||
