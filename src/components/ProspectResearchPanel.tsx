@@ -193,7 +193,7 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
 
       // Save to Firebase
       const payload = {
-        companyName: report.companyInfo.name || company,
+        companyName: report?.companyInfo?.name || company,
         userId: user.uid,
         orgId: profile.orgId,
         reportJSON: JSON.stringify(report),
