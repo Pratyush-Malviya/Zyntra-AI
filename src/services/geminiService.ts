@@ -9,59 +9,6 @@ const ai = new GoogleGenAI({
   }
 });
 
-const DEFAULT_NVIDIA_API_KEY = "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";
-
-export function getNvidiaApiKey(): string {
-  if (typeof window !== "undefined") {
-    const saved = localStorage.getItem("zy_nvidia_api_key");
-    if (saved) return saved;
-  }
-  return process.env.NVIDIA_API_KEY || DEFAULT_NVIDIA_API_KEY;
-}
-
-export function getNvidiaSelectedModel(): string {
-  if (typeof window !== "undefined") {
-    const saved = localStorage.getItem("zy_nvidia_selected_model");
-    if (saved) return saved;
-  }
-  return "google/gemma-3n-e2b-it";
-}
-
-const nvidiaApiKey = "DYNAMIC_LOADED";
-
-async function callNvidiaFallback(prompt: string, systemPrompt?: string, isJson: boolean = false): Promise<string> {
-  const currentModel = getNvidiaSelectedModel();
-  console.log(`[NVIDIA NIM Fallback] Invoking ${currentModel} via server proxy...`);
-  
-  const response = await fetch("/api/ai/nvidia", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: currentModel,
-      messages: [{ role: "user", content: prompt }],
-      systemPrompt,
-      temperature: 0.20,
-      max_tokens: 3000,
-      top_p: 0.70,
-      frequency_penalty: 0.00,
-      presence_penalty: 0.00,
-      ...(isJson ? { response_format: { type: "json_object" } } : {})
-    })
-  });
-
-  if (!response.ok) {
-    const errorBody = await response.text();
-    throw new Error(`NVIDIA proxy response error (${response.status}): ${errorBody}`);
-  }
-
-  const data = await response.json();
-  if (!data?.choices?.[0]?.message?.content) {
-    throw new Error("Invalid response format received from NVIDIA proxy.");
-  }
-
-  return data.choices[0].message.content;
-}
-
 export interface OutreachMessages {
   whatsapp: string;
   linkedin_connect: string;
@@ -87,16 +34,16 @@ function cleanAndParseJSON(jsonStr: string): any {
   }
 
   // 2. Perform a character-by-character scan state-machine to clean, comments-strip,
-  // trailing-comma-strip, and translate single-quoted JSON properties/strings safely.
+  // trailing-comma-strip, translate single-quoted JSON properties/strings safely,
+  // and handle unescaped quotes inside double-quoted strings.
   const bulletproofRepair = (str: string): string => {
     let result = "";
     let inString = false;
     let stringDelim: string | null = null;
     let escapeActive = false;
 
-    // Helper to check if a comma at `index` is a trailing comma
-    const isTrailingComma = (index: number): boolean => {
-      let j = index + 1;
+    const isNextValidJsonDelim = (index: number): boolean => {
+      let j = index;
       while (j < str.length) {
         const c = str[j];
         if (c === ' ' || c === '\n' || c === '\r' || c === '\t') {
@@ -105,51 +52,77 @@ function cleanAndParseJSON(jsonStr: string): any {
         }
         if (c === '/' && str[j + 1] === '/') {
           j += 2;
-          while (j < str.length && str[j] !== '\n') {
-            j++;
-          }
+          while (j < str.length && str[j] !== '\n') j++;
           continue;
         }
         if (c === '/' && str[j + 1] === '*') {
           j += 2;
-          while (j < str.length - 1 && !(str[j] === '*' && str[j + 1] === '/')) {
-            j++;
-          }
+          while (j < str.length - 1 && !(str[j] === '*' && str[j + 1] === '/')) j++;
           j += 2;
           continue;
         }
-        if (c === '}' || c === ']') {
-          return true;
+        return c === ':' || c === ',' || c === '}' || c === ']';
+      }
+      return true;
+    };
+
+    const isTrailingComma = (index: number): boolean => {
+      let j = index + 1;
+      while (j < str.length) {
+        const c = str[j];
+        if (c === ' ' || c === '\n' || c === '\r' || c === '\t') { j++; continue; }
+        if (c === '/' && str[j + 1] === '/') {
+          j += 2;
+          while (j < str.length && str[j] !== '\n') j++;
+          continue;
         }
+        if (c === '/' && str[j + 1] === '*') {
+          j += 2;
+          while (j < str.length - 1 && !(str[j] === '*' && str[j + 1] === '/')) j++;
+          j += 2;
+          continue;
+        }
+        if (c === '}' || c === ']') return true;
         return false;
       }
-      return true; // trailing/extraneous
+      return true;
     };
 
     for (let i = 0; i < str.length; i++) {
       const char = str[i];
 
-      // Handle escape sequences inside strings
       if (escapeActive) {
-        result += char;
-        escapeActive = false;
+        if ('"\\/bfnrt'.includes(char) || char === 'u') {
+          result += '\\' + char;
+        } else {
+          result += char;
+        }
+        if (char !== 'u') escapeActive = false;
+        else escapeActive = false;
         continue;
       }
 
       if (char === '\\') {
-        result += char;
         escapeActive = true;
         continue;
       }
 
       if (inString) {
         if (char === stringDelim) {
-          // Closing the string
-          inString = false;
-          stringDelim = null;
-          result += '"'; // Always use double quotes for string boundaries in target JSON
+          if (stringDelim === '"') {
+            if (isNextValidJsonDelim(i + 1)) {
+              inString = false;
+              stringDelim = null;
+              result += '"';
+            } else {
+              result += '\\"';
+            }
+          } else {
+            inString = false;
+            stringDelim = null;
+            result += '"';
+          }
         } else if (char === '"' && stringDelim === "'") {
-          // Double quote inside single-quoted string: MUST escape it for standard JSON
           result += '\\"';
         } else if (char === '\n') {
           result += '\\n';
@@ -160,45 +133,35 @@ function cleanAndParseJSON(jsonStr: string): any {
         } else {
           const code = char.charCodeAt(0);
           if (code < 32) {
-            // Strip non-printable raw control chars under 32 but keep spaces/printable chars
           } else {
             result += char;
           }
         }
       } else {
-        // Outside string
         if (char === '/' && str[i + 1] === '/') {
-          // Skip single-line comment
           i += 2;
-          while (i < str.length && str[i] !== '\n') {
-            i++;
-          }
+          while (i < str.length && str[i] !== '\n') i++;
           continue;
         }
         if (char === '/' && str[i + 1] === '*') {
-          // Skip block comment
           i += 2;
-          while (i < str.length - 1 && !(str[i] === '*' && str[i + 1] === '/')) {
-            i++;
-          }
-          i += 1; // pointer will be incremented by the loop for '/'
+          while (i < str.length - 1 && !(str[i] === '*' && str[i + 1] === '/')) i++;
+          i += 1;
           continue;
         }
         if (char === '"' || char === "'") {
           inString = true;
           stringDelim = char;
-          result += '"'; // Always use double quotes for string boundaries in target JSON
+          result += '"';
         } else if (char === ',') {
-          // Skip trailing commas
-          if (isTrailingComma(i)) {
-            continue;
-          }
+          if (isTrailingComma(i)) continue;
           result += char;
         } else {
           result += char;
         }
       }
     }
+    if (inString) result += '"';
     return result;
   };
 
@@ -210,8 +173,73 @@ function cleanAndParseJSON(jsonStr: string): any {
       const repaired = bulletproofRepair(cleaned);
       return JSON.parse(repaired);
     } catch (secondError) {
-      console.error("Bulletproof JSON repair failed. Original raw string length:", jsonStr.length);
-      throw secondError;
+      console.warn("Bulletproof repair also failed, attempting structural repair...", secondError);
+      try {
+        const repaired = bulletproofRepair(cleaned);
+        const structuralRepair = (s: string): string => {
+          let result = "";
+          let inStr = false;
+          let esc = false;
+          let prevTokenWasValue = false;
+          let needsComma = false;
+          for (let i = 0; i < s.length; i++) {
+            const c = s[i];
+            if (esc) { result += c; esc = false; continue; }
+            if (c === '\\') { result += c; esc = true; continue; }
+            if (inStr) {
+              if (c === '"') {
+                inStr = false;
+                prevTokenWasValue = true;
+                needsComma = true;
+              }
+              result += c;
+            } else {
+              if (c === '"') {
+                if (needsComma && prevTokenWasValue) {
+                  result += ',';
+                }
+                inStr = true;
+                needsComma = false;
+                result += c;
+              } else if (c === '{' || c === '[') {
+                needsComma = false;
+                prevTokenWasValue = false;
+                result += c;
+              } else if (c === '}' || c === ']') {
+                prevTokenWasValue = true;
+                needsComma = true;
+                result += c;
+              } else if (c === ':') {
+                prevTokenWasValue = false;
+                needsComma = false;
+                result += c;
+              } else if (c === ',') {
+                prevTokenWasValue = false;
+                needsComma = false;
+                result += c;
+              } else if (c === 't' || c === 'f' || c === 'n' || c === '-' || (c >= '0' && c <= '9')) {
+                let j = i;
+                while (j < s.length && !'",}]\n\r\t '.includes(s[j]) && s[j] !== ':') j++;
+                const val = s.slice(i, j);
+                if (needsComma && prevTokenWasValue) result += ',' + val;
+                else result += val;
+                i = j - 1;
+                prevTokenWasValue = true;
+                needsComma = true;
+                continue;
+              } else {
+                result += c;
+              }
+            }
+          }
+          return result;
+        };
+        const structuralResult = structuralRepair(repaired);
+        return JSON.parse(structuralResult);
+      } catch (thirdError) {
+        console.error("All JSON repair strategies failed. Original raw string length:", jsonStr.length);
+        throw thirdError;
+      }
     }
   }
 }
@@ -248,16 +276,8 @@ export async function generateOutreach(lead: any, config: any): Promise<Outreach
     return cleanAndParseJSON(rawText) as OutreachMessages;
   } catch (error) {
     console.error("Gemini Generation Error:", error);
-    if (isQuotaOrApiKeyError(error) || !process.env.GEMINI_API_KEY) {
-      if (nvidiaApiKey) {
-        try {
-          const nvidiaResponse = await callNvidiaFallback(prompt, "You are a B2B sales expert writing omnichannel cold outreach. Return a structured JSON object matching the requested schema exactly.", true);
-          return cleanAndParseJSON(nvidiaResponse) as OutreachMessages;
-        } catch (nvError) {
-          console.debug("NVIDIA Fallback failed for outreach (CORS expected):", nvError);
-        }
-      }
-      console.warn("Activating high-fidelity fallback for outreach generation");
+    if (!process.env.GEMINI_API_KEY) {
+      console.warn("No Gemini API key configured, using fallback for outreach generation");
       return getMockOutreach(lead, config);
     }
     throw error;
@@ -400,16 +420,8 @@ export async function generateProspectResearch(companyInput: string): Promise<Pr
     return { ...cleanAndParseJSON(rawText) } as ProspectResearchReport;
   } catch (error) {
     console.error("Prospect Research Generation Error:", error);
-    if (isQuotaOrApiKeyError(error) || !process.env.GEMINI_API_KEY) {
-      if (nvidiaApiKey) {
-        try {
-          const nvidiaResponse = await callNvidiaFallback(prompt, "You are an elite enterprise B2B management consultant and AI solutions architect. Return a structured consulting report JSON.", true);
-          return { ...cleanAndParseJSON(nvidiaResponse) } as ProspectResearchReport;
-        } catch (nvError) {
-          console.debug("NVIDIA Fallback failed for prospect research (CORS expected):", nvError);
-        }
-      }
-      console.warn("Activating high-fidelity fallback for prospect research");
+    if (!process.env.GEMINI_API_KEY) {
+      console.warn("No Gemini API key configured, using fallback for prospect research");
       return getMockProspectResearch(companyInput);
     }
     throw error;
@@ -464,41 +476,12 @@ export async function analyzeBenchmarkDrift(leads: any[]): Promise<BenchmarkDrif
     return { ...cleanAndParseJSON(rawText) } as BenchmarkDriftAnalysis;
   } catch (error) {
     console.error("Benchmark Drift Analysis Error:", error);
-    if (isQuotaOrApiKeyError(error) || !process.env.GEMINI_API_KEY) {
-      if (nvidiaApiKey) {
-        try {
-          const nvidiaResponse = await callNvidiaFallback(prompt, "You are an elite enterprise B2B sales strategist and CRO consultant. Return a structured JSON report matching the requested schema exactly.", true);
-          return { ...cleanAndParseJSON(nvidiaResponse) } as BenchmarkDriftAnalysis;
-        } catch (nvError) {
-          console.debug("NVIDIA Fallback failed for benchmark drift (CORS expected):", nvError);
-        }
-      }
-      console.warn("Activating high-fidelity fallback for benchmark drift analysis");
+    if (!process.env.GEMINI_API_KEY) {
+      console.warn("No Gemini API key configured, using fallback for benchmark drift analysis");
       return getMockBenchmarkDrift(leads);
     }
     throw error;
   }
-}
-
-// ==========================================
-// HIGH-FIDELITY FALLBACK SANDBOX ENGINE
-// ==========================================
-
-function isQuotaOrApiKeyError(err: any): boolean {
-  if (!err) return false;
-  const msg = (err.message || String(err)).toLowerCase();
-  return (
-    msg.includes("429") ||
-    msg.includes("503") ||
-    msg.includes("unavailable") ||
-    msg.includes("resource_exhausted") ||
-    msg.includes("quota") ||
-    msg.includes("api key") ||
-    msg.includes("limit") ||
-    msg.includes("unauthorized") ||
-    msg.includes("fetch") ||
-    msg.includes("cors")
-  );
 }
 
 export function getMockOutreach(lead: any, config: any): OutreachMessages {
