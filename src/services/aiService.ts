@@ -4,10 +4,14 @@ const nvidiaApiKey = "DYNAMIC_LOADED";
 
 export function getNvidiaApiKey(): string {
   if (typeof window !== "undefined") {
-    const saved = localStorage.getItem("zy_nvidia_api_key");
+    const saved = localStorage.getItem("zyntra_nvidia_key") || localStorage.getItem("zy_nvidia_api_key");
     if (saved) return saved;
   }
-  return process.env.NVIDIA_API_KEY || "";
+  // Try to safely access process.env if it exists (e.g., in SSR/Node)
+  if (typeof process !== "undefined" && process.env) {
+    return process.env.NVIDIA_API_KEY || "";
+  }
+  return "";
 }
 
 async function callNvidiaAI(prompt: string, systemPrompt?: string): Promise<string> {
