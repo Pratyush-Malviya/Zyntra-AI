@@ -11,21 +11,14 @@ export function getNvidiaApiKey(): string {
 }
 
 async function callNvidiaAI(prompt: string, systemPrompt?: string): Promise<string> {
-  const key = getNvidiaApiKey();
-  if (!key) throw new Error("No NVIDIA API key configured");
   console.log(`[NVIDIA NIM] Invoking ${NVIDIA_MODEL}...`);
-  const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+  const response = await fetch("/api/ai/nvidia", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${key}`
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       model: NVIDIA_MODEL,
-      messages: [
-        ...(systemPrompt ? [{ role: "system", content: systemPrompt }] : []),
-        { role: "user", content: prompt }
-      ],
+      messages: [{ role: "user", content: prompt }],
+      systemPrompt,
       temperature: 0.20,
       max_tokens: 8000,
       top_p: 0.70

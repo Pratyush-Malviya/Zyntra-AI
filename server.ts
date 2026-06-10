@@ -87,10 +87,10 @@ app.post("/api/ai/nvidia", express.json(), async (req, res) => {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${nvidiaKey}` },
       body: JSON.stringify({
-        model: model || "google/gemma-3n-e2b-it",
+        model: model || "deepseek-ai/deepseek-v4-flash",
         messages: [...(systemPrompt ? [{ role: "system", content: systemPrompt }] : []), ...(messages || [])],
         ...(temperature !== undefined ? { temperature } : { temperature: 0.20 }),
-        ...(max_tokens !== undefined ? { max_tokens } : { max_tokens: 3000 }),
+        ...(max_tokens !== undefined ? { max_tokens } : { max_tokens: 8000 }),
         ...(top_p !== undefined ? { top_p } : {}),
         ...(frequency_penalty !== undefined ? { frequency_penalty } : {}),
         ...(presence_penalty !== undefined ? { presence_penalty } : {}),
