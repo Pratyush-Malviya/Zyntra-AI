@@ -15,7 +15,7 @@ interface UserProfile {
   uid: string; email: string; name: string; photoURL?: string; role: string; createdAt: string;
 }
 interface Campaign { id: string; name: string; status: 'draft' | 'active' | 'completed'; leadsCount: number; createdAt: string; config?: any; }
-interface Lead { id: string; campaignId: string; name: string; role: string; company: string; email: string; phone: string; status: 'imported' | 'generated' | 'sent'; score: number; tags?: string[]; industry?: string; country?: string; linkedin_url?: string; createdAt?: string; }
+export interface Lead { id: string; campaignId: string; name: string; role: string; company: string; email: string; phone: string; status: 'imported' | 'generated' | 'sent'; score: number; tags?: string[]; industry?: string; country?: string; linkedin_url?: string; website?: string; createdAt?: string; }
 interface Contact { id: string; firstName: string; lastName: string; email: string; phone: string; jobTitle: string; company: string; linkedin: string; notes: string; createdAt: string; }
 interface Quote { id: string; number: string; type: 'quote' | 'invoice' | 'contract'; title: string; accountName: string; amount: number; currency: string; status: string; dueDate: string; createdAt: string; }
 interface Config { company: string; product: string; industry: string; targetRole: string; targetCountry: string; tone: string; }

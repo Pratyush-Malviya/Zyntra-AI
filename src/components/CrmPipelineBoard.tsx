@@ -172,7 +172,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({ leads, showT
                     ) : stageDeals.map(deal => {
                       const lead = leads.find(l => l.id === deal.leadId);
                       return (
-                        <motion.div key={deal.id} layout draggable onDragStart={e => handleDragStart(e, deal.id)}
+                        <motion.div key={deal.id} layout draggable onDragStart={(e: any) => handleDragStart(e, deal.id)}
                           onClick={() => { setSelectedDeal(deal); setNoteDraftText(""); }}
                           className={`bg-surface border rounded-xl p-3 cursor-grab active:cursor-grabbing space-y-2 transition-all ${selectedDeal?.id === deal.id ? 'border-brand bg-brand/5' : 'border-border hover:border-text-muted'}`}>
                           <div className="flex items-start justify-between gap-1">

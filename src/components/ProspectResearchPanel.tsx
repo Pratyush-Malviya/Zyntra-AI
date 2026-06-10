@@ -137,12 +137,16 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
   }, [profile?.orgId]);
 
   const fetchResearches = async () => {
-    if (!profile?.orgId) return;
+    const orgIdToUse = profile?.orgId || profile?.uid || user?.uid;
+    if (!orgIdToUse) {
+      setLoadingHistory(false);
+      return;
+    }
     setLoadingHistory(true);
     try {
       const q = query(
         collection(db, 'prospect_researches'),
-        where('orgId', '==', profile.orgId)
+        where('orgId', '==', orgIdToUse)
       );
       const snap = await getDocs(q);
       const list = snap.docs.map(doc => ({
@@ -195,7 +199,7 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
       const payload = {
         companyName: report?.companyInfo?.name || company,
         userId: user.uid,
-        orgId: profile.orgId,
+        orgId: profile?.orgId || profile?.uid || user?.uid || 'default',
         reportJSON: JSON.stringify(report),
         createdAt: Timestamp.now()
       };
@@ -277,7 +281,7 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
         website: info.website || 'N/A',
         employees: info.employees || 'N/A',
         userId: user.uid,
-        orgId: profile.orgId,
+        orgId: profile?.orgId || profile?.uid || user?.uid || 'default',
         campaignId: targetCampaignId,
         status: 'imported',
         score: 85
