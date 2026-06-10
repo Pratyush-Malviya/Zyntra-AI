@@ -3,7 +3,15 @@ import path from "path";
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 
+import fs from "fs";
+
 dotenv.config();
+if (fs.existsSync(".env.local")) {
+  const envConfig = dotenv.parse(fs.readFileSync(".env.local"));
+  for (const k in envConfig) {
+    process.env[k] = envConfig[k];
+  }
+}
 
 const app = express();
 const PORT = 3000;
@@ -74,6 +82,105 @@ function hashApiKey(key: string): string {
   return "hash_" + Math.abs(hash).toString(36);
 }
 
+function cleanAndParseJSON(jsonStr: string): any {
+  if (!jsonStr) throw new Error("JSON string is empty or undefined");
+  let cleaned = jsonStr.trim();
+  const firstBrace = cleaned.indexOf('{');
+  const lastBrace = cleaned.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    cleaned = cleaned.substring(firstBrace, lastBrace + 1);
+  }
+  const bulletproofRepair = (str: string): string => {
+    let result = "";
+    let inString = false;
+    let stringDelim: string | null = null;
+    let escapeActive = false;
+    const isNextValidJsonDelim = (index: number): boolean => {
+      let j = index;
+      while (j < str.length) {
+        const c = str[j];
+        if (c === ' ' || c === '\n' || c === '\r' || c === '\t') { j++; continue; }
+        if (c === '/' && str[j + 1] === '/') { j += 2; while (j < str.length && str[j] !== '\n') j++; continue; }
+        if (c === '/' && str[j + 1] === '*') { j += 2; while (j < str.length - 1 && !(str[j] === '*' && str[j + 1] === '/')) j++; j += 2; continue; }
+        return c === ':' || c === ',' || c === '}' || c === ']';
+      }
+      return true;
+    };
+    const isTrailingComma = (index: number): boolean => {
+      let j = index + 1;
+      while (j < str.length) {
+        const c = str[j];
+        if (c === ' ' || c === '\n' || c === '\r' || c === '\t') { j++; continue; }
+        if (c === '/' && str[j + 1] === '/') { j += 2; while (j < str.length && str[j] !== '\n') j++; continue; }
+        if (c === '/' && str[j + 1] === '*') { j += 2; while (j < str.length - 1 && !(str[j] === '*' && str[j + 1] === '/')) j++; j += 2; continue; }
+        if (c === '}' || c === ']') return true;
+        return false;
+      }
+      return true;
+    };
+    for (let i = 0; i < str.length; i++) {
+      const char = str[i];
+      if (escapeActive) {
+        if ('"\\/bfnrt'.includes(char) || char === 'u') result += '\\' + char;
+        else result += char;
+        escapeActive = false;
+        continue;
+      }
+      if (char === '\\') { escapeActive = true; continue; }
+      if (inString) {
+        if (char === stringDelim) {
+          if (stringDelim === '"') {
+            if (isNextValidJsonDelim(i + 1)) { inString = false; stringDelim = null; result += '"'; }
+            else { result += '\\"'; }
+          } else { inString = false; stringDelim = null; result += '"'; }
+        } else if (char === '"' && stringDelim === "'") { result += '\\"'; }
+        else if (char === '\n') { result += '\\n'; }
+        else if (char === '\r') { result += '\\r'; }
+        else if (char === '\t') { result += '\\t'; }
+        else { const code = char.charCodeAt(0); if (code >= 32) result += char; }
+      } else {
+        if (char === '/' && str[i + 1] === '/') { i += 2; while (i < str.length && str[i] !== '\n') i++; continue; }
+        if (char === '/' && str[i + 1] === '*') { i += 2; while (i < str.length - 1 && !(str[i] === '*' && str[i + 1] === '/')) i++; i += 1; continue; }
+        if (char === '"' || char === "'") { inString = true; stringDelim = char; result += '"'; }
+        else if (char === ',') { if (isTrailingComma(i)) continue; result += char; }
+        else { result += char; }
+      }
+    }
+    if (inString) result += '"';
+    return result;
+  };
+
+  try { return JSON.parse(cleaned); } catch (err) {
+    try { return JSON.parse(bulletproofRepair(cleaned)); } catch (secondError) {
+      const structuralRepair = (s: string): string => {
+        let result = ""; let inStr = false; let esc = false; let prevTokenWasValue = false; let needsComma = false;
+        for (let i = 0; i < s.length; i++) {
+          const c = s[i];
+          if (esc) { result += c; esc = false; continue; }
+          if (c === '\\') { result += c; esc = true; continue; }
+          if (inStr) {
+            if (c === '"') { inStr = false; prevTokenWasValue = true; needsComma = true; }
+            result += c;
+          } else {
+            if (c === '"') { if (needsComma && prevTokenWasValue) result += ','; inStr = true; needsComma = false; result += c; }
+            else if (c === '{' || c === '[') { needsComma = false; prevTokenWasValue = false; result += c; }
+            else if (c === '}' || c === ']') { prevTokenWasValue = true; needsComma = true; result += c; }
+            else if (c === ':') { prevTokenWasValue = false; needsComma = false; result += c; }
+            else if (c === ',') { prevTokenWasValue = false; needsComma = false; result += c; }
+            else if (c === 't' || c === 'f' || c === 'n' || c === '-' || (c >= '0' && c <= '9')) {
+              let j = i; while (j < s.length && !'",}]\n\r\t '.includes(s[j]) && s[j] !== ':') j++;
+              const val = s.slice(i, j); if (needsComma && prevTokenWasValue) result += ',' + val; else result += val;
+              i = j - 1; prevTokenWasValue = true; needsComma = true; continue;
+            } else { result += c; }
+          }
+        }
+        return result;
+      };
+      return JSON.parse(structuralRepair(bulletproofRepair(cleaned)));
+    }
+  }
+}
+
 // --- Routes ---
 app.get("/api/health", (req, res) => res.json({ status: "ok", uptime: process.uptime() }));
 
@@ -87,14 +194,44 @@ app.post("/api/ai/nvidia", express.json(), async (req, res) => {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${nvidiaKey}` },
       body: JSON.stringify({
-        model: model || "deepseek-ai/deepseek-v4-flash",
+        model: model || "meta/llama-3.3-70b-instruct",
         messages: [...(systemPrompt ? [{ role: "system", content: systemPrompt }] : []), ...(messages || [])],
         ...(temperature !== undefined ? { temperature } : { temperature: 0.20 }),
         ...(max_tokens !== undefined ? { max_tokens } : { max_tokens: 8000 }),
         ...(top_p !== undefined ? { top_p } : {}),
         ...(frequency_penalty !== undefined ? { frequency_penalty } : {}),
         ...(presence_penalty !== undefined ? { presence_penalty } : {}),
-        ...(response_format ? { response_format } : {}),
+        ...(response_format ? { response_format } : { response_format: { type: "json_object" } }),
+      }),
+    });
+    if (!response.ok) return res.status(response.status).json({ error: await response.text() });
+    res.json(await response.json());
+  } catch (err: any) { res.status(502).json({ error: err.message }); }
+});
+
+// OpenRouter AI Proxy
+app.post("/api/ai/openrouter", express.json(), async (req, res) => {
+  const openRouterKey = process.env.OPENROUTER_API_KEY;
+  if (!openRouterKey) return res.status(400).json({ error: "OPENROUTER_API_KEY not configured" });
+  const { model, messages, systemPrompt, temperature, max_tokens, top_p, frequency_penalty, presence_penalty, response_format } = req.body;
+  try {
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: { 
+        "Content-Type": "application/json", 
+        "Authorization": `Bearer ${openRouterKey}`,
+        "HTTP-Referer": "http://localhost:3000",
+        "X-Title": "Zyntra AI"
+      },
+      body: JSON.stringify({
+        model: model || "openai/gpt-4o-mini",
+        messages: [...(systemPrompt ? [{ role: "system", content: systemPrompt }] : []), ...(messages || [])],
+        ...(temperature !== undefined ? { temperature } : { temperature: 0.20 }),
+        ...(max_tokens !== undefined ? { max_tokens } : { max_tokens: 8000 }),
+        ...(top_p !== undefined ? { top_p } : {}),
+        ...(frequency_penalty !== undefined ? { frequency_penalty } : {}),
+        ...(presence_penalty !== undefined ? { presence_penalty } : {}),
+        ...(response_format ? { response_format } : { response_format: { type: "json_object" } }),
       }),
     });
     if (!response.ok) return res.status(response.status).json({ error: await response.text() });

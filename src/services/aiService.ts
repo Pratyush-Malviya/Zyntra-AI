@@ -1,4 +1,4 @@
-const NVIDIA_MODEL = "deepseek-ai/deepseek-v4-flash";
+const NVIDIA_MODEL = "meta/llama-3.3-70b-instruct";
 
 const nvidiaApiKey = "DYNAMIC_LOADED";
 
@@ -21,7 +21,8 @@ async function callNvidiaAI(prompt: string, systemPrompt?: string): Promise<stri
       systemPrompt,
       temperature: 0.20,
       max_tokens: 8000,
-      top_p: 0.70
+      top_p: 0.70,
+      response_format: { type: "json_object" }
     })
   });
   if (!response.ok) {
@@ -284,7 +285,7 @@ export async function generateOutreach(lead: any, config: any): Promise<Outreach
   `;
 
   try {
-    const nvidiaText = await callNvidiaAI(prompt, "You are a B2B sales expert writing omnichannel cold outreach. Return a structured JSON object matching the requested schema exactly.");
+    const nvidiaText = await callNvidiaAI(prompt, "You are a B2B sales expert writing omnichannel cold outreach. Return a structured JSON object matching the requested schema exactly. ONLY return valid minified JSON without markdown code fences or explanations.");
     return cleanAndParseJSON(nvidiaText) as OutreachMessages;
   } catch (error) {
     console.error("NVIDIA AI Generation Error:", error);
@@ -419,7 +420,7 @@ export async function generateProspectResearch(companyInput: string): Promise<Pr
   `;
 
   try {
-    const nvidiaText = await callNvidiaAI(prompt, "You are an elite enterprise B2B management consultant and AI solutions architect. Return a structured consulting report JSON.");
+    const nvidiaText = await callNvidiaAI(prompt, "You are an elite enterprise B2B management consultant and AI solutions architect. Return a structured consulting report JSON. ONLY return valid minified JSON without markdown code fences or explanations.");
     return { ...cleanAndParseJSON(nvidiaText) } as ProspectResearchReport;
   } catch (error) {
     console.error("Prospect Research Generation Error:", error);
@@ -469,7 +470,7 @@ export async function analyzeBenchmarkDrift(leads: any[]): Promise<BenchmarkDrif
   `;
 
   try {
-    const nvidiaText = await callNvidiaAI(prompt, "You are an elite enterprise B2B sales strategist and CRO consultant. Return a structured JSON report matching the requested schema exactly.");
+    const nvidiaText = await callNvidiaAI(prompt, "You are an elite enterprise B2B sales strategist and CRO consultant. Return a structured JSON report matching the requested schema exactly. ONLY return valid minified JSON without markdown code fences or explanations.");
     return { ...cleanAndParseJSON(nvidiaText) } as BenchmarkDriftAnalysis;
   } catch (error) {
     console.error("Benchmark Drift Analysis Error:", error);
