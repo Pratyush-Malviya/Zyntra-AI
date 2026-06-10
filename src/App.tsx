@@ -4,7 +4,7 @@ import { Settings, Users, Target, LayoutDashboard, Kanban, DollarSign, FileText,
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { motion, AnimatePresence } from 'motion/react';
-import { generateOutreach, OutreachMessages } from './services/geminiService';
+import { generateOutreach, OutreachMessages } from './services/aiService';
 import LandingPage from './components/LandingPage';
 import { SmartCsvImportModal } from './components/SmartCsvImportModal';
 import ProspectResearchPanel from './components/ProspectResearchPanel';

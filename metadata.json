@@ -2,5 +2,5 @@
   "name": "Zyntra AI Outreach Engine",
   "description": "A next-generation AI-powered omnichannel outreach platform for generating personalized WhatsApp, LinkedIn, and Email messages.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_NVIDIA_API"]
 }

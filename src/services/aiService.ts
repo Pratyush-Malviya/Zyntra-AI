@@ -1,15 +1,4 @@
-import { GoogleGenAI, Type } from "@google/genai";
-
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY || "",
-  httpOptions: {
-    headers: {
-      'User-Agent': 'aistudio-build',
-    }
-  }
-});
-
-const NVIDIA_FREE_MODEL = "deepseek-ai/deepseek-v4-flash";
+const NVIDIA_MODEL = "deepseek-ai/deepseek-v4-flash";
 
 const nvidiaApiKey = "DYNAMIC_LOADED";
 
@@ -21,10 +10,10 @@ export function getNvidiaApiKey(): string {
   return process.env.NVIDIA_API_KEY || "";
 }
 
-async function callNvidiaFallback(prompt: string, systemPrompt?: string): Promise<string> {
+async function callNvidiaAI(prompt: string, systemPrompt?: string): Promise<string> {
   const key = getNvidiaApiKey();
   if (!key) throw new Error("No NVIDIA API key configured");
-  console.log(`[NVIDIA NIM] Invoking ${NVIDIA_FREE_MODEL}...`);
+  console.log(`[NVIDIA NIM] Invoking ${NVIDIA_MODEL}...`);
   const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -32,7 +21,7 @@ async function callNvidiaFallback(prompt: string, systemPrompt?: string): Promis
       "Authorization": `Bearer ${key}`
     },
     body: JSON.stringify({
-      model: NVIDIA_FREE_MODEL,
+      model: NVIDIA_MODEL,
       messages: [
         ...(systemPrompt ? [{ role: "system", content: systemPrompt }] : []),
         { role: "user", content: prompt }
@@ -59,7 +48,6 @@ export interface OutreachMessages {
   email_followup: string;
 }
 
-// Clean and Parse JSON handles raw control characters / line breaks inside string values in JSON and aggressive conversational wrapping repairs
 function cleanAndParseJSON(jsonStr: string): any {
   if (!jsonStr) {
     throw new Error("JSON string is empty or undefined");
@@ -67,16 +55,12 @@ function cleanAndParseJSON(jsonStr: string): any {
 
   let cleaned = jsonStr.trim();
 
-  // 1. Isolate the core JSON object block using first '{' and last '}' to strip exploratory wrappers
   const firstBrace = cleaned.indexOf('{');
   const lastBrace = cleaned.lastIndexOf('}');
   if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
     cleaned = cleaned.substring(firstBrace, lastBrace + 1);
   }
 
-  // 2. Perform a character-by-character scan state-machine to clean, comments-strip,
-  // trailing-comma-strip, translate single-quoted JSON properties/strings safely,
-  // and handle unescaped quotes inside double-quoted strings.
   const bulletproofRepair = (str: string): string => {
     let result = "";
     let inString = false;
@@ -307,25 +291,13 @@ export async function generateOutreach(lead: any, config: any): Promise<Outreach
   `;
 
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt + "\n\nReturn ONLY valid JSON. No markdown, no code fences, no explanation.",
-      config: {}
-    });
-    
-    const rawText = (response.text || '');
-    return cleanAndParseJSON(rawText) as OutreachMessages;
+    const nvidiaText = await callNvidiaAI(prompt, "You are a B2B sales expert writing omnichannel cold outreach. Return a structured JSON object matching the requested schema exactly.");
+    return cleanAndParseJSON(nvidiaText) as OutreachMessages;
   } catch (error) {
-    console.error("Gemini Generation Error:", error);
-    if (!process.env.GEMINI_API_KEY) {
-      console.warn("No Gemini API key configured, using fallback for outreach generation");
+    console.error("NVIDIA AI Generation Error:", error);
+    if (!getNvidiaApiKey()) {
+      console.warn("No NVIDIA API key configured, using mock outreach");
       return getMockOutreach(lead, config);
-    }
-    try {
-      const nvidiaText = await callNvidiaFallback(prompt, "You are a B2B sales expert writing omnichannel cold outreach. Return a structured JSON object matching the requested schema exactly.");
-      return cleanAndParseJSON(nvidiaText) as OutreachMessages;
-    } catch (nvError) {
-      console.warn("NVIDIA fallback failed for outreach:", nvError);
     }
     throw error;
   }
@@ -426,7 +398,6 @@ export async function generateProspectResearch(companyInput: string): Promise<Pr
     You are an elite enterprise B2B management consultant and AI solutions architect.
     Your task is to conduct an automated, systematic, live-grounded research sprint on the company/domain: "${companyInput}".
 
-    Since you are equipped with Google Search grounding, you MUST search the internet for exact details on "${companyInput}".
     Extract actual, real-world verified facts. Do NOT make up, approximate, or hallucinate information if verified details are discoverable.
     
     CRITICAL QUALITY DIRECTIVES to eliminate hallucination:
@@ -435,8 +406,8 @@ export async function generateProspectResearch(companyInput: string): Promise<Pr
     3. INFRASTRUCTURE & TECH STACK: Use web-scraping or indicators of technologies to identify active ERP systems (SAP, Oracle, NetSuite, etc.), CRMs (Salesforce, HubSpot, etc.), Business Intelligence stacks (Tableau, PowerBI, etc.), Supply Chain configurations, and dynamic website technologies (React, Next.js, HubSpot, Cloudflare, etc.). Specify exact product names and your realistic assessment confidence level ('High', 'Medium', 'Low') along with exact evidence indicators.
     4. AI ADOPTION & STRATEGY: Analyze any reported state of AI adoption, deployed machine learning algorithms, or plans. List real competitors of this company and their estimated relative AI maturity.
     5. CUSTOM FIT SOLUTIONS: Propose highly specific, granular AI/ML B2B software solutions tailored precisely to the identified pain points. Include detailed pricing structures with monthly subscriptions, Year-1 contracts, and estimated Life-Time Value (LTV) forecasts that make absolute commercial sense for a company of their size.
-    6. TARGET STAKEHOLDER: Find the actual, current, real-world named executive or key decision-maker (e.g., actual CEO, CFO, CIO, CTO, VP, or Head of Operations) currently leading within that organization. Perform a precise look-up to find their real full name (e.g. \"Satya Nadella\"), exact title, a verified or highly realistic corporate phone number, a verified business corporate email address matched to their company domain, and their actual personal LinkedIn profile URL if available. Do NOT use fake placeholder text or dummy links like \"Jane Doe\" or \"example.com\".
-    7. DETAILED MCKINSEY-GRADE WORK & OUTREACH PREPARATION ANALYSIS: In "markdownReport", generate a comprehensive, premium, 2000-3000 word consulting report. This must read like a Gartner Magic Quadrant or McKinsey analysis, incorporating real-world news dates (e.g., 2024-2026), specific executive quotes, and in-depth business model breakdowns. Rely directly on Google Search results to make this report exceptionally factual and precise.
+    6. TARGET STAKEHOLDER: Find the actual, current, real-world named executive or key decision-maker (e.g., actual CEO, CFO, CIO, CTO, VP, or Head of Operations) currently leading within that organization. Perform a precise look-up to find their real full name (e.g. "Satya Nadella"), exact title, a verified or highly realistic corporate phone number, a verified business corporate email address matched to their company domain, and their actual personal LinkedIn profile URL if available. Do NOT use fake placeholder text or dummy links like "Jane Doe" or "example.com".
+    7. DETAILED MCKINSEY-GRADE WORK & OUTREACH PREPARATION ANALYSIS: In "markdownReport", generate a comprehensive, premium, 2000-3000 word consulting report. This must read like a Gartner Magic Quadrant or McKinsey analysis, incorporating real-world news dates (e.g., 2024-2026), specific executive quotes, and in-depth business model breakdowns. Rely directly on research to make this report exceptionally factual and precise.
     The report MUST contain these specific styled parts with clear headers and thorough, data-dense analysis:
     - # DETAILED CONSULTING REPORT: [COMPANY NAME]
     - ## PART 1: EXECUTIVE BRIEFING & CORE CORPORATE PROFILE
@@ -455,27 +426,13 @@ export async function generateProspectResearch(companyInput: string): Promise<Pr
   `;
 
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt + "\n\nReturn ONLY valid JSON. No markdown, no code fences, no explanation. Follow the exact schema described in the instructions.",
-      config: {
-        tools: [{ googleSearch: {} }]
-      }
-    });
-    
-    const rawText = (response.text || '');
-    return { ...cleanAndParseJSON(rawText) } as ProspectResearchReport;
+    const nvidiaText = await callNvidiaAI(prompt, "You are an elite enterprise B2B management consultant and AI solutions architect. Return a structured consulting report JSON.");
+    return { ...cleanAndParseJSON(nvidiaText) } as ProspectResearchReport;
   } catch (error) {
     console.error("Prospect Research Generation Error:", error);
-    if (!process.env.GEMINI_API_KEY) {
-      console.warn("No Gemini API key configured, using fallback for prospect research");
+    if (!getNvidiaApiKey()) {
+      console.warn("No NVIDIA API key configured, using mock prospect research");
       return getMockProspectResearch(companyInput);
-    }
-    try {
-      const nvidiaText = await callNvidiaFallback(prompt, "You are an elite enterprise B2B management consultant and AI solutions architect. Return a structured consulting report JSON.");
-      return { ...cleanAndParseJSON(nvidiaText) } as ProspectResearchReport;
-    } catch (nvError) {
-      console.warn("NVIDIA fallback failed for prospect research:", nvError);
     }
     throw error;
   }
@@ -519,25 +476,13 @@ export async function analyzeBenchmarkDrift(leads: any[]): Promise<BenchmarkDrif
   `;
 
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt + "\n\nReturn ONLY valid JSON. No markdown, no code fences, no explanation. Follow the exact schema described in the instructions.",
-      config: {}
-    });
-    
-    const rawText = (response.text || '');
-    return { ...cleanAndParseJSON(rawText) } as BenchmarkDriftAnalysis;
+    const nvidiaText = await callNvidiaAI(prompt, "You are an elite enterprise B2B sales strategist and CRO consultant. Return a structured JSON report matching the requested schema exactly.");
+    return { ...cleanAndParseJSON(nvidiaText) } as BenchmarkDriftAnalysis;
   } catch (error) {
     console.error("Benchmark Drift Analysis Error:", error);
-    if (!process.env.GEMINI_API_KEY) {
-      console.warn("No Gemini API key configured, using fallback for benchmark drift analysis");
+    if (!getNvidiaApiKey()) {
+      console.warn("No NVIDIA API key configured, using mock benchmark drift");
       return getMockBenchmarkDrift(leads);
-    }
-    try {
-      const nvidiaText = await callNvidiaFallback(prompt, "You are an elite enterprise B2B sales strategist and CRO consultant. Return a structured JSON report matching the requested schema exactly.");
-      return { ...cleanAndParseJSON(nvidiaText) } as BenchmarkDriftAnalysis;
-    } catch (nvError) {
-      console.warn("NVIDIA fallback failed for benchmark drift:", nvError);
     }
     throw error;
   }
@@ -583,7 +528,6 @@ export function getMockProspectResearch(companyInput: string): ProspectResearchR
     .split('.')[0];
   const companyName = cleanName.charAt(0).toUpperCase() + cleanName.slice(1);
 
-  // Determine dynamic details for known companies
   const nameLower = companyName.toLowerCase();
   let defaultStatus = "Private (Scale-up)";
   let defaultRevenue = "$150M+ ARR (Estimated)";
@@ -972,5 +916,3 @@ export function getMockBenchmarkDrift(leads: any[]): BenchmarkDriftAnalysis {
     reallocationAdvice: "We recommend immediately pausing the generic mid-market IT list and re-directing SDR focus strictly toward Tier-1 VP of Sales and VP of Operations targets within the Financial Services and Advanced Tech segments."
   };
 }
-
-
