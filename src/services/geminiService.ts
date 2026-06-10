@@ -9,6 +9,47 @@ const ai = new GoogleGenAI({
   }
 });
 
+const NVIDIA_FREE_MODEL = "deepseek-ai/deepseek-v4-flash";
+
+const nvidiaApiKey = "DYNAMIC_LOADED";
+
+export function getNvidiaApiKey(): string {
+  if (typeof window !== "undefined") {
+    const saved = localStorage.getItem("zy_nvidia_api_key");
+    if (saved) return saved;
+  }
+  return process.env.NVIDIA_API_KEY || "";
+}
+
+async function callNvidiaFallback(prompt: string, systemPrompt?: string): Promise<string> {
+  const key = getNvidiaApiKey();
+  if (!key) throw new Error("No NVIDIA API key configured");
+  console.log(`[NVIDIA NIM] Invoking ${NVIDIA_FREE_MODEL}...`);
+  const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${key}`
+    },
+    body: JSON.stringify({
+      model: NVIDIA_FREE_MODEL,
+      messages: [
+        ...(systemPrompt ? [{ role: "system", content: systemPrompt }] : []),
+        { role: "user", content: prompt }
+      ],
+      temperature: 0.20,
+      max_tokens: 8000,
+      top_p: 0.70
+    })
+  });
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`NVIDIA NIM error (${response.status}): ${errorBody}`);
+  }
+  const data = await response.json();
+  return data.choices?.[0]?.message?.content || "";
+}
+
 export interface OutreachMessages {
   whatsapp: string;
   linkedin_connect: string;
@@ -280,6 +321,12 @@ export async function generateOutreach(lead: any, config: any): Promise<Outreach
       console.warn("No Gemini API key configured, using fallback for outreach generation");
       return getMockOutreach(lead, config);
     }
+    try {
+      const nvidiaText = await callNvidiaFallback(prompt, "You are a B2B sales expert writing omnichannel cold outreach. Return a structured JSON object matching the requested schema exactly.");
+      return cleanAndParseJSON(nvidiaText) as OutreachMessages;
+    } catch (nvError) {
+      console.warn("NVIDIA fallback failed for outreach:", nvError);
+    }
     throw error;
   }
 }
@@ -424,6 +471,12 @@ export async function generateProspectResearch(companyInput: string): Promise<Pr
       console.warn("No Gemini API key configured, using fallback for prospect research");
       return getMockProspectResearch(companyInput);
     }
+    try {
+      const nvidiaText = await callNvidiaFallback(prompt, "You are an elite enterprise B2B management consultant and AI solutions architect. Return a structured consulting report JSON.");
+      return { ...cleanAndParseJSON(nvidiaText) } as ProspectResearchReport;
+    } catch (nvError) {
+      console.warn("NVIDIA fallback failed for prospect research:", nvError);
+    }
     throw error;
   }
 }
@@ -479,6 +532,12 @@ export async function analyzeBenchmarkDrift(leads: any[]): Promise<BenchmarkDrif
     if (!process.env.GEMINI_API_KEY) {
       console.warn("No Gemini API key configured, using fallback for benchmark drift analysis");
       return getMockBenchmarkDrift(leads);
+    }
+    try {
+      const nvidiaText = await callNvidiaFallback(prompt, "You are an elite enterprise B2B sales strategist and CRO consultant. Return a structured JSON report matching the requested schema exactly.");
+      return { ...cleanAndParseJSON(nvidiaText) } as BenchmarkDriftAnalysis;
+    } catch (nvError) {
+      console.warn("NVIDIA fallback failed for benchmark drift:", nvError);
     }
     throw error;
   }
