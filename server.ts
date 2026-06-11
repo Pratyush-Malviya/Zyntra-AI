@@ -194,11 +194,12 @@ app.post("/api/ai/nvidia", express.json(), async (req, res) => {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${nvidiaKey}` },
       body: JSON.stringify({
-        model: model || "meta/llama-3.3-70b-instruct",
+        model: model || "deepseek-ai/deepseek-v4-pro",
         messages: [...(systemPrompt ? [{ role: "system", content: systemPrompt }] : []), ...(messages || [])],
         ...(temperature !== undefined ? { temperature } : { temperature: 0.20 }),
         ...(max_tokens !== undefined ? { max_tokens } : { max_tokens: 8000 }),
         ...(top_p !== undefined ? { top_p } : {}),
+        ...(req.body.chat_template_kwargs !== undefined ? { chat_template_kwargs: req.body.chat_template_kwargs } : {}),
         ...(frequency_penalty !== undefined ? { frequency_penalty } : {}),
         ...(presence_penalty !== undefined ? { presence_penalty } : {}),
         ...(response_format ? { response_format } : { response_format: { type: "json_object" } }),

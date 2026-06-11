@@ -1,4 +1,4 @@
-const NVIDIA_MODEL = "meta/llama-3.3-70b-instruct";
+const NVIDIA_MODEL = "deepseek-ai/deepseek-v4-pro";
 
 const nvidiaApiKey = "DYNAMIC_LOADED";
 
@@ -26,6 +26,7 @@ async function callNvidiaAI(prompt: string, systemPrompt?: string): Promise<stri
       temperature: 0.20,
       max_tokens: 8000,
       top_p: 0.70,
+      chat_template_kwargs: { thinking: false },
       response_format: { type: "json_object" }
     })
   });
