@@ -5,7 +5,7 @@ const NVIDIA_MODEL = "deepseek-ai/deepseek-v4-pro";
 
 // Initialize system-wide backend client with 'aistudio-build' User-Agent standard header
 const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY || "",
+  apiKey: process.env.GEMINI_API_KEY || "dummy-key-to-bypass-sdk-warning",
   httpOptions: {
     headers: {
       'User-Agent': 'aistudio-build',
