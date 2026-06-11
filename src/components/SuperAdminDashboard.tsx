@@ -33,7 +33,7 @@ import {
   Flame
 } from 'lucide-react';
 import { db, auth } from '../firebase';
-import { getNvidiaApiKey, getNvidiaSelectedModel } from '../services/geminiService';
+import { getNvidiaApiKey, getNvidiaSelectedModel } from '../services/aiService';
 import { 
   collection, 
   query, 

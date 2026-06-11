@@ -130,8 +130,8 @@ export function getNvidiaSelectedModel(): string {
   return "google/gemma-3n-e2b-it";
 }
 
-// Low-overhead client-side helper to call the secure Express server-side Gemini routes
-async function fetchSecureGemini(endpoint: string, body: any): Promise<any> {
+// Low-overhead client-side helper to call the secure Express server-side AI routes
+async function fetchSecureAI(endpoint: string, body: any): Promise<any> {
   const nvidiaKey = getNvidiaApiKey();
   const nvidiaModel = getNvidiaSelectedModel();
 
@@ -161,19 +161,19 @@ async function fetchSecureGemini(endpoint: string, body: any): Promise<any> {
     }
     return json;
   } catch (err: any) {
-    console.error(`Secure Gemini API call to ${endpoint} failed:`, err);
+    console.error(`Secure AI API call to ${endpoint} failed:`, err);
     throw err;
   }
 }
 
 export async function generateOutreach(lead: any, config: any): Promise<OutreachMessages> {
-  return fetchSecureGemini('/api/gemini/generate-outreach', { lead, config });
+  return fetchSecureAI('/api/ai/generate-outreach', { lead, config });
 }
 
 export async function generateProspectResearch(companyInput: string): Promise<ProspectResearchReport> {
-  return fetchSecureGemini('/api/gemini/generate-prospect-research', { companyInput });
+  return fetchSecureAI('/api/ai/generate-prospect-research', { companyInput });
 }
 
 export async function analyzeBenchmarkDrift(leads: any[]): Promise<BenchmarkDriftAnalysis> {
-  return fetchSecureGemini('/api/gemini/analyze-benchmark-drift', { leads });
+  return fetchSecureAI('/api/ai/analyze-benchmark-drift', { leads });
 }

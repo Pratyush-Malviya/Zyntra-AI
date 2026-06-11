@@ -38,7 +38,7 @@ import {
   Copy,
   Database
 } from 'lucide-react';
-import { analyzeBenchmarkDrift, BenchmarkDriftAnalysis } from '../services/geminiService';
+import { analyzeBenchmarkDrift, BenchmarkDriftAnalysis } from '../services/aiService';
 
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';

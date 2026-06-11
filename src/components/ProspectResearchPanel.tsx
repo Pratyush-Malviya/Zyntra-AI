@@ -37,7 +37,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
-import { generateProspectResearch, ProspectResearchReport } from '../services/geminiService';
+import { generateProspectResearch, ProspectResearchReport } from '../services/aiService';
 import { db, Timestamp } from '../firebase';
 import { collection, addDoc, getDocs, query, where, deleteDoc, doc, updateDoc, writeBatch } from 'firebase/firestore';
 import { jsPDF } from 'jspdf';
@@ -824,22 +824,6 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
                 animate={{ opacity: 1, y: 0 }}
                 className="space-y-6"
               >
-                {/* Sandbox Fallback Mode Banner */}
-                {(activeResearch as any).isMocked && (
-                  <div className="p-5 rounded-3xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-4 text-xs text-amber-200">
-                    <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-                    <div>
-                      <h4 className="font-syne font-extrabold text-amber-300 text-sm">Sandbox Simulation Mode Active (Live Gemini Key Exhausted)</h4>
-                      <p className="mt-1 leading-relaxed text-amber-300/80 text-[11px]">
-                        The production Gemini API free-tier limit has been reached (<code className="bg-black/40 px-1 py-0.5 rounded font-mono text-amber-200">RESOURCE_EXHAUSTED 429</code>). To maintain absolute service readiness, Zyntra has loaded high-fidelity local GTM target mapping.
-                      </p>
-                      <p className="mt-2.5 font-bold text-amber-300 hover:underline">
-                        💡 To resume Live operations on Vercel: upgrade your Google AI Studio plan or verify your GEMINI_API_KEY environment variables of your Vercel deployment.
-                      </p>
-                    </div>
-                  </div>
-                )}
-
                 {/* Visual Header Overview Card */}
                 <div className="bg-gradient-to-br from-surface to-surface-alt border border-border rounded-[24px] md:rounded-[32px] p-5 md:p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative overflow-hidden">
                   <div className="space-y-2">

@@ -4,7 +4,7 @@ import {
   Trash2, PlusCircle, LayoutDashboard, Search, Filter, RefreshCw, 
   ChevronRight, Calendar, User, Briefcase, TrendingUp, AlertTriangle, Cpu
 } from 'lucide-react';
-import { generateOutreach } from '../services/geminiService';
+import { generateOutreach } from '../services/aiService';
 
 interface AEOpportunity {
   id: string;

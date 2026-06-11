@@ -10,7 +10,7 @@ import {
   generateOutreachBackend, 
   generateProspectResearchBackend, 
   analyzeBenchmarkDriftBackend 
-} from "./src/services/geminiServiceBackend";
+} from "./src/services/aiServiceBackend";
 
 dotenv.config();
 
@@ -640,7 +640,6 @@ const hashApiKey = (key: string) => {
 };
 
 // Real B2B Sales intelligence background simulator and provider (Task 3 Close Analysis)
-import { GoogleGenAI, Type } from "@google/genai";
 
 async function runAiDealAnalysis(deal: Deal, lead: Lead | undefined, activities: ActivityLog[]): Promise<any> {
   const contextText = JSON.stringify({
@@ -688,25 +687,6 @@ async function runAiDealAnalysis(deal: Deal, lead: Lead | undefined, activities:
     }
   }
 
-  // 2. Fallback to Gemini Server-Side API
-  const geminiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
-  if (geminiKey) {
-    try {
-      console.log("[Claude Close Analyzer] Invoking Gemini-powered Fallback Engine...");
-      const ai = new GoogleGenAI({ apiKey: geminiKey });
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: `${sysPrompt}\n\n${prompt}`,
-        config: {
-          responseMimeType: "application/json"
-        }
-      });
-      const text = response.text || "";
-      return JSON.parse(text);
-    } catch (err: any) {
-      console.error("[Claude Close Analyzer] Gemini fallback failed:", err.message);
-    }
-  }
 
   // 2.5 Fallback to NVIDIA NIM Fallback
   const nvidiaKey = process.env.NVIDIA_API_KEY;
@@ -2666,7 +2646,7 @@ app.post("/api/ai/nvidia", express.json(), async (req, res) => {
   });
 
   // Secure server-side Gemini generation proxy endpoints
-  app.post("/api/gemini/generate-outreach", async (req, res) => {
+  app.post("/api/ai/generate-outreach", async (req, res) => {
     const { lead, config, customNvidia } = req.body;
     try {
       const messages = await generateOutreachBackend(lead, config, customNvidia);
@@ -2677,7 +2657,7 @@ app.post("/api/ai/nvidia", express.json(), async (req, res) => {
     }
   });
 
-  app.post("/api/gemini/generate-prospect-research", async (req, res) => {
+  app.post("/api/ai/generate-prospect-research", async (req, res) => {
     const { companyInput, customNvidia } = req.body;
     try {
       const research = await generateProspectResearchBackend(companyInput, customNvidia);
@@ -2688,7 +2668,7 @@ app.post("/api/ai/nvidia", express.json(), async (req, res) => {
     }
   });
 
-  app.post("/api/gemini/analyze-benchmark-drift", async (req, res) => {
+  app.post("/api/ai/analyze-benchmark-drift", async (req, res) => {
     const { leads, customNvidia } = req.body;
     try {
       const analysis = await analyzeBenchmarkDriftBackend(leads, customNvidia);
