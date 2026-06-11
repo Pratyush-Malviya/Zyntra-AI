@@ -1,41 +1,41 @@
+import { GoogleGenAI, Type } from "@google/genai";
+import OpenAI from 'openai';
+
 const NVIDIA_MODEL = "deepseek-ai/deepseek-v4-pro";
 
-const nvidiaApiKey = "DYNAMIC_LOADED";
-
-export function getNvidiaApiKey(): string {
-  if (typeof window !== "undefined") {
-    const saved = localStorage.getItem("zyntra_nvidia_key") || localStorage.getItem("zy_nvidia_api_key");
-    if (saved) return saved;
+// Initialize system-wide backend client with 'aistudio-build' User-Agent standard header
+const ai = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_KEY || "",
+  httpOptions: {
+    headers: {
+      'User-Agent': 'aistudio-build',
+    }
   }
-  // Try to safely access process.env if it exists (e.g., in SSR/Node)
-  if (typeof process !== "undefined" && process.env) {
-    return process.env.NVIDIA_API_KEY || "";
-  }
-  return "";
-}
+});
 
 async function callNvidiaAI(prompt: string, systemPrompt?: string): Promise<string> {
-  console.log(`[NVIDIA NIM] Invoking ${NVIDIA_MODEL}...`);
-  const response = await fetch("/api/ai/nvidia", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: NVIDIA_MODEL,
-      messages: [{ role: "user", content: prompt }],
-      systemPrompt,
-      temperature: 0.20,
-      max_tokens: 8000,
-      top_p: 0.70,
-      chat_template_kwargs: { thinking: false },
-      response_format: { type: "json_object" }
-    })
+  console.log(`[NVIDIA NIM] Invoking ${NVIDIA_MODEL} via OpenAI SDK...`);
+  const openai = new OpenAI({
+    apiKey: process.env.NVIDIA_API_KEY || "",
+    baseURL: 'https://integrate.api.nvidia.com/v1',
   });
-  if (!response.ok) {
-    const errorBody = await response.text();
-    throw new Error(`NVIDIA NIM error (${response.status}): ${errorBody}`);
-  }
-  const data = await response.json();
-  return data.choices?.[0]?.message?.content || "";
+
+  const messages: any[] = [];
+  if (systemPrompt) messages.push({ role: "system", content: systemPrompt });
+  messages.push({ role: "user", content: prompt });
+
+  const completion = await openai.chat.completions.create({
+    model: NVIDIA_MODEL,
+    messages,
+    temperature: 0.20,
+    top_p: 0.70,
+    max_tokens: 8000,
+    // @ts-ignore
+    chat_template_kwargs: { thinking: false },
+    response_format: { type: "json_object" }
+  });
+
+  return completion.choices[0]?.message?.content || "";
 }
 
 export interface OutreachMessages {
@@ -47,6 +47,7 @@ export interface OutreachMessages {
   email_followup: string;
 }
 
+// Clean and Parse JSON handles raw control characters / line breaks inside string values in JSON and aggressive conversational wrapping repairs
 function cleanAndParseJSON(jsonStr: string): any {
   if (!jsonStr) {
     throw new Error("JSON string is empty or undefined");
@@ -54,20 +55,23 @@ function cleanAndParseJSON(jsonStr: string): any {
 
   let cleaned = jsonStr.trim();
 
+  // 1. Isolate the core JSON object block using first '{' and last '}' if they exist
   const firstBrace = cleaned.indexOf('{');
-  const lastBrace = cleaned.lastIndexOf('}');
-  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-    cleaned = cleaned.substring(firstBrace, lastBrace + 1);
+  if (firstBrace !== -1) {
+    cleaned = cleaned.substring(firstBrace);
   }
 
+  // 2. Perform a character-by-character scan state-machine to clean, comments-strip,
+  // trailing-comma-strip, resolve unescaped internal double quotes, and close truncated entities.
   const bulletproofRepair = (str: string): string => {
     let result = "";
     let inString = false;
-    let stringDelim: string | null = null;
     let escapeActive = false;
+    const stack: ('{' | '[')[] = [];
 
-    const isNextValidJsonDelim = (index: number): boolean => {
-      let j = index;
+    // Helper to check if a comma at `index` is a trailing comma
+    const isTrailingComma = (index: number): boolean => {
+      let j = index + 1;
       while (j < str.length) {
         const c = str[j];
         if (c === ' ' || c === '\n' || c === '\r' || c === '\t') {
@@ -76,78 +80,72 @@ function cleanAndParseJSON(jsonStr: string): any {
         }
         if (c === '/' && str[j + 1] === '/') {
           j += 2;
-          while (j < str.length && str[j] !== '\n') j++;
+          while (j < str.length && str[j] !== '\n') {
+            j++;
+          }
           continue;
         }
         if (c === '/' && str[j + 1] === '*') {
           j += 2;
-          while (j < str.length - 1 && !(str[j] === '*' && str[j + 1] === '/')) j++;
+          while (j < str.length - 1 && !(str[j] === '*' && str[j + 1] === '/')) {
+            j++;
+          }
           j += 2;
           continue;
         }
-        return c === ':' || c === ',' || c === '}' || c === ']';
-      }
-      return true;
-    };
-
-    const isTrailingComma = (index: number): boolean => {
-      let j = index + 1;
-      while (j < str.length) {
-        const c = str[j];
-        if (c === ' ' || c === '\n' || c === '\r' || c === '\t') { j++; continue; }
-        if (c === '/' && str[j + 1] === '/') {
-          j += 2;
-          while (j < str.length && str[j] !== '\n') j++;
-          continue;
+        if (c === '}' || c === ']') {
+          return true;
         }
-        if (c === '/' && str[j + 1] === '*') {
-          j += 2;
-          while (j < str.length - 1 && !(str[j] === '*' && str[j + 1] === '/')) j++;
-          j += 2;
-          continue;
-        }
-        if (c === '}' || c === ']') return true;
         return false;
       }
-      return true;
+      return true; // trailing/extraneous
     };
 
     for (let i = 0; i < str.length; i++) {
       const char = str[i];
 
-      if (escapeActive) {
-        if ('"\\/bfnrt'.includes(char) || char === 'u') {
-          result += '\\' + char;
-        } else {
-          result += char;
-        }
-        if (char !== 'u') escapeActive = false;
-        else escapeActive = false;
-        continue;
-      }
-
-      if (char === '\\') {
-        escapeActive = true;
-        continue;
-      }
-
+      // Handle escape sequences inside strings
       if (inString) {
-        if (char === stringDelim) {
-          if (stringDelim === '"') {
-            if (isNextValidJsonDelim(i + 1)) {
-              inString = false;
-              stringDelim = null;
-              result += '"';
-            } else {
-              result += '\\"';
+        if (escapeActive) {
+          result += char;
+          escapeActive = false;
+          continue;
+        }
+
+        if (char === '\\') {
+          result += char;
+          escapeActive = true;
+          continue;
+        }
+
+        if (char === '"') {
+          // Check if this double quote is a real closing quote.
+          // In standard JSON, a closing quote is followed by whitespace, comma, colon, close-brace, close-bracket, or end of string.
+          let isRealClose = false;
+          let j = i + 1;
+          while (j < str.length) {
+            const nextChar = str[j];
+            if (nextChar === ' ' || nextChar === '\n' || nextChar === '\r' || nextChar === '\t') {
+              j++;
+              continue;
             }
-          } else {
-            inString = false;
-            stringDelim = null;
-            result += '"';
+            if (nextChar === ',' || nextChar === '}' || nextChar === ']' || nextChar === ':') {
+              isRealClose = true;
+            }
+            break;
           }
-        } else if (char === '"' && stringDelim === "'") {
-          result += '\\"';
+
+          if (i === str.length - 1) {
+            isRealClose = true;
+          }
+
+          if (isRealClose) {
+            inString = false;
+            result += '"';
+          } else {
+            // This is an unescaped double quote inside a string! Escape it.
+            result += '\\"';
+          }
         } else if (char === '\n') {
           result += '\\n';
         } else if (char === '\r') {
@@ -157,35 +155,130 @@ function cleanAndParseJSON(jsonStr: string): any {
         } else {
           const code = char.charCodeAt(0);
           if (code < 32) {
+            // Strip non-printable raw control chars under 32 but keep spaces/printable chars
           } else {
             result += char;
           }
         }
       } else {
+        // Outside string
         if (char === '/' && str[i + 1] === '/') {
+          // Skip single-line comment
           i += 2;
-          while (i < str.length && str[i] !== '\n') i++;
+          while (i < str.length && str[i] !== '\n') {
+            i++;
+          }
           continue;
         }
         if (char === '/' && str[i + 1] === '*') {
+          // Skip block comment
           i += 2;
-          while (i < str.length - 1 && !(str[i] === '*' && str[i + 1] === '/')) i++;
-          i += 1;
+          while (i < str.length - 1 && !(str[i] === '*' && str[i + 1] === '/')) {
+            i++;
+          }
+          i += 1; // pointer will be incremented by the loop for '/'
           continue;
         }
-        if (char === '"' || char === "'") {
+        if (char === '"') {
           inString = true;
-          stringDelim = char;
           result += '"';
+        } else if (char === '{') {
+          stack.push('{');
+          result += char;
+        } else if (char === '[') {
+          stack.push('[');
+          result += char;
+        } else if (char === '}') {
+          if (stack.length > 0 && stack[stack.length - 1] === '{') {
+            stack.pop();
+          }
+          result += char;
+        } else if (char === ']') {
+          if (stack.length > 0 && stack[stack.length - 1] === '[') {
+            stack.pop();
+          }
+          result += char;
         } else if (char === ',') {
-          if (isTrailingComma(i)) continue;
+          // Skip trailing commas
+          if (isTrailingComma(i)) {
+            continue;
+          }
           result += char;
         } else {
           result += char;
         }
       }
     }
-    if (inString) result += '"';
+
+    // Handle end-of-string states for truncated payloads
+    if (inString) {
+      result += '"';
+    }
+
+    // Clean up any trailing hanging colon/commas due to truncation
+    let loop = true;
+    while (loop && result.length > 0) {
+      const trimmed = result.trim();
+      if (trimmed.endsWith(':') || trimmed.endsWith(',')) {
+        const lastComma = result.lastIndexOf(',');
+        const lastOpenBrace = result.lastIndexOf('{');
+        const cutIndex = Math.max(lastComma, lastOpenBrace);
+        if (cutIndex !== -1) {
+          result = result.substring(0, cutIndex);
+          if (cutIndex === lastOpenBrace) {
+            result += '{';
+          }
+        } else {
+          break;
+        }
+      } else {
+        loop = false;
+      }
+    }
+
+    // Determine final correct stack of remaining open elements
+    const finalStack: ('{' | '[')[] = [];
+    let finalInString = false;
+    let finalEscape = false;
+    for (let i = 0; i < result.length; i++) {
+      const char = result[i];
+      if (finalInString) {
+        if (finalEscape) {
+          finalEscape = false;
+        } else if (char === '\\') {
+          finalEscape = true;
+        } else if (char === '"') {
+          finalInString = false;
+        }
+      } else {
+        if (char === '"') {
+          finalInString = true;
+        } else if (char === '{') {
+          finalStack.push('{');
+        } else if (char === '[') {
+          finalStack.push('[');
+        } else if (char === '}') {
+          if (finalStack.length > 0 && finalStack[finalStack.length - 1] === '{') {
+            finalStack.pop();
+          }
+        } else if (char === ']') {
+          if (finalStack.length > 0 && finalStack[finalStack.length - 1] === '[') {
+            finalStack.pop();
+          }
+        }
+      }
+    }
+
+    if (finalInString) {
+      result += '"';
+    }
+
+    while (finalStack.length > 0) {
+      const top = finalStack.pop();
+      if (top === '{') result += '}';
+      else if (top === '[') result += ']';
+    }
+
     return result;
   };
 
@@ -197,78 +290,32 @@ function cleanAndParseJSON(jsonStr: string): any {
       const repaired = bulletproofRepair(cleaned);
       return JSON.parse(repaired);
     } catch (secondError) {
-      console.warn("Bulletproof repair also failed, attempting structural repair...", secondError);
-      try {
-        const repaired = bulletproofRepair(cleaned);
-        const structuralRepair = (s: string): string => {
-          let result = "";
-          let inStr = false;
-          let esc = false;
-          let prevTokenWasValue = false;
-          let needsComma = false;
-          for (let i = 0; i < s.length; i++) {
-            const c = s[i];
-            if (esc) { result += c; esc = false; continue; }
-            if (c === '\\') { result += c; esc = true; continue; }
-            if (inStr) {
-              if (c === '"') {
-                inStr = false;
-                prevTokenWasValue = true;
-                needsComma = true;
-              }
-              result += c;
-            } else {
-              if (c === '"') {
-                if (needsComma && prevTokenWasValue) {
-                  result += ',';
-                }
-                inStr = true;
-                needsComma = false;
-                result += c;
-              } else if (c === '{' || c === '[') {
-                needsComma = false;
-                prevTokenWasValue = false;
-                result += c;
-              } else if (c === '}' || c === ']') {
-                prevTokenWasValue = true;
-                needsComma = true;
-                result += c;
-              } else if (c === ':') {
-                prevTokenWasValue = false;
-                needsComma = false;
-                result += c;
-              } else if (c === ',') {
-                prevTokenWasValue = false;
-                needsComma = false;
-                result += c;
-              } else if (c === 't' || c === 'f' || c === 'n' || c === '-' || (c >= '0' && c <= '9')) {
-                let j = i;
-                while (j < s.length && !'",}]\n\r\t '.includes(s[j]) && s[j] !== ':') j++;
-                const val = s.slice(i, j);
-                if (needsComma && prevTokenWasValue) result += ',' + val;
-                else result += val;
-                i = j - 1;
-                prevTokenWasValue = true;
-                needsComma = true;
-                continue;
-              } else {
-                result += c;
-              }
-            }
-          }
-          return result;
-        };
-        const structuralResult = structuralRepair(repaired);
-        return JSON.parse(structuralResult);
-      } catch (thirdError) {
-        console.error("All JSON repair strategies failed. Original raw string length:", jsonStr.length);
-        throw thirdError;
-      }
+      console.error("Bulletproof JSON repair failed. Original raw string length:", jsonStr.length);
+      throw secondError;
     }
   }
 }
 
-export async function generateOutreach(lead: any, config: any): Promise<OutreachMessages> {
+function isQuotaOrApiKeyError(err: any): boolean {
+  if (!err) return false;
+  const msg = (err.message || String(err)).toLowerCase();
+  return (
+    msg.includes("429") ||
+    msg.includes("resource_exhausted") ||
+    msg.includes("quota") ||
+    msg.includes("api key") ||
+    msg.includes("limit") ||
+    msg.includes("unauthorized") ||
+    msg.includes("fetch") ||
+    msg.includes("cors")
+  );
+}
+
+// -------------------------------------------------------------
+// Backends IMPLEMENTATIONS
+// -------------------------------------------------------------
+
+export async function generateOutreachBackend(lead: any, config: any, customNvidia?: any): Promise<any> {
   const prompt = `
     You are a B2B sales expert writing omnichannel cold outreach. 
     Return a structured JSON object.
@@ -290,113 +337,67 @@ export async function generateOutreach(lead: any, config: any): Promise<Outreach
   `;
 
   try {
-    const nvidiaText = await callNvidiaAI(prompt, "You are a B2B sales expert writing omnichannel cold outreach. Return a structured JSON object matching the requested schema exactly. ONLY return valid minified JSON without markdown code fences or explanations.");
-    return cleanAndParseJSON(nvidiaText) as OutreachMessages;
-  } catch (error) {
-    console.error("NVIDIA AI Generation Error:", error);
-    if (!getNvidiaApiKey()) {
-      console.warn("No NVIDIA API key configured, using mock outreach");
-      return getMockOutreach(lead, config);
+    if (!process.env.GEMINI_API_KEY) {
+      throw new Error("No GEMINI_API_KEY configured on backend");
     }
-    throw error;
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            whatsapp: { type: Type.STRING },
+            linkedin_connect: { type: Type.STRING },
+            linkedin_dm: { type: Type.STRING },
+            email_subject: { type: Type.STRING },
+            email_body: { type: Type.STRING },
+            email_followup: { type: Type.STRING },
+          },
+          required: ["whatsapp", "linkedin_connect", "linkedin_dm", "email_subject", "email_body", "email_followup"],
+        }
+      }
+    });
+    
+    const rawText = (response.text || '');
+    return cleanAndParseJSON(rawText);
+  } catch (error) {
+    if (isQuotaOrApiKeyError(error)) {
+      console.warn("Gemini Resource/Quota limit reached. Activating DeepSeek fallback for outreach generation...");
+      try {
+        const deepseekResult = await callNvidiaAI(prompt, "You are a B2B sales expert writing omnichannel cold outreach. Return a structured JSON object matching the requested schema exactly. ONLY return valid minified JSON without markdown code fences or explanations.");
+        return cleanAndParseJSON(deepseekResult);
+      } catch (nvidiaErr) {
+        console.error("DeepSeek generation failed:", nvidiaErr);
+      }
+    } else {
+      console.error("Gemini Generation Error on server:", error);
+    }
+    console.warn("Activating high-fidelity mock fallback for outreach generation");
+    return getMockOutreach(lead, config);
   }
 }
 
-export interface ProspectResearchReport {
-  isMocked?: boolean;
-  companyInfo: {
-    name: string;
-    industry: string;
-    hq: string;
-    founded: string;
-    status: string;
-    website: string;
-    revenue: string;
-    employees: string;
-    markets: string;
-    description: string;
-    socialMediaLinks?: {
-      linkedin?: string;
-      twitter?: string;
-      facebook?: string;
-      youtube?: string;
-    };
-    funding?: {
-      hasRaisedRecently: boolean;
-      details: string;
-      rounds?: { roundName: string; amount: string; date: string; investors?: string }[];
-    };
-    recentProducts?: {
-      hasLaunchedRecently: boolean;
-      details: string;
-      productsList?: { name: string; description: string; launchDate?: string }[];
-    };
-  };
-  painPoints: {
-    title: string;
-    severity: "CRITICAL" | "HIGH" | "MEDIUM";
-    description: string;
-    evidence: { quote: string; source: string; date: string; url?: string }[];
-    impact: string;
-    timeline: string;
-  }[];
-  techStack: {
-    erp: { name: string; status: string; confidence: string; source: string };
-    crm: { name: string; status: string; confidence: string; source: string };
-    bi: { name: string; status: string; confidence: string; source: string };
-    supplyChain: { name: string; status: string; confidence: string; source: string };
-    websiteTech: string[];
-  };
-  aiAdoption: {
-    maturityLevel: "Pre-AI" | "Basic" | "Intermediate" | "Advanced";
-    deployedTools: string[];
-    plannedTools: string[];
-    competitors: { name: string; aiMaturity: string; tools: string }[];
-  };
-  aiSolutions: {
-    title: string;
-    painPointCausal: string;
-    mvp: string;
-    features: string[];
-    pricing: {
-      model: string;
-      monthlyFee: string;
-      year1Contract: string;
-      potentialLtv: string;
-    };
-    pricingJustification: string;
-    whyYouWin: string[];
-  }[];
-  gtmStrategy: {
-    decisionMaker: {
-      name: string;
-      title: string;
-      phone: string;
-      email: string;
-      linkedinUrl: string;
-      responsibilities: string;
-      painOwns: string;
-      motivation: string;
-    };
-    openingHook: string;
-    coreMessage: string;
-    cta: string;
-    expectedObjections: { objection: string; response: string }[];
-  };
-  dealSizeForecast: {
-    phase1QuickWin: string;
-    phase2Expansion: string;
-    phase3FullPlatform: string;
-    totalRevenueLtv: string;
-  };
-  markdownReport: string;
-}
+export async function generateProspectResearchBackend(companyInput: string, customNvidia?: any): Promise<any> {
+  let targetCompany = companyInput;
+  let targetLinkedin = "";
 
-export async function generateProspectResearch(companyInput: string): Promise<ProspectResearchReport> {
+  try {
+    if (companyInput.trim().startsWith("{")) {
+      const parsed = JSON.parse(companyInput);
+      targetCompany = parsed.website || parsed.company || companyInput;
+      targetLinkedin = parsed.linkedin || "";
+    }
+  } catch (e) {
+    // Not JSON, use as-is
+  }
+
   const prompt = `
     You are an elite enterprise B2B management consultant and AI solutions architect.
-    Your task is to conduct an automated, systematic, live-grounded research sprint on the company/domain: "${companyInput}".
+    Your task is to conduct an automated, systematic, live-grounded research sprint on the company/domain/website: "${targetCompany}"${targetLinkedin ? ` and specifically targeting the prospect decision-maker at LinkedIn: "${targetLinkedin}"` : ""}.
 
+    Since you are equipped with Google Search grounding, you MUST search the internet for exact details on "${targetCompany}"${targetLinkedin ? ` and retrieve search results or LinkedIn profile info for: "${targetLinkedin}"` : ""}.
     Extract actual, real-world verified facts. Do NOT make up, approximate, or hallucinate information if verified details are discoverable.
     
     CRITICAL QUALITY DIRECTIVES to eliminate hallucination:
@@ -405,9 +406,9 @@ export async function generateProspectResearch(companyInput: string): Promise<Pr
     3. INFRASTRUCTURE & TECH STACK: Use web-scraping or indicators of technologies to identify active ERP systems (SAP, Oracle, NetSuite, etc.), CRMs (Salesforce, HubSpot, etc.), Business Intelligence stacks (Tableau, PowerBI, etc.), Supply Chain configurations, and dynamic website technologies (React, Next.js, HubSpot, Cloudflare, etc.). Specify exact product names and your realistic assessment confidence level ('High', 'Medium', 'Low') along with exact evidence indicators.
     4. AI ADOPTION & STRATEGY: Analyze any reported state of AI adoption, deployed machine learning algorithms, or plans. List real competitors of this company and their estimated relative AI maturity.
     5. CUSTOM FIT SOLUTIONS: Propose highly specific, granular AI/ML B2B software solutions tailored precisely to the identified pain points. Include detailed pricing structures with monthly subscriptions, Year-1 contracts, and estimated Life-Time Value (LTV) forecasts that make absolute commercial sense for a company of their size.
-    6. TARGET STAKEHOLDER: Find the actual, current, real-world named executive or key decision-maker (e.g., actual CEO, CFO, CIO, CTO, VP, or Head of Operations) currently leading within that organization. Perform a precise look-up to find their real full name (e.g. "Satya Nadella"), exact title, a verified or highly realistic corporate phone number, a verified business corporate email address matched to their company domain, and their actual personal LinkedIn profile URL if available. Do NOT use fake placeholder text or dummy links like "Jane Doe" or "example.com".
-    7. DETAILED MCKINSEY-GRADE WORK & OUTREACH PREPARATION ANALYSIS: In "markdownReport", generate a comprehensive, premium, 2000-3000 word consulting report. This must read like a Gartner Magic Quadrant or McKinsey analysis, incorporating real-world news dates (e.g., 2024-2026), specific executive quotes, and in-depth business model breakdowns. Rely directly on research to make this report exceptionally factual and precise.
-    The report MUST contain these specific styled parts with clear headers and thorough, data-dense analysis:
+    6. TARGET STAKEHOLDER: ${targetLinkedin ? `The user provided a target LinkedIn profile: "${targetLinkedin}". Search the internet specifically to locate the real name, exact corporate title, responsibilities, pain owns, and professional motivation of this person at LinkedIn URL "${targetLinkedin}". If public information for this exact individual is scarce, generate highly realistic and professional business contact information based on their website domain and corporate role, ensuring the name aligns with the profile owner/representative.` : `Find the actual, current, real-world named executive or key decision-maker (e.g., actual CEO, CFO, CIO, CTO, VP, or Head of Operations) currently leading within that organization. Perform a precise look-up to find their real full name (e.g. "Satya Nadella"), exact title, a verified or highly realistic corporate phone number, a verified business corporate email address matched to their company domain, and their actual personal LinkedIn profile URL if available.`} Do NOT use fake placeholder text or dummy links like "Jane Doe" or "example.com".
+    7. DETAILED MCKINSEY-GRADE WORK & OUTREACH PREPARATION ANALYSIS: In "markdownReport", generate a comprehensive, premium, data-dense 500-1000 word consulting report. This must read like an extremely detailed Gartner Magic Quadrant or McKinsey analysis, incorporating real-world news dates (e.g., 2024-2026), specific executive quotes, and in-depth business model breakdowns. Rely directly on Google Search results to make this report exceptionally factual and precise.
+    The report MUST contain these specific styled parts with clear headers and thorough, dense analysis:
     - # DETAILED CONSULTING REPORT: [COMPANY NAME]
     - ## PART 1: EXECUTIVE BRIEFING & CORE CORPORATE PROFILE
       Analyze the corporate profile, company scale, primary target markets, and competitive positioning.
@@ -421,40 +422,296 @@ export async function generateProspectResearch(companyInput: string): Promise<Pr
       Outline specific blueprints for your custom-built SaaS integration models, complete with comprehensive Year-1 contract estimates and ROI analyses.
     - ## PART 6: OMNICHANNEL GTM EXECUTIVE OUTREACH SEQUENCE
       Provide exact sequences (LinkedIn & email) ready for action.
+    - ## PART 7: DECISION-MAKER ALIGNMENT
+      Provide custom commentary demonstrating how your pitch aligns perfectly with the target profile's responsibilities, background, and LinkedIn positioning.
     8. FUNDING & LAUNCHED PRODUCTS: Research recent funding rounds, venture capital/private equity backing, or security filings to indicate if they have raised funding recently or not. Research recent press announcements or product logs to discover any latest products or services they have launched, or are planning to launch soon.
   `;
 
   try {
-    const nvidiaText = await callNvidiaAI(prompt, "You are an elite enterprise B2B management consultant and AI solutions architect. Return a structured consulting report JSON. ONLY return valid minified JSON without markdown code fences or explanations.");
-    return { ...cleanAndParseJSON(nvidiaText) } as ProspectResearchReport;
-  } catch (error) {
-    console.error("Prospect Research Generation Error:", error);
-    if (!getNvidiaApiKey()) {
-      console.warn("No NVIDIA API key configured, using mock prospect research");
-      return getMockProspectResearch(companyInput);
+    if (!process.env.GEMINI_API_KEY) {
+      throw new Error("No GEMINI_API_KEY configured on backend");
     }
-    throw error;
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            companyInfo: {
+              type: Type.OBJECT,
+              properties: {
+                name: { type: Type.STRING },
+                industry: { type: Type.STRING },
+                hq: { type: Type.STRING },
+                founded: { type: Type.STRING },
+                status: { type: Type.STRING },
+                website: { type: Type.STRING },
+                revenue: { type: Type.STRING },
+                employees: { type: Type.STRING },
+                markets: { type: Type.STRING },
+                description: { type: Type.STRING },
+                socialMediaLinks: {
+                  type: Type.OBJECT,
+                  properties: {
+                    linkedin: { type: Type.STRING },
+                    twitter: { type: Type.STRING },
+                    facebook: { type: Type.STRING },
+                    youtube: { type: Type.STRING },
+                  },
+                  required: ["linkedin"]
+                },
+                funding: {
+                  type: Type.OBJECT,
+                  properties: {
+                    hasRaisedRecently: { type: Type.BOOLEAN },
+                    details: { type: Type.STRING },
+                    rounds: {
+                      type: Type.ARRAY,
+                      items: {
+                        type: Type.OBJECT,
+                        properties: {
+                          roundName: { type: Type.STRING },
+                          amount: { type: Type.STRING },
+                          date: { type: Type.STRING },
+                          investors: { type: Type.STRING }
+                        },
+                        required: ["roundName", "amount", "date"]
+                      }
+                    }
+                  },
+                  required: ["hasRaisedRecently", "details"]
+                },
+                recentProducts: {
+                  type: Type.OBJECT,
+                  properties: {
+                    hasLaunchedRecently: { type: Type.BOOLEAN },
+                    details: { type: Type.STRING },
+                    productsList: {
+                      type: Type.ARRAY,
+                      items: {
+                        type: Type.OBJECT,
+                        properties: {
+                          name: { type: Type.STRING },
+                          description: { type: Type.STRING },
+                          launchDate: { type: Type.STRING }
+                        },
+                        required: ["name", "description"]
+                      }
+                    }
+                  },
+                  required: ["hasLaunchedRecently", "details"]
+                }
+              },
+              required: [
+                "name", "industry", "hq", "founded", "status", "website", "revenue", 
+                "employees", "markets", "description", "socialMediaLinks", "funding", "recentProducts"
+              ],
+            },
+            painPoints: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  title: { type: Type.STRING },
+                  severity: { type: Type.STRING },
+                  description: { type: Type.STRING },
+                  evidence: {
+                    type: Type.ARRAY,
+                    items: {
+                      type: Type.OBJECT,
+                      properties: {
+                        quote: { type: Type.STRING },
+                        source: { type: Type.STRING },
+                        date: { type: Type.STRING },
+                      },
+                      required: ["quote", "source", "date"],
+                    }
+                  },
+                  impact: { type: Type.STRING },
+                  timeline: { type: Type.STRING },
+                },
+                required: ["title", "severity", "description", "evidence", "impact", "timeline"],
+              }
+            },
+            techStack: {
+              type: Type.OBJECT,
+              properties: {
+                erp: {
+                  type: Type.OBJECT,
+                  properties: {
+                    name: { type: Type.STRING },
+                    status: { type: Type.STRING },
+                    confidence: { type: Type.STRING },
+                    source: { type: Type.STRING },
+                  },
+                  required: ["name", "status", "confidence", "source"]
+                },
+                crm: {
+                  type: Type.OBJECT,
+                  properties: {
+                    name: { type: Type.STRING },
+                    status: { type: Type.STRING },
+                    confidence: { type: Type.STRING },
+                    source: { type: Type.STRING },
+                  },
+                  required: ["name", "status", "confidence", "source"]
+                },
+                bi: {
+                  type: Type.OBJECT,
+                  properties: {
+                    name: { type: Type.STRING },
+                    status: { type: Type.STRING },
+                    confidence: { type: Type.STRING },
+                    source: { type: Type.STRING },
+                  },
+                  required: ["name", "status", "confidence", "source"]
+                },
+                supplyChain: {
+                  type: Type.OBJECT,
+                  properties: {
+                    name: { type: Type.STRING },
+                    status: { type: Type.STRING },
+                    confidence: { type: Type.STRING },
+                    source: { type: Type.STRING },
+                  },
+                  required: ["name", "status", "confidence", "source"]
+                },
+                websiteTech: {
+                  type: Type.ARRAY,
+                  items: { type: Type.STRING },
+                }
+              },
+              required: ["erp", "crm", "bi", "supplyChain", "websiteTech"],
+            },
+            aiAdoption: {
+              type: Type.OBJECT,
+              properties: {
+                maturityLevel: { type: Type.STRING },
+                deployedTools: { type: Type.ARRAY, items: { type: Type.STRING } },
+                plannedTools: { type: Type.ARRAY, items: { type: Type.STRING } },
+                competitors: {
+                  type: Type.ARRAY,
+                  items: {
+                    type: Type.OBJECT,
+                    properties: {
+                      name: { type: Type.STRING },
+                      aiMaturity: { type: Type.STRING },
+                      tools: { type: Type.STRING },
+                    },
+                    required: ["name", "aiMaturity", "tools"],
+                  }
+                }
+              },
+              required: ["maturityLevel", "deployedTools", "plannedTools", "competitors"],
+            },
+            aiSolutions: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  title: { type: Type.STRING },
+                  painPointCausal: { type: Type.STRING },
+                  mvp: { type: Type.STRING },
+                  features: { type: Type.ARRAY, items: { type: Type.STRING } },
+                  pricing: {
+                    type: Type.OBJECT,
+                    properties: {
+                      model: { type: Type.STRING },
+                      monthlyFee: { type: Type.STRING },
+                      year1Contract: { type: Type.STRING },
+                      potentialLtv: { type: Type.STRING },
+                    },
+                    required: ["model", "monthlyFee", "year1Contract", "potentialLtv"],
+                  },
+                  pricingJustification: { type: Type.STRING },
+                  whyYouWin: { type: Type.ARRAY, items: { type: Type.STRING } },
+                },
+                required: ["title", "painPointCausal", "mvp", "features", "pricing", "pricingJustification", "whyYouWin"],
+              }
+            },
+            gtmStrategy: {
+              type: Type.OBJECT,
+              properties: {
+                decisionMaker: {
+                  type: Type.OBJECT,
+                  properties: {
+                    name: { type: Type.STRING },
+                    title: { type: Type.STRING },
+                    phone: { type: Type.STRING },
+                    email: { type: Type.STRING },
+                    linkedinUrl: { type: Type.STRING },
+                    responsibilities: { type: Type.STRING },
+                    painOwns: { type: Type.STRING },
+                    motivation: { type: Type.STRING },
+                  },
+                  required: ["name", "title", "phone", "email", "linkedinUrl", "responsibilities", "painOwns", "motivation"],
+                },
+                openingHook: { type: Type.STRING },
+                coreMessage: { type: Type.STRING },
+                cta: { type: Type.STRING },
+                expectedObjections: {
+                  type: Type.ARRAY,
+                  items: {
+                    type: Type.OBJECT,
+                    properties: {
+                      objection: { type: Type.STRING },
+                      response: { type: Type.STRING },
+                    },
+                    required: ["objection", "response"],
+                  }
+                }
+              },
+              required: ["decisionMaker", "openingHook", "coreMessage", "cta", "expectedObjections"],
+            },
+            dealSizeForecast: {
+              type: Type.OBJECT,
+              properties: {
+                phase1QuickWin: { type: Type.STRING },
+                phase2Expansion: { type: Type.STRING },
+                phase3FullPlatform: { type: Type.STRING },
+                totalRevenueLtv: { type: Type.STRING },
+              },
+              required: ["phase1QuickWin", "phase2Expansion", "phase3FullPlatform", "totalRevenueLtv"],
+            },
+            markdownReport: { type: Type.STRING },
+          },
+          required: [
+            "companyInfo",
+            "painPoints",
+            "techStack",
+            "aiAdoption",
+            "aiSolutions",
+            "gtmStrategy",
+            "dealSizeForecast",
+            "markdownReport"
+          ],
+        },
+        tools: [{ googleSearch: {} }]
+      }
+    });
+    
+    const rawText = (response.text || '');
+    return cleanAndParseJSON(rawText);
+  } catch (error) {
+    if (isQuotaOrApiKeyError(error)) {
+      console.warn("Gemini Resource/Quota limit reached for prospect research. Activating DeepSeek fallback...");
+      try {
+        const deepseekResult = await callNvidiaAI(prompt, "You are an elite enterprise B2B management consultant and AI solutions architect. Return a structured consulting report JSON. ONLY return valid minified JSON without markdown code fences or explanations.");
+        return cleanAndParseJSON(deepseekResult);
+      } catch (nvidiaErr) {
+        console.error("DeepSeek generation failed:", nvidiaErr);
+      }
+    } else {
+      console.error("Prospect Research Generation Error on server:", error);
+    }
+    console.warn("Activating high-fidelity mock fallback for prospect research on server");
+    return getMockProspectResearch(companyInput);
   }
 }
 
-export interface BenchmarkDriftAnalysis {
-  summary: string;
-  keyIssues: {
-    issue: string;
-    description: string;
-    impact: string;
-  }[];
-  actionableImprovements: {
-    title: string;
-    channels: string[];
-    proposedStrategy: string;
-    exampleOutreachSubject?: string;
-    exampleOutreachBody?: string;
-  }[];
-  reallocationAdvice: string;
-}
-
-export async function analyzeBenchmarkDrift(leads: any[]): Promise<BenchmarkDriftAnalysis> {
+export async function analyzeBenchmarkDriftBackend(leads: any[], customNvidia?: any): Promise<any> {
   const leadsContext = leads.map((l, i) => 
     `Lead ${i+1}: Name="${l.name}", Role="${l.role || 'unknown'}", Company="${l.company || 'unknown'}", Industry="${l.industry || 'unknown'}", Country="${l.country || 'unknown'}", Score=${l.score || 'N/A'}`
   ).join("\n");
@@ -475,19 +732,75 @@ export async function analyzeBenchmarkDrift(leads: any[]): Promise<BenchmarkDrif
   `;
 
   try {
-    const nvidiaText = await callNvidiaAI(prompt, "You are an elite enterprise B2B sales strategist and CRO consultant. Return a structured JSON report matching the requested schema exactly. ONLY return valid minified JSON without markdown code fences or explanations.");
-    return { ...cleanAndParseJSON(nvidiaText) } as BenchmarkDriftAnalysis;
-  } catch (error) {
-    console.error("Benchmark Drift Analysis Error:", error);
-    if (!getNvidiaApiKey()) {
-      console.warn("No NVIDIA API key configured, using mock benchmark drift");
-      return getMockBenchmarkDrift(leads);
+    if (!process.env.GEMINI_API_KEY) {
+      throw new Error("No GEMINI_API_KEY configured on backend");
     }
-    throw error;
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            summary: { type: Type.STRING },
+            keyIssues: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  issue: { type: Type.STRING },
+                  description: { type: Type.STRING },
+                  impact: { type: Type.STRING }
+                },
+                required: ["issue", "description", "impact"]
+              }
+            },
+            actionableImprovements: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  title: { type: Type.STRING },
+                  channels: { type: Type.ARRAY, items: { type: Type.STRING } },
+                  proposedStrategy: { type: Type.STRING },
+                  exampleOutreachSubject: { type: Type.STRING },
+                  exampleOutreachBody: { type: Type.STRING }
+                },
+                required: ["title", "channels", "proposedStrategy"]
+              }
+            },
+            reallocationAdvice: { type: Type.STRING }
+          },
+          required: ["summary", "keyIssues", "actionableImprovements", "reallocationAdvice"]
+        }
+      }
+    });
+
+    const rawText = (response.text || '');
+    return cleanAndParseJSON(rawText);
+  } catch (error) {
+    if (isQuotaOrApiKeyError(error)) {
+      console.warn("Gemini Resource/Quota limit reached for benchmark drift analysis. Activating DeepSeek fallback...");
+      try {
+        const deepseekResult = await callNvidiaAI(prompt, "You are an elite enterprise B2B sales strategist and CRO consultant. Return a structured JSON report matching the requested schema exactly. ONLY return valid minified JSON without markdown code fences or explanations.");
+        return cleanAndParseJSON(deepseekResult);
+      } catch (nvidiaErr) {
+        console.error("DeepSeek generation failed:", nvidiaErr);
+      }
+    } else {
+      console.error("Benchmark Drift Analysis Error on server:", error);
+    }
+    console.warn("Activating high-fidelity mock fallback for benchmark drift analysis on server");
+    return getMockBenchmarkDrift(leads);
   }
 }
 
-export function getMockOutreach(lead: any, config: any): OutreachMessages {
+// -------------------------------------------------------------
+// Fallback Mocks
+// -------------------------------------------------------------
+
+function getMockOutreach(lead: any, config: any): any {
   const leadName = lead.name || "there";
   const company = lead.company || "your company";
   const role = lead.role || "decision maker";
@@ -521,12 +834,26 @@ function defaultFounded(name: string): string {
   return "2013";
 }
 
-export function getMockProspectResearch(companyInput: string): ProspectResearchReport {
-  const cleanName = companyInput.trim()
+function getMockProspectResearch(companyInput: string): any {
+  let targetCompany = companyInput;
+  let targetLinkedin = "";
+
+  try {
+    if (companyInput.trim().startsWith('{')) {
+      const parsed = JSON.parse(companyInput);
+      targetCompany = parsed.website || parsed.company || companyInput;
+      targetLinkedin = parsed.linkedin || "";
+    }
+  } catch (e) {
+    // Not JSON, use as-is
+  }
+
+  const cleanName = targetCompany.trim()
     .replace(/^(https?:\/\/)?(www\.)?/, '')
     .split('.')[0];
   const companyName = cleanName.charAt(0).toUpperCase() + cleanName.slice(1);
 
+  // Determine dynamic details for known companies
   const nameLower = companyName.toLowerCase();
   let defaultStatus = "Private (Scale-up)";
   let defaultRevenue = "$150M+ ARR (Estimated)";
@@ -767,7 +1094,7 @@ ${mockProducts.productsList.map(p => `* **${p.name}** ${p.launchDate ? `*(${p.la
         title: "Vice President of Revenue Operations & Commercial Performance",
         phone: "+1 (415) 883-9124 ext. 410",
         email: `msterling@${cleanName || 'company'}.com`,
-        linkedinUrl: `https://linkedin.com/in/msterling-revops-${cleanName || 'company'}`,
+        linkedinUrl: targetLinkedin || `https://linkedin.com/in/msterling-revops-${cleanName || 'company'}`,
         responsibilities: "Responsible for commercial tool stack utilization, sales desk enablement, pipeline consistency, and scaling outbound SDR teams globally.",
         painOwns: "Loves pipeline velocity but hates low-quality SDR list management and CRM sync lags.",
         motivation: "Aims to achieve 40% year-over-year commercial efficiency gain using highly automated signal routing tools."
@@ -869,7 +1196,7 @@ To convert this research into a direct commercial engagement, we suggest executi
   };
 }
 
-export function getMockBenchmarkDrift(leads: any[]): BenchmarkDriftAnalysis {
+function getMockBenchmarkDrift(leads: any[]): any {
   return {
     summary: `Your campaign's average lead intent score has drifted to ${leads.length ? Math.round(leads.reduce((acc: number, l: any) => acc + (l.score || 60), 0) / leads.length) : 58}, representing warning levels. Mismatch detected between target decision-makers titles (many lack direct budgetary oversight) and localized geographic segments.`,
     keyIssues: [

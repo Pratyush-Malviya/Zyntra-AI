@@ -1,14 +1,233 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: organizations
+    // Document ID: {orgId}
+    // Fields:
+    //   - name: string
+    //   - domain: string
+    //   - createdAt: timestamp
+    //
+    // Collection: users
+    // Document ID: {userId}
+    // Fields:
+    //   - uid: string
+    //   - email: string
+    //   - role: string (super_admin, org_admin, user)
+    //   - orgId: string
+    //
+    // Collection: campaigns, leads, messages
+    // Fields:
+    //   - userId: string
+    //   - orgId: string
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        (request.auth.token.email == "malviya.pratyush26@gmail.com" || 
+         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['super_admin', 'org_admin']));
+    }
+
+    function isSuperAdmin() {
+      return isAuthenticated() && 
+        (request.auth.token.email == "malviya.pratyush26@gmail.com" || 
+         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super_admin'));
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'role', 'orgId']) &&
+             data.uid is string &&
+             data.email is string &&
+             data.role in ['super_admin', 'org_admin', 'user'] &&
+             data.orgId is string;
+    }
+
+    function roleUnchanged() {
+      return !('role' in request.resource.data) || request.resource.data.role == resource.data.role;
+    }
+
+    function orgIdUnchanged() {
+      return !('orgId' in request.resource.data) || request.resource.data.orgId == resource.data.orgId;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isOrgAdmin(orgId) {
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.orgId == orgId && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'org_admin';
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /organizations/{orgId} {
+      allow get: if isAuthenticated();
+      allow list: if isSuperAdmin();
+      allow create: if isAuthenticated();
+      allow update: if isSuperAdmin() || isOrgAdmin(orgId);
+      allow delete: if isSuperAdmin();
+    }
+
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read: if isAuthenticated() && (
+        isSuperAdmin() || 
+        isOwner(userId) || 
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.orgId == resource.data.orgId && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'org_admin')
+      );
+      allow create: if isAuthenticated() && isValidUser(request.resource.data) && (
+        isSuperAdmin() || 
+        (isOwner(userId) && request.resource.data.role == 'user')
+      ); 
+      allow update: if isAuthenticated() && (
+        isSuperAdmin() || 
+        (isOwner(userId) && roleUnchanged() && orgIdUnchanged()) || 
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.orgId == resource.data.orgId && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'org_admin' && roleUnchanged())
+      );
+      allow delete: if isSuperAdmin();
     }
-    match /campaigns/{docId} {
-      allow read, write: if request.auth != null;
+
+    match /campaigns/{campaignId} {
+      allow read: if isAuthenticated() && (
+        isSuperAdmin() || 
+        resource.data.userId == request.auth.uid ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.orgId == resource.data.orgId)
+      );
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (
+        isSuperAdmin() || 
+        resource.data.userId == request.auth.uid ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.orgId == resource.data.orgId)
+      );
+      allow delete: if isAuthenticated() && (
+        isSuperAdmin() || 
+        resource.data.userId == request.auth.uid ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.orgId == resource.data.orgId)
+      );
     }
-    match /{document=**} {
-      allow read, write: if request.auth != null;
+
+    match /leads/{leadId} {
+      allow read: if isAuthenticated() && (
+        isSuperAdmin() || 
+        resource.data.userId == request.auth.uid ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.orgId == resource.data.orgId)
+      );
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (
+        isSuperAdmin() || 
+        resource.data.userId == request.auth.uid ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.orgId == resource.data.orgId)
+      );
+      allow delete: if isAuthenticated() && (
+        isSuperAdmin() || 
+        resource.data.userId == request.auth.uid ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.orgId == resource.data.orgId)
+      );
+    }
+
+    match /messages/{messageId} {
+      allow read: if isAuthenticated() && (
+        isSuperAdmin() || 
+        resource.data.userId == request.auth.uid ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.orgId == resource.data.orgId)
+      );
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (
+        isSuperAdmin() || 
+        resource.data.userId == request.auth.uid ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.orgId == resource.data.orgId)
+      );
+      allow delete: if isAuthenticated() && (
+        isSuperAdmin() || 
+        resource.data.userId == request.auth.uid ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.orgId == resource.data.orgId)
+      );
+    }
+
+    match /prospect_researches/{researchId} {
+      allow read: if isAuthenticated() && (
+        isSuperAdmin() || 
+        resource.data.userId == request.auth.uid ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.orgId == resource.data.orgId)
+      );
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (
+        isSuperAdmin() || 
+        resource.data.userId == request.auth.uid ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.orgId == resource.data.orgId)
+      );
+      allow delete: if isAuthenticated() && (
+        isSuperAdmin() || 
+        resource.data.userId == request.auth.uid ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.orgId == resource.data.orgId)
+      );
+    }
+
+    match /payments/{paymentId} {
+      allow read, write: if isAuthenticated() && isSuperAdmin();
+    }
+
+    match /crm_sync_logs/{logId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /import_mapping_templates/{templateId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /webhook_configs/{configId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /webhook_delivery_logs/{logId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /api_keys/{keyId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /generation_logs/{logId} {
+      allow read, write: if isAuthenticated();
     }
   }
 }
