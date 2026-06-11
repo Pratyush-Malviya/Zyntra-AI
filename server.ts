@@ -1,5 +1,5 @@
 import express from "express";
-import { createServer as createViteServer } from "vite";
+
 import path from "path";
 import fs from "fs";
 import nodemailer from "nodemailer";
@@ -2566,6 +2566,7 @@ app.post("/api/ai/nvidia", express.json(), async (req, res) => {
   // Vite development middleware or static production fallback
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
