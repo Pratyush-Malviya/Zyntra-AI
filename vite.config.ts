@@ -4,41 +4,17 @@ import path from 'path';
 import {defineConfig, loadEnv} from 'vite';
 
 export default defineConfig(({mode}) => {
-  const env = loadEnv(mode, '.', '');
   return {
     plugins: [react(), tailwindcss()],
-    define: {
-      'process.env.NVIDIA_API_KEY': JSON.stringify(env.NVIDIA_API_KEY),
-    },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
       },
     },
-    build: {
-      chunkSizeWarningLimit: 1500,
-      rollupOptions: {
-        output: {
-          manualChunks: {
-            'vendor-react': ['react', 'react-dom', 'motion'],
-            'vendor-lucide': ['lucide-react'],
-            'vendor-recharts': ['recharts'],
-            'vendor-pdf': ['jspdf', 'jspdf-autotable'],
-            'vendor-xlsx': ['xlsx'],
-            'vendor-html2canvas': ['html2canvas'],
-            'vendor-markdown': ['react-markdown'],
-          },
-        },
-      },
-    },
     server: {
+      // HMR is disabled in AI Studio via DISABLE_HMR env var.
+      // Do not modifyâfile watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',
-      proxy: {
-        '/api': {
-          target: 'http://localhost:3000',
-          changeOrigin: true
-        }
-      }
     },
   };
 });

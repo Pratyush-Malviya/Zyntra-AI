@@ -37,8 +37,8 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
-import { generateProspectResearch, ProspectResearchReport } from '../services/aiService';
-import { auth, db, Timestamp } from '../firebase';
+import { generateProspectResearch, ProspectResearchReport } from '../services/geminiService';
+import { db, Timestamp } from '../firebase';
 import { collection, addDoc, getDocs, query, where, deleteDoc, doc, updateDoc, writeBatch } from 'firebase/firestore';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -67,6 +67,88 @@ const ALL_PRESETS_POOL: { name: string; url: string }[] = [
   { name: 'Figma', url: 'figma.com' }
 ];
 
+export const sanitizeResearchReport = (report: any): ProspectResearchReport => {
+  if (!report) return {} as any;
+  const info = report?.companyInfo || {};
+  return {
+    ...report,
+    companyInfo: {
+      name: info?.name || '',
+      industry: info?.industry || '',
+      hq: info?.hq || '',
+      founded: info?.founded || '',
+      status: info?.status || '',
+      website: info?.website || '',
+      revenue: info?.revenue || '',
+      employees: info?.employees || '',
+      markets: info?.markets || '',
+      description: info?.description || '',
+      socialMediaLinks: {
+        linkedin: info?.socialMediaLinks?.linkedin || '',
+        twitter: info?.socialMediaLinks?.twitter || '',
+        facebook: info?.socialMediaLinks?.facebook || '',
+        youtube: info?.socialMediaLinks?.youtube || '',
+        ...info?.socialMediaLinks
+      },
+      funding: {
+        hasRaisedRecently: info?.funding?.hasRaisedRecently || false,
+        details: info?.funding?.details || '',
+        rounds: info?.funding?.rounds || [],
+        ...info?.funding
+      },
+      recentProducts: {
+        hasLaunchedRecently: info?.recentProducts?.hasLaunchedRecently || false,
+        details: info?.recentProducts?.details || '',
+        productsList: info?.recentProducts?.productsList || [],
+        ...info?.recentProducts
+      }
+    },
+    painPoints: report.painPoints || [],
+    techStack: {
+      erp: report?.techStack?.erp || {},
+      crm: report?.techStack?.crm || {},
+      bi: report?.techStack?.bi || {},
+      supplyChain: report?.techStack?.supplyChain || {},
+      websiteTech: report?.techStack?.websiteTech || [],
+      ...report?.techStack
+    },
+    aiAdoption: {
+      maturityLevel: report?.aiAdoption?.maturityLevel || '',
+      deployedTools: report?.aiAdoption?.deployedTools || [],
+      plannedTools: report?.aiAdoption?.plannedTools || [],
+      competitors: report?.aiAdoption?.competitors || [],
+      ...report?.aiAdoption
+    },
+    aiSolutions: report.aiSolutions || [],
+    gtmStrategy: {
+      decisionMaker: {
+        name: report?.gtmStrategy?.decisionMaker?.name || '',
+        title: report?.gtmStrategy?.decisionMaker?.title || '',
+        phone: report?.gtmStrategy?.decisionMaker?.phone || '',
+        email: report?.gtmStrategy?.decisionMaker?.email || '',
+        linkedinUrl: report?.gtmStrategy?.decisionMaker?.linkedinUrl || '',
+        responsibilities: report?.gtmStrategy?.decisionMaker?.responsibilities || '',
+        painOwns: report?.gtmStrategy?.decisionMaker?.painOwns || '',
+        motivation: report?.gtmStrategy?.decisionMaker?.motivation || '',
+        ...report?.gtmStrategy?.decisionMaker
+      },
+      openingHook: report?.gtmStrategy?.openingHook || '',
+      coreMessage: report?.gtmStrategy?.coreMessage || '',
+      cta: report?.gtmStrategy?.cta || '',
+      expectedObjections: report?.gtmStrategy?.expectedObjections || [],
+      ...report?.gtmStrategy
+    },
+    dealSizeForecast: {
+      phase1QuickWin: report?.dealSizeForecast?.phase1QuickWin || '',
+      phase2Expansion: report?.dealSizeForecast?.phase2Expansion || '',
+      phase3FullPlatform: report?.dealSizeForecast?.phase3FullPlatform || '',
+      totalRevenueLtv: report?.dealSizeForecast?.totalRevenueLtv || '',
+      ...report?.dealSizeForecast
+    },
+    markdownReport: report.markdownReport || ''
+  };
+};
+
 interface ProspectResearchPanelProps {
   key?: any;
   user: any;
@@ -77,6 +159,7 @@ interface ProspectResearchPanelProps {
 
 export default function ProspectResearchPanel({ user, profile, campaigns, showToast }: ProspectResearchPanelProps) {
   const [inputVal, setInputVal] = useState('');
+  const [linkedinVal, setLinkedinVal] = useState('');
   const [currentPresets, setCurrentPresets] = useState<{ name: string; url: string }[]>([]);
 
   const randomizePresets = () => {
@@ -125,7 +208,6 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
     return localStorage.getItem('zyntra-research-full-width') === 'true';
   });
 
-
   const toggleFullWidth = () => {
     const newVal = !isFullWidth;
     setIsFullWidth(newVal);
@@ -137,16 +219,12 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
   }, [profile?.orgId]);
 
   const fetchResearches = async () => {
-    const orgIdToUse = profile?.orgId || profile?.uid || user?.uid;
-    if (!orgIdToUse) {
-      setLoadingHistory(false);
-      return;
-    }
+    if (!profile?.orgId) return;
     setLoadingHistory(true);
     try {
       const q = query(
         collection(db, 'prospect_researches'),
-        where('orgId', '==', orgIdToUse)
+        where('orgId', '==', profile.orgId)
       );
       const snap = await getDocs(q);
       const list = snap.docs.map(doc => ({
@@ -157,13 +235,13 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
       list.sort((a: any, b: any) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
       setResearches(list);
     } catch (err) {
-      if (!auth.currentUser?.isAnonymous) console.error("Error fetching researches:", err);
+      console.error("Error fetching researches:", err);
     } finally {
       setLoadingHistory(false);
     }
   };
 
-  const startResearch = async (company: string) => {
+  const startResearch = async (company: string, linkedin: string = '') => {
     if (!company.trim()) {
       showToast('Please enter a company website or name.', 'error');
       return;
@@ -190,17 +268,20 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
     }, 100);
 
     try {
-      const report = await generateProspectResearch(company);
+      const payloadString = JSON.stringify({ website: company, linkedin: linkedin.trim() });
+      const report = await generateProspectResearch(payloadString);
       clearInterval(intervalTime);
       setSprintTime(80);
       setSprintPhase(4);
 
+      const sanitized = sanitizeResearchReport(report);
+
       // Save to Firebase
       const payload = {
-        companyName: report?.companyInfo?.name || company,
+        companyName: sanitized.companyInfo.name || company,
         userId: user.uid,
-        orgId: profile?.orgId || profile?.uid || user?.uid || 'default',
-        reportJSON: JSON.stringify(report),
+        orgId: profile.orgId,
+        reportJSON: JSON.stringify(sanitized),
         createdAt: Timestamp.now()
       };
       
@@ -208,13 +289,13 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
       const newRecord = { id: docRef.id, ...payload };
       
       setResearches(prev => [newRecord, ...prev]);
-      setActiveResearch(report);
+      setActiveResearch(sanitized);
       setActiveResearchId(docRef.id);
       setActiveSubTab('overview');
       showToast('Research Sprint completed successfully! Report compiled.', 'success');
     } catch (err: any) {
       clearInterval(intervalTime);
-      if (!auth.currentUser?.isAnonymous) console.error(err);
+      console.error(err);
       showToast(`Research failed: ${err.message || err}`, 'error');
     } finally {
       setLoading(false);
@@ -241,7 +322,7 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
       setConfirmDeleteId(null);
       showToast('Research report deleted.', 'success');
     } catch (err) {
-      if (!auth.currentUser?.isAnonymous) console.error(err);
+      console.error(err);
       showToast('Failed to delete report.', 'error');
     }
   };
@@ -249,7 +330,7 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
   const selectHistory = (r: any) => {
     try {
       const parsed = JSON.parse(r.reportJSON);
-      setActiveResearch(parsed);
+      setActiveResearch(sanitizeResearchReport(parsed));
       setActiveResearchId(r.id);
       setActiveSubTab('overview');
     } catch (err) {
@@ -281,7 +362,7 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
         website: info.website || 'N/A',
         employees: info.employees || 'N/A',
         userId: user.uid,
-        orgId: profile?.orgId || profile?.uid || user?.uid || 'default',
+        orgId: profile.orgId,
         campaignId: targetCampaignId,
         status: 'imported',
         score: 85
@@ -299,7 +380,7 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
 
       showToast(`Added decision maker from ${info.name || 'Company'} as a Lead to selected campaign!`, 'success');
     } catch (err: any) {
-      if (!auth.currentUser?.isAnonymous) console.error(err);
+      console.error(err);
       showToast(`Export failed: ${err.message}`, 'error');
     } finally {
       setExportingLead(false);
@@ -547,7 +628,7 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
             </div>
             
             <p className="text-xs text-text-muted leading-relaxed">
-              Input a company website URL or legal corporation name. The Zyntra AI outreach engine will trigger its continuous discovery sprint mapping out exact pain points.
+              Input a company website URL and the prospect's LinkedIn profile URL. Zyntra will execute a deep intelligence sprint across public data, corporate filings, and professional profiles to customize absolute pain alignment.
             </p>
 
             <div className="space-y-4">
@@ -560,14 +641,29 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
                     value={inputVal}
                     onChange={e => setInputVal(e.target.value)}
                     disabled={loading}
-                    onKeyDown={e => { if (e.key === 'Enter') startResearch(inputVal); }}
+                    onKeyDown={e => { if (e.key === 'Enter') startResearch(inputVal, linkedinVal); }}
                   />
                   <Globe className="w-4 h-4 text-text-muted/60 absolute left-4 top-1/2 -translate-y-1/2" />
                 </div>
               </div>
 
+              <div className="space-y-2">
+                <label className="text-[10px] text-text-muted font-bold uppercase tracking-widest">Prospect LinkedIn URL</label>
+                <div className="relative">
+                  <input
+                    className="w-full bg-surface-alt border border-border focus:border-brand rounded-2xl p-4 pl-12 text-sm outline-none transition-all placeholder:text-text-muted"
+                    placeholder="e.g. https://linkedin.com/in/prospect-profile"
+                    value={linkedinVal}
+                    onChange={e => setLinkedinVal(e.target.value)}
+                    disabled={loading}
+                    onKeyDown={e => { if (e.key === 'Enter') startResearch(inputVal, linkedinVal); }}
+                  />
+                  <Linkedin className="w-4 h-4 text-text-muted/60 absolute left-4 top-1/2 -translate-y-1/2" />
+                </div>
+              </div>
+
               <button
-                onClick={() => startResearch(inputVal)}
+                onClick={() => startResearch(inputVal, linkedinVal)}
                 disabled={loading}
                 className="w-full bg-brand hover:bg-brand/90 text-white font-bold py-4 rounded-2xl transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50 shadow-lg shadow-brand/20 cursor-pointer"
               >
@@ -576,7 +672,6 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
               </button>
             </div>
           </div>
-
 
           {/* Past Researches History Column */}
           <div className="bg-surface border border-border rounded-[24px] md:rounded-[32px] p-5 md:p-8 space-y-5">
@@ -734,12 +829,12 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
                   <div className="p-5 rounded-3xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-4 text-xs text-amber-200">
                     <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
                     <div>
-                      <h4 className="font-syne font-extrabold text-amber-300 text-sm">Sandbox Simulation Mode Active (NVIDIA API Key Missing)</h4>
+                      <h4 className="font-syne font-extrabold text-amber-300 text-sm">Sandbox Simulation Mode Active (Live Gemini Key Exhausted)</h4>
                       <p className="mt-1 leading-relaxed text-amber-300/80 text-[11px]">
-                        The NVIDIA API key is not configured. To maintain service readiness, Zyntra has loaded high-fidelity local GTM target mapping.
+                        The production Gemini API free-tier limit has been reached (<code className="bg-black/40 px-1 py-0.5 rounded font-mono text-amber-200">RESOURCE_EXHAUSTED 429</code>). To maintain absolute service readiness, Zyntra has loaded high-fidelity local GTM target mapping.
                       </p>
                       <p className="mt-2.5 font-bold text-amber-300 hover:underline">
-                        To resume live operations: configure your NVIDIA_API_KEY environment variable in your Vercel deployment or add it in Settings.
+                        💡 To resume Live operations on Vercel: upgrade your Google AI Studio plan or verify your GEMINI_API_KEY environment variables of your Vercel deployment.
                       </p>
                     </div>
                   </div>

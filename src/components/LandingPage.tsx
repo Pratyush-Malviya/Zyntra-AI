@@ -25,15 +25,13 @@ import { motion, AnimatePresence } from 'motion/react';
 
 interface LandingPageProps {
   onLaunchApp: () => void;
-  onGoogleLogin: () => void;
-  onDemoLogin: () => void;
   isAuthenticated: boolean;
   theme: 'dark' | 'light';
   setTheme: (t: 'dark' | 'light') => void;
   isMobileDevice?: boolean;
 }
 
-export default function LandingPage({ onLaunchApp, onGoogleLogin, onDemoLogin, isAuthenticated, theme, setTheme, isMobileDevice }: LandingPageProps) {
+export default function LandingPage({ onLaunchApp, isAuthenticated, theme, setTheme, isMobileDevice }: LandingPageProps) {
   // Calculator state
   const [leadVolume, setLeadVolume] = useState<number>(500);
   const [conversionRate, setConversionRate] = useState<number>(2.5);
@@ -149,23 +147,22 @@ export default function LandingPage({ onLaunchApp, onGoogleLogin, onDemoLogin, i
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4 max-w-md mx-auto">
             <button 
-              onClick={onGoogleLogin}
+              onClick={onLaunchApp}
               className="w-full sm:w-auto px-8 py-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs uppercase tracking-widest shadow-2.5xl shadow-blue-600/20 transition-all cursor-pointer flex items-center justify-center gap-2"
             >
-              <Mail className="w-4 h-4" />
-              <span>Sign in with Google</span>
+              <span>Get Started Now</span>
               <ArrowRight className="w-4 h-4" />
             </button>
-            <button 
-              onClick={onDemoLogin}
+            <a 
+              href="#yield-calculator"
               className={`w-full sm:w-auto px-8 py-4 rounded-xl font-bold text-xs uppercase tracking-widest border text-center transition-all ${
                 theme === 'dark' 
                   ? 'border-white/[0.08] hover:bg-white/[0.04] bg-slate-900/40 text-slate-200' 
                   : 'border-slate-200 hover:bg-slate-50 bg-white text-slate-700 shadow-xs'
               }`}
             >
-              Try Demo (Anonymous)
-            </button>
+              Simulate ROI Yield
+            </a>
           </div>
         </div>
 
