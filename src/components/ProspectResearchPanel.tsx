@@ -787,30 +787,73 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
                       sprintPhase === 2 ? 'Tech Adoption Auditing' :
                       'B2B Solutions Customization'
                     }</span>
-                    <span className="text-text-muted">Elapsed Sprint: {sprintTime} / 80 Mins</span>
+                    <span className="text-text-muted">Elapsed Sprint: {sprintTime} / 80 Mins ({Math.min(100, Math.round((sprintTime / 80) * 100))}%)</span>
                   </div>
 
                   {/* Horizontal visual bar */}
                   <div className="w-full bg-bg h-2.5 rounded-full overflow-hidden">
                     <div 
                       className="bg-gradient-to-r from-brand to-brand-alt h-full transition-all duration-100 rounded-full"
-                      style={{ width: `${(sprintTime / 80) * 100}%` }}
+                      style={{ width: `${Math.min(100, (sprintTime / 80) * 100)}%` }}
                     />
                   </div>
 
                   {/* Live updates ticker */}
-                  <div className="pt-2 border-t border-border/60 text-[10px] font-mono text-left space-y-1 bg-bg/50 p-3 rounded-xl max-h-[80px] overflow-hidden">
-                    <div className={sprintTime >= 1 ? "text-brand-alt" : "text-text-muted/40"}>
-                      ✓ [Phase 1] Harvested web profile scale, revenue estimates, and core market verticals
-                    </div>
-                    <div className={sprintTime >= 16 ? "text-brand-alt" : "text-text-muted/40"}>
-                      {sprintTime >= 16 ? "✓" : "→"} [Phase 2] HARVESTING pain citations from SEBI filings, earnings transcripts, transcripts
-                    </div>
-                    <div className={sprintTime >= 36 ? "text-brand-alt" : "text-text-muted/40"}>
-                      {sprintTime >= 36 ? "✓" : "→"} [Phase 3] AUDITING enterprise indicators matching ERP (SAP/Oracle), CRM databases, and hiring scopes
-                    </div>
-                    <div className={sprintTime >= 61 ? "text-brand-alt" : "text-text-muted/40"}>
-                      {sprintTime >= 61 ? "✓" : "→"} [Phase 4] COMPILING 5 custom AI products with ROI contract values and pipeline briefs
+                  <div className="pt-2 border-t border-border/60 text-[10px] font-mono text-left bg-bg/50 p-3 rounded-xl h-[90px] overflow-hidden flex flex-col justify-end relative">
+                    <div className="space-y-1.5 flex flex-col justify-end w-full">
+                      <AnimatePresence mode="popLayout">
+                        {sprintTime >= 1 && (
+                          <motion.div 
+                            key="phase1"
+                            initial={{ opacity: 0, y: 10 }} 
+                            animate={{ opacity: 1, y: 0 }} 
+                            className="text-brand-alt shrink-0"
+                          >
+                            ✓ [Phase 1] Harvested web profile scale, revenue estimates, and core market verticals
+                          </motion.div>
+                        )}
+                        {sprintTime >= 16 && (
+                          <motion.div 
+                            key="phase2"
+                            initial={{ opacity: 0, y: 10 }} 
+                            animate={{ opacity: 1, y: 0 }} 
+                            className="text-brand-alt shrink-0"
+                          >
+                            ✓ [Phase 2] HARVESTING pain citations from SEBI filings, earnings transcripts, transcripts
+                          </motion.div>
+                        )}
+                        {sprintTime >= 36 && (
+                          <motion.div 
+                            key="phase3"
+                            initial={{ opacity: 0, y: 10 }} 
+                            animate={{ opacity: 1, y: 0 }} 
+                            className="text-brand-alt shrink-0"
+                          >
+                            ✓ [Phase 3] AUDITING enterprise indicators matching ERP (SAP/Oracle), CRM databases, and hiring scopes
+                          </motion.div>
+                        )}
+                        {sprintTime >= 61 && (
+                          <motion.div 
+                            key="phase4"
+                            initial={{ opacity: 0, y: 10 }} 
+                            animate={{ opacity: 1, y: 0 }} 
+                            className="text-brand-alt shrink-0"
+                          >
+                            ✓ [Phase 4] COMPILING 5 custom AI products with ROI contract values and pipeline briefs
+                          </motion.div>
+                        )}
+                        {sprintTime < 80 && (
+                          <motion.div 
+                            key="processing"
+                            initial={{ opacity: 0 }} 
+                            animate={{ opacity: 1 }} 
+                            className="text-text-muted flex items-center gap-1.5 pt-1 animate-pulse shrink-0"
+                          >
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                            Processing next objective...
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
                   </div>
                 </div>

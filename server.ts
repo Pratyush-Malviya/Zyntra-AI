@@ -861,10 +861,9 @@ function getComposioApiKey() {
   return customComposioApiKey || process.env.COMPOSIO_API_KEY || "ak_p4BqouLPkWFbzB3EKi-1";
 }
 
-// Start HTTP and WS server
-async function startServer() {
-  const app = express();
-  const PORT = 3000;
+// Initialize Express app
+export const app = express();
+const PORT = process.env.PORT || 3000;
 
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
@@ -2565,6 +2564,7 @@ app.post("/api/ai/nvidia", express.json(), async (req, res) => {
   });
 
   // Vite development middleware or static production fallback
+async function startServer() {
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
       server: { middlewareMode: true },
@@ -2635,4 +2635,8 @@ app.post("/api/ai/nvidia", express.json(), async (req, res) => {
   });
 }
 
-startServer();
+if (!process.env.VERCEL) {
+  startServer();
+}
+
+export default app;
