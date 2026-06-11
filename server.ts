@@ -10,7 +10,7 @@ import {
   generateOutreachBackend, 
   generateProspectResearchBackend, 
   analyzeBenchmarkDriftBackend 
-} from "./src/services/aiServiceBackend";
+} from "./src/services/aiServiceBackend.js";
 
 dotenv.config();
 
