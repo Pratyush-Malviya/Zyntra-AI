@@ -427,8 +427,6 @@ app.get("*", (req, res) => { res.sendFile(path.join(distPath, "index.html")); })
 
 // --- Export for Vercel ---
 export default app;
-module.exports = app;
-
 // --- Local dev server ---
 if (process.env.VERCEL !== '1') {
   app.listen(PORT, "0.0.0.0", () => console.log(`Server running on http://0.0.0.0:${PORT}`));

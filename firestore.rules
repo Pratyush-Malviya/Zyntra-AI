@@ -1,62 +1,14 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // ===============================================================
-    // Helpers — avoids exists()/get() which cause assertion failures
-    // on non-default databases with Firestore v12.
-    // ===============================================================
-
-    function isAuth() {
-      return request.auth != null;
-    }
-
-    function isSuperAdmin() {
-      return isAuth() && request.auth.token.email == "malviya.pratyush26@gmail.com";
-    }
-
-    function isOwner(userId) {
-      return isAuth() && request.auth.uid == userId;
-    }
-
-    // ===============================================================
-    // Organizations
-    // ===============================================================
-    match /organizations/{orgId} {
-      allow read: if isAuth();
-      allow create: if isAuth();
-      allow update: if isSuperAdmin();
-      allow delete: if isSuperAdmin();
-    }
-
-    // ===============================================================
-    // Users — self-service create/update, super admin full access
-    // ===============================================================
     match /users/{userId} {
-      allow read: if isAuth();
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId) || isSuperAdmin();
-      allow delete: if isSuperAdmin();
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
-
-    // ===============================================================
-    // Campaign, Lead, Message, Prospect Research — auth-gated
-    // App-layer queries already filter by orgId / userId.
-    // ===============================================================
-    match /campaigns/{id}      { allow read, write: if isAuth(); }
-    match /leads/{id}          { allow read, write: if isAuth(); }
-    match /messages/{id}       { allow read, write: if isAuth(); }
-    match /prospect_researches/{id} { allow read, write: if isAuth(); }
-
-    // ===============================================================
-    // Other collections used by the app
-    // ===============================================================
-    match /payments/{id}        { allow read, write: if isSuperAdmin(); }
-    match /crm_sync_logs/{id}  { allow read, write: if isAuth(); }
-    match /import_mapping_templates/{id} { allow read, write: if isAuth(); }
-    match /webhook_configs/{id} { allow read, write: if isAuth(); }
-    match /webhook_delivery_logs/{id} { allow read, write: if isAuth(); }
-    match /api_keys/{id}       { allow read, write: if isAuth(); }
-    match /generation_logs/{id} { allow read, write: if isAuth(); }
+    match /campaigns/{docId} {
+      allow read, write: if request.auth != null;
+    }
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
   }
 }
