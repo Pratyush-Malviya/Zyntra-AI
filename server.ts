@@ -315,22 +315,7 @@ async function processKbFileBackground(file: KbFile) {
       }
     }
     
-    if (!result) {
-      const geminiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
-      if (geminiKey) {
-        try {
-          const ai = new GoogleGenAI({ apiKey: geminiKey });
-          const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: `${sysPrompt}\n\n${prompt}`,
-            config: { responseMimeType: "application/json" }
-          });
-          result = JSON.parse(response.text || "{}");
-        } catch (gemError: any) {
-          console.error("Gemini extractor fallback failed:", gemError.message);
-        }
-      }
-    }
+
 
     if (!result) {
       const nvidiaKey = process.env.NVIDIA_API_KEY;
@@ -1767,152 +1752,13 @@ async function startServer() {
     // Default heuristic result to merge/fallback
     const heuristicResult = cleanClutterHeuristically(headers, rows);
 
-    const geminiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
-    if (!geminiKey) {
-      console.warn("[AI Align] No GEMINI_API_KEY configured. Falling back to high-fidelity heuristics.");
-      return res.json({
-        success: true,
-        method: "heuristics",
-        mapping: heuristicResult.mapping,
-        cleanedRows: heuristicResult.cleanedRows,
-        clutterReport: "Automatic heuristic column matching executed. Scanned and corrected any shuffled contact phone/email values."
-      });
-    }
-
-    try {
-      console.log(`[AI Align] Processing ${rows.length} rows using Gemini AI with smart self-healing alignment...`);
-      const ai = new GoogleGenAI({
-        apiKey: geminiKey,
-        httpOptions: {
-          headers: {
-            'User-Agent': 'aistudio-build',
-          }
-        }
-      });
-
-      const sysPrompt = `You are an intelligent data cleaner for a modern CRM.
-Analyze the user-uploaded spreadsheet column headers and data rows. Your job is to:
-1. Automatically map the Excel/CSV column headers to the correct standard CRM fields:
-   - "name" (Prospect's Full Name)
-   - "email" (Work email containing @)
-   - "phone" (Phone number containing numbers/dashes/pluses)
-   - "company" (Company Name)
-   - "role" (Job title/role)
-   - "score" (Numeric rating 0-100)
-
-2. Perform clutter cleaning of the values. Some cells might be swapped (e.g. Phone number in Email column and Email in Phone column, or name in company and vice-versa).
-   Your output MUST place the correctly classified value into its corresponding target field in the 'cleanedRows', self-healing any column mix-ups. There should never be an email in phone, or phone in email.
-
-Provide the response in the requested strictly valid JSON schema format.`;
-
-      const prompt = `Spreadsheet Column Headers: ${JSON.stringify(headers)}
-Raw Rows Data: ${JSON.stringify(rows.slice(0, 50))} (Analyze and clean up to the first 50 rows)`;
-
-      const response = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
-        contents: prompt,
-        config: {
-          systemInstruction: sysPrompt,
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              mapping: {
-                type: Type.OBJECT,
-                description: "Map of Spreadsheet Header -> Target CRM Field (name, email, phone, company, role, score)"
-              },
-              cleanedRows: {
-                type: Type.ARRAY,
-                items: {
-                  type: Type.OBJECT,
-                  properties: {
-                    name: { type: Type.STRING },
-                    email: { type: Type.STRING },
-                    phone: { type: Type.STRING },
-                    company: { type: Type.STRING },
-                    role: { type: Type.STRING },
-                    score: { type: Type.INTEGER }
-                  }
-                }
-              },
-              clutterReport: {
-                type: Type.STRING,
-                description: "Summary of errors/clutter solved (e.g. 'Swapped email and phone columns; corrected company column mix-up')"
-              }
-            },
-            required: ["mapping", "cleanedRows", "clutterReport"]
-          }
-        }
-      });
-
-      const text = response.text || "";
-      const resultObj = JSON.parse(text);
-
-      let finalCleanedRows: any[] = [];
-      const aiCleanedPart = resultObj.cleanedRows || [];
-
-      // Run healCleanedRow for safety on AI-returned results for first 50 lines
-      for (let i = 0; i < Math.min(50, rows.length); i++) {
-        const rawRow = rows[i];
-        const aiRow = aiCleanedPart[i] || {};
-        const healed = healCleanedRow({
-          name: aiRow.name,
-          email: aiRow.email,
-          phone: aiRow.phone,
-          company: aiRow.company,
-          role: aiRow.role,
-          score: aiRow.score
-        }, rawRow);
-        finalCleanedRows.push(healed);
-      }
-
-      if (rows.length > 50) {
-        console.log(`[AI Align] Extrapolating AI mapping for remaining ${rows.length - 50} rows...`);
-        const learnedMapping = resultObj.mapping || heuristicResult.mapping;
-        
-        const remainingRows = rows.slice(50);
-        const extrapolatedCleaned = remainingRows.map((row) => {
-          const mappedRow: any = {
-            name: "",
-            email: "",
-            phone: "",
-            company: "",
-            role: "Executive Target",
-            score: 60
-          };
-
-          // Apply mapping
-          headers.forEach(h => {
-            const field = learnedMapping[h];
-            if (field !== undefined && field !== "") {
-              mappedRow[field] = row[h] !== undefined ? String(row[h]).trim() : "";
-            }
-          });
-
-          return healCleanedRow(mappedRow, row);
-        });
-
-        finalCleanedRows = [...finalCleanedRows, ...extrapolatedCleaned];
-      }
-
-      return res.json({
-        success: true,
-        method: "gemini-3.5-flash",
-        mapping: resultObj.mapping || heuristicResult.mapping,
-        cleanedRows: finalCleanedRows,
-        clutterReport: resultObj.clutterReport || "Pristine alignment maps synchronized cleanly."
-      });
-
-    } catch (err: any) {
-      console.error("[AI Align] Gemini error: ", err.message);
-      return res.json({
-        success: true,
-        method: "heuristics-fallback",
-        mapping: heuristicResult.mapping,
-        cleanedRows: heuristicResult.cleanedRows,
-        clutterReport: `Heuristics fallback: Mapped headers and resolved cluttered cells. (AI temporary bypass error: ${err.message})`
-      });
-    }
+    return res.json({
+      success: true,
+      method: "heuristics",
+      mapping: heuristicResult.mapping,
+      cleanedRows: heuristicResult.cleanedRows,
+      clutterReport: "Automatic heuristic column matching executed. Scanned and corrected any shuffled contact phone/email values."
+    });
   });
 
   // REST API: Named Mapping Templates (Task 2 Configuration templates)
@@ -2486,7 +2332,6 @@ app.post("/api/ai/nvidia", express.json(), async (req, res) => {
       let generatedVia = "Heuristic AI Engine";
 
       const anthropicKey = process.env.ANTHROPIC_API_KEY;
-      const geminiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
 
       if (anthropicKey) {
         try {
@@ -2503,22 +2348,7 @@ app.post("/api/ai/nvidia", express.json(), async (req, res) => {
           outreachPayload = JSON.parse(cleanJson);
           generatedVia = "Anthropic Claude API";
         } catch (e: any) {
-          console.error("Claude client error, falling back to Gemini:", e.message);
-        }
-      }
-
-      if (!outreachPayload.body && geminiKey) {
-        try {
-          const ai = new GoogleGenAI({ apiKey: geminiKey });
-          const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: prompt,
-            config: { responseMimeType: "application/json" }
-          });
-          outreachPayload = JSON.parse(response.text || "{}");
-          generatedVia = "Gemini Flash Model";
-        } catch (e: any) {
-          console.error("Gemini model error:", e);
+          console.error("Claude client error:", e.message);
         }
       }
 
