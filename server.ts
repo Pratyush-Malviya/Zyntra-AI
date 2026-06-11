@@ -1961,6 +1961,11 @@ app.post("/api/ai/nvidia", express.json(), async (req, res) => {
         ...(presence_penalty !== undefined ? { presence_penalty } : {}),
         ...(response_format ? { response_format } : { response_format: { type: "json_object" } }),
       }),
+    });
+    if (!response.ok) return res.status(response.status).json({ error: await response.text() });
+    res.json(await response.json());
+  } catch (err: any) { res.status(502).json({ error: err.message }); }
+});
 
   app.post("/api/import/templates", (req, res) => {
     const { name, mapping } = req.body;
