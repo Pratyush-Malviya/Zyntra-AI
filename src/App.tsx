@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, Suspense, Component } from 'react';
 import { auth, db, googleProvider, signInWithPopup, signOut, signInAnonymously, onAuthStateChanged, doc, setDoc, getDoc, collection, query, where, onSnapshot, addDoc, updateDoc, deleteDoc, getDocs, Timestamp } from './firebase';
-import { Settings, Users, Target, LayoutDashboard, Kanban, DollarSign, FileText, LogOut, Menu, X, Sun, Moon, Plus, Mail, Phone, Linkedin, Send, Download, Search, MessageSquare, ChevronRight, Loader2, Globe, Activity, Sparkles, ExternalLink } from 'lucide-react';
+import { Settings, Users, Target, LayoutDashboard, Kanban, DollarSign, FileText, LogOut, Menu, X, Sun, Moon, Plus, Mail, Phone, Linkedin, Send, Download, Search, MessageSquare, ChevronRight, Loader2, Globe, Activity, Sparkles, ExternalLink, Building, AlertCircle, FolderKanban, GitBranch, Webhook, BookOpen, Monitor, ChevronDown } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { motion, AnimatePresence } from 'motion/react';
@@ -10,6 +10,15 @@ import { SmartCsvImportModal } from './components/SmartCsvImportModal';
 import ProspectResearchPanel from './components/ProspectResearchPanel';
 
 const CrmPipelineBoard = React.lazy(() => import('./components/CrmPipelineBoard').then(m => ({ default: m.CrmPipelineBoard })));
+const AccountsPanel = React.lazy(() => import('./components/AccountsPanel').then(m => ({ default: m.AccountsPanel })));
+const ContactsPanel = React.lazy(() => import('./components/ContactsPanel').then(m => ({ default: m.ContactsPanel })));
+const CasesPanel = React.lazy(() => import('./components/CasesPanel').then(m => ({ default: m.CasesPanel })));
+const ProjectsPanel = React.lazy(() => import('./components/ProjectsPanel').then(m => ({ default: m.ProjectsPanel })));
+const QuotesPanel = React.lazy(() => import('./components/QuotesPanel').then(m => ({ default: m.QuotesPanel })));
+const WorkflowPanel = React.lazy(() => import('./components/WorkflowPanel').then(m => ({ default: m.WorkflowPanel })));
+const WebhooksPanel = React.lazy(() => import('./components/WebhooksPanel').then(m => ({ default: m.WebhooksPanel })));
+const KnowledgeBasePanel = React.lazy(() => import('./components/KnowledgeBasePanel').then(m => ({ default: m.KnowledgeBasePanel })));
+const PortalPreview = React.lazy(() => import('./components/PortalPreview').then(m => ({ default: m.PortalPreview })));
 
 interface UserProfile {
   uid: string; email: string; name: string; photoURL?: string; role: string; createdAt: string;
@@ -34,6 +43,7 @@ function PanelWrapper({ children }: { children: React.ReactNode }) {
 
 // --- Main App ---
 function MainApp({ user, profile, theme, setTheme }: { user: any; profile: UserProfile; theme: 'dark' | 'light'; setTheme: (t: 'dark' | 'light') => void }) {
+  const [modulesExpanded, setModulesExpanded] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeView, setActiveView] = useState('DASHBOARD');
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -113,10 +123,20 @@ function MainApp({ user, profile, theme, setTheme }: { user: any; profile: UserP
     { id: 'PIPELINE', icon: Kanban, label: 'Pipeline' },
     { id: 'CAMPAIGNS', icon: Target, label: 'Campaigns' },
     { id: 'LEADS', icon: Users, label: 'Leads' },
-    { id: 'CONTACTS', icon: Mail, label: 'Contacts' },
     { id: 'RESEARCH', icon: Sparkles, label: 'Research' },
-    { id: 'QUOTES', icon: DollarSign, label: 'Quotes' },
     { id: 'SETTINGS', icon: Settings, label: 'Settings' },
+  ];
+
+  const suiteModules = [
+    { id: 'ACCOUNTS', icon: Building, label: 'Accounts' },
+    { id: 'CONTACTS', icon: Mail, label: 'Contacts' },
+    { id: 'CASES', icon: AlertCircle, label: 'Cases' },
+    { id: 'PROJECTS', icon: FolderKanban, label: 'Projects' },
+    { id: 'QUOTES', icon: DollarSign, label: 'Quotes & Billing' },
+    { id: 'WORKFLOWS', icon: GitBranch, label: 'Workflows' },
+    { id: 'WEBHOOKS', icon: Webhook, label: 'Webhooks' },
+    { id: 'KNOWLEDGE_BASE', icon: BookOpen, label: 'Knowledge Base' },
+    { id: 'PORTAL', icon: Monitor, label: 'Customer Portal' },
   ];
 
   return (
@@ -134,6 +154,40 @@ function MainApp({ user, profile, theme, setTheme }: { user: any; profile: UserP
               <item.icon className="w-4 h-4" /> {item.label}
             </button>
           ))}
+
+          {/* Suite CRM Modules Section */}
+          <div className="pt-2">
+            <button
+              onClick={() => setModulesExpanded(!modulesExpanded)}
+              className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-widest text-text-muted hover:bg-bg-primary transition-all"
+            >
+              <span className="flex items-center gap-2">
+                <Building className="w-3.5 h-3.5" />
+                Suite Modules
+              </span>
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${modulesExpanded ? 'rotate-180' : ''}`} />
+            </button>
+            <AnimatePresence initial={false}>
+              {modulesExpanded && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <div className="space-y-0.5 pt-1">
+                    {suiteModules.map(item => (
+                      <button key={item.id} onClick={() => { setActiveView(item.id); setIsMobileMenuOpen(false); }}
+                        className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-all ${activeView === item.id ? 'bg-brand text-white' : 'text-text-muted hover:bg-bg-primary'}`}>
+                        <item.icon className="w-4 h-4" /> {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </nav>
         <div className="p-4 border-t border-border shrink-0">
           <button onClick={() => signOut(auth)} className="flex items-center gap-2 text-sm text-text-muted hover:text-red-400"><LogOut className="w-4 h-4" /> Sign Out</button>
@@ -281,20 +335,7 @@ function MainApp({ user, profile, theme, setTheme }: { user: any; profile: UserP
               />
             )}
 
-            {activeView === 'CONTACTS' && (
-              <PanelWrapper>
-                <h3 className="text-lg font-bold">Contacts</h3>
-                {contacts.length === 0 && <p className="text-sm text-text-muted">No contacts yet. They will appear here when you add them through the API or directly.</p>}
-                <div className="grid gap-2">
-                  {contacts.map(c => (
-                    <div key={c.id} className="bg-bg-secondary rounded-xl border border-border p-3 flex items-center justify-between">
-                      <div><p className="font-medium">{c.firstName} {c.lastName}</p><p className="text-xs text-text-muted">{c.jobTitle} at {c.company}</p></div>
-                      <div className="flex items-center gap-2 text-xs text-text-muted">{c.email && <span><Mail className="w-3 h-3 inline" /> {c.email}</span>}</div>
-                    </div>
-                  ))}
-                </div>
-              </PanelWrapper>
-            )}
+
 
             {activeView === 'RESEARCH' && (
               <ErrorBoundary key="research">
@@ -302,20 +343,54 @@ function MainApp({ user, profile, theme, setTheme }: { user: any; profile: UserP
               </ErrorBoundary>
             )}
 
-            {activeView === 'QUOTES' && (
-              <PanelWrapper>
-                <h3 className="text-lg font-bold">Quotes & Billing</h3>
-                {quotes.length === 0 && <p className="text-sm text-text-muted">No documents yet.</p>}
-                <div className="grid gap-2">
-                  {quotes.map(q => (
-                    <div key={q.id} className="bg-bg-secondary rounded-xl border border-border p-3 flex items-center justify-between">
-                      <div><p className="font-medium">{q.title}</p><p className="text-xs text-text-muted">{q.number} · {q.accountName} · {q.currency} {q.amount.toLocaleString()}</p></div>
-                      <span className={`px-2 py-0.5 rounded text-xs ${q.status === 'paid' ? 'bg-green-500/20 text-green-400' : q.status === 'sent' ? 'bg-blue-500/20 text-blue-400' : 'bg-gray-500/20 text-gray-400'}`}>{q.status}</span>
-                    </div>
-                  ))}
-                </div>
-              </PanelWrapper>
+            {/* Suite CRM Modules */}
+            {activeView === 'ACCOUNTS' && (
+              <ErrorBoundary key="accounts">
+                <PanelWrapper><AccountsPanel showToast={toast} /></PanelWrapper>
+              </ErrorBoundary>
             )}
+            {activeView === 'CONTACTS' && (
+              <ErrorBoundary key="contacts">
+                <PanelWrapper><ContactsPanel showToast={toast} /></PanelWrapper>
+              </ErrorBoundary>
+            )}
+            {activeView === 'CASES' && (
+              <ErrorBoundary key="cases">
+                <PanelWrapper><CasesPanel showToast={toast} /></PanelWrapper>
+              </ErrorBoundary>
+            )}
+            {activeView === 'PROJECTS' && (
+              <ErrorBoundary key="projects">
+                <PanelWrapper><ProjectsPanel showToast={toast} /></PanelWrapper>
+              </ErrorBoundary>
+            )}
+            {activeView === 'QUOTES' && (
+              <ErrorBoundary key="quotes">
+                <PanelWrapper><QuotesPanel showToast={toast} /></PanelWrapper>
+              </ErrorBoundary>
+            )}
+            {activeView === 'WORKFLOWS' && (
+              <ErrorBoundary key="workflows">
+                <PanelWrapper><WorkflowPanel showToast={toast} /></PanelWrapper>
+              </ErrorBoundary>
+            )}
+            {activeView === 'WEBHOOKS' && (
+              <ErrorBoundary key="webhooks">
+                <PanelWrapper><WebhooksPanel showToast={toast} /></PanelWrapper>
+              </ErrorBoundary>
+            )}
+            {activeView === 'KNOWLEDGE_BASE' && (
+              <ErrorBoundary key="knowledge">
+                <PanelWrapper><KnowledgeBasePanel showToast={toast} /></PanelWrapper>
+              </ErrorBoundary>
+            )}
+            {activeView === 'PORTAL' && (
+              <ErrorBoundary key="portal">
+                <PanelWrapper><PortalPreview showToast={toast} /></PanelWrapper>
+              </ErrorBoundary>
+            )}
+
+
 
             {activeView === 'SETTINGS' && (
               <PanelWrapper>
