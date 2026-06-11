@@ -2,10 +2,12 @@ import OpenAI from 'openai';
 
 const NVIDIA_MODEL = "deepseek-ai/deepseek-v4-pro";
 
-async function callNvidiaAI(prompt: string, systemPrompt?: string): Promise<string> {
-  console.log(`[NVIDIA NIM] Invoking ${NVIDIA_MODEL} via OpenAI SDK...`);
+async function callNvidiaAI(prompt: string, systemPrompt?: string, customNvidia?: { apiKey?: string; model?: string }): Promise<string> {
+  const apiKey = customNvidia?.apiKey || process.env.NVIDIA_API_KEY || "";
+  const model = customNvidia?.model || NVIDIA_MODEL;
+  console.log(`[NVIDIA NIM] Invoking ${model} via OpenAI SDK...`);
   const openai = new OpenAI({
-    apiKey: process.env.NVIDIA_API_KEY || "",
+    apiKey,
     baseURL: 'https://integrate.api.nvidia.com/v1',
   });
 
@@ -14,7 +16,7 @@ async function callNvidiaAI(prompt: string, systemPrompt?: string): Promise<stri
   messages.push({ role: "user", content: prompt });
 
   const completion = await openai.chat.completions.create({
-    model: NVIDIA_MODEL,
+    model,
     messages,
     temperature: 0.20,
     top_p: 0.70,
@@ -326,7 +328,7 @@ export async function generateOutreachBackend(lead: any, config: any, customNvid
   `;
 
   try {
-    const deepseekResult = await callNvidiaAI(prompt, "You are a B2B sales expert writing omnichannel cold outreach. Return a structured JSON object matching the requested schema exactly. ONLY return valid minified JSON without markdown code fences or explanations.");
+    const deepseekResult = await callNvidiaAI(prompt, "You are a B2B sales expert writing omnichannel cold outreach. Return a structured JSON object matching the requested schema exactly. ONLY return valid minified JSON without markdown code fences or explanations.", customNvidia);
     return cleanAndParseJSON(deepseekResult);
   } catch (error) {
     console.error("DeepSeek generation failed:", error);
@@ -384,7 +386,7 @@ export async function generateProspectResearchBackend(companyInput: string, cust
   `;
 
   try {
-    const deepseekResult = await callNvidiaAI(prompt, "You are an elite enterprise B2B management consultant and AI solutions architect. Return a structured consulting report JSON. ONLY return valid minified JSON without markdown code fences or explanations.");
+    const deepseekResult = await callNvidiaAI(prompt, "You are an elite enterprise B2B management consultant and AI solutions architect. Return a structured consulting report JSON. ONLY return valid minified JSON without markdown code fences or explanations.", customNvidia);
     return cleanAndParseJSON(deepseekResult);
   } catch (error) {
     console.error("DeepSeek generation failed:", error);
@@ -414,7 +416,7 @@ export async function analyzeBenchmarkDriftBackend(leads: any[], customNvidia?: 
   `;
 
   try {
-    const deepseekResult = await callNvidiaAI(prompt, "You are an elite enterprise B2B sales strategist and CRO consultant. Return a structured JSON report matching the requested schema exactly. ONLY return valid minified JSON without markdown code fences or explanations.");
+    const deepseekResult = await callNvidiaAI(prompt, "You are an elite enterprise B2B sales strategist and CRO consultant. Return a structured JSON report matching the requested schema exactly. ONLY return valid minified JSON without markdown code fences or explanations.", customNvidia);
     return cleanAndParseJSON(deepseekResult);
   } catch (error) {
     console.error("DeepSeek generation failed:", error);
@@ -462,6 +464,7 @@ function defaultFounded(name: string): string {
 }
 
 function getMockProspectResearch(companyInput: string): any {
+  if (!companyInput) companyInput = "Unknown Company";
   let targetCompany = companyInput;
   let targetLinkedin = "";
 
