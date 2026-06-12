@@ -9,11 +9,16 @@
     "start": "node dist/server.cjs",
     "preview": "vite preview",
     "clean": "rm -rf dist",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "test": "python with_server.py --server \"npm run dev\" --port 3000 -- python -m pytest tests/ -v",
+    "test:smoke": "python with_server.py --server \"npm run dev\" --port 3000 -- python tests/smoke_test.py",
+    "test:login": "python with_server.py --server \"npm run dev\" --port 3000 -- python tests/login_test.py",
+    "test:outreach": "python with_server.py --server \"npm run dev\" --port 3000 -- python tests/outreach_flow.py"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.98.0",
     "@chakra-ui/react": "^2.10.10",
+    "@composio/client": "^0.1.0-alpha.73",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
     "@saas-ui/react": "^2.11.4",
@@ -45,6 +50,7 @@
     "@types/ws": "^8.18.1",
     "autoprefixer": "^10.4.21",
     "esbuild": "^0.28.0",
+    "playwright": "^1.60.0",
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0",
     "typescript": "~5.8.2",

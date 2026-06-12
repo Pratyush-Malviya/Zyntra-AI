@@ -20,6 +20,7 @@ import {
   Sidebar,
   SidebarSection,
   NavItem,
+  NavItemLabel,
   SidebarToggleButton,
 } from '@saas-ui/react';
 import {
@@ -61,11 +62,9 @@ const tierBadge = (label: string, color: string) => (
     textTransform="uppercase"
     letterSpacing="widest"
     textAlign="center"
-    bg={`${color}.500`}
-    bgOpacity={0.1}
+    bg={`${color}.500/10`}
     borderWidth={1}
-    borderColor={`${color}.500`}
-    borderOpacity={0.2}
+    borderColor={`${color}.500/20`}
     rounded="md"
     px={3}
     py={1}
@@ -75,6 +74,23 @@ const tierBadge = (label: string, color: string) => (
     {label}
   </Text>
 );
+
+function SidebarNavItem({ isActive, onClick, icon, label, labelSecondary }: {
+  isActive?: boolean;
+  onClick?: () => void;
+  icon: React.ReactElement;
+  label: string;
+  labelSecondary?: string;
+}) {
+  return (
+    <NavItem isActive={isActive} onClick={onClick} icon={icon}>
+      <NavItemLabel>
+        <Text fontSize="sm" fontWeight="medium">{label}</Text>
+        {labelSecondary && <Text fontSize="xs" color="gray.400">{labelSecondary}</Text>}
+      </NavItemLabel>
+    </NavItem>
+  );
+}
 
 export function AppShell({
   children, activeView, onViewChange, superAdminTab, onSuperAdminTabChange,
@@ -147,42 +163,42 @@ export function AppShell({
         {simulatedRole === 'super_admin' && (
           <SidebarSection>
             {tierBadge('TIER 1 — Super Admin', 'purple')}
-            <NavItem
+            <SidebarNavItem
               isActive={activeView === 'SUPER_ADMIN' && superAdminTab === 'dashboard'}
               onClick={() => handleNav('SUPER_ADMIN', 'dashboard')}
               icon={<Activity size={18} />}
               label="Command Dashboard"
               labelSecondary="SaaS Metrics Central"
             />
-            <NavItem
+            <SidebarNavItem
               isActive={activeView === 'SUPER_ADMIN' && superAdminTab === 'organizations'}
               onClick={() => handleNav('SUPER_ADMIN', 'organizations')}
               icon={<Building size={18} />}
               label="Manage Orgs"
               labelSecondary="Tenant Provisioning"
             />
-            <NavItem
+            <SidebarNavItem
               isActive={activeView === 'SUPER_ADMIN' && superAdminTab === 'employees_list'}
               onClick={() => handleNav('SUPER_ADMIN', 'employees_list')}
               icon={<Users size={18} />}
               label="Employees Directory"
               labelSecondary="Global Directory Map"
             />
-            <NavItem
+            <SidebarNavItem
               isActive={activeView === 'SUPER_ADMIN' && superAdminTab === 'llm_config'}
               onClick={() => handleNav('SUPER_ADMIN', 'llm_config')}
               icon={<Cpu size={18} />}
               label="LLM Routing Hub"
               labelSecondary="Failovers & Metering"
             />
-            <NavItem
+            <SidebarNavItem
               isActive={activeView === 'SUPER_ADMIN' && superAdminTab === 'enterprise_suite'}
               onClick={() => handleNav('SUPER_ADMIN', 'enterprise_suite')}
               icon={<ShieldCheck size={18} />}
               label="Enterprise Audit"
               labelSecondary="Compliance & SSO Logs"
             />
-            <NavItem
+            <SidebarNavItem
               isActive={activeView === 'SUPER_ADMIN_BILLING'}
               onClick={() => handleNav('SUPER_ADMIN_BILLING')}
               icon={<CreditCard size={18} />}
@@ -196,49 +212,49 @@ export function AppShell({
         {simulatedRole === 'org_admin' && (
           <SidebarSection>
             {tierBadge('TIER 2 — Org Admin', 'blue')}
-            <NavItem
+            <SidebarNavItem
               isActive={activeView === 'ORG_DASHBOARD'}
               onClick={() => handleNav('ORG_DASHBOARD')}
               icon={<LayoutDashboard size={18} />}
               label="Tenant Overview"
               labelSecondary="Quota & Seat Allocation"
             />
-            <NavItem
+            <SidebarNavItem
               isActive={activeView === 'ORG_MEMBERS'}
               onClick={() => handleNav('ORG_MEMBERS')}
               icon={<Users size={18} />}
               label="Member Directory"
               labelSecondary="Invite & Role Allocation"
             />
-            <NavItem
+            <SidebarNavItem
               isActive={activeView === 'ORG_BRANDING'}
               onClick={() => handleNav('ORG_BRANDING')}
               icon={<Settings size={18} />}
               label="Custom Branding"
               labelSecondary="Themes & Logos Setting"
             />
-            <NavItem
+            <SidebarNavItem
               isActive={activeView === 'ORG_DOMAIN'}
               onClick={() => handleNav('ORG_DOMAIN')}
               icon={<Globe size={18} />}
               label="Branded Domain"
               labelSecondary="DKIM / SPF DNS Wizard"
             />
-            <NavItem
+            <SidebarNavItem
               isActive={activeView === 'ORG_BILLING'}
               onClick={() => handleNav('ORG_BILLING')}
               icon={<CreditCard size={18} />}
               label="Billing & Plans"
               labelSecondary="Enterprise Subscription"
             />
-            <NavItem
+            <SidebarNavItem
               isActive={activeView === 'ORG_FEATURES'}
               onClick={() => handleNav('ORG_FEATURES')}
               icon={<Zap  size={18} />}
               label="Feature Controls"
               labelSecondary="Toggle Admin Modules"
             />
-            <NavItem
+            <SidebarNavItem
               isActive={activeView === 'ORG_SECURITY'}
               onClick={() => handleNav('ORG_SECURITY')}
               icon={<ShieldCheck size={18} />}
@@ -252,28 +268,28 @@ export function AppShell({
         {simulatedRole === 'sdr' && (
           <SidebarSection>
             {tierBadge('TIER 3 — SDR Workspace', 'orange')}
-            <NavItem
+            <SidebarNavItem
               isActive={activeView === 'OUTREACH'}
               onClick={() => handleNav('OUTREACH')}
               icon={<Target size={18} />}
               label="Outreach Campaigns"
               labelSecondary="Campaigns & Lead Map"
             />
-            <NavItem
+            <SidebarNavItem
               isActive={activeView === 'RESEARCH'}
               onClick={() => handleNav('RESEARCH')}
               icon={<Globe size={18} />}
               label="Prospect Intel"
               labelSecondary="ICP Research & Dossiers"
             />
-            <NavItem
+            <SidebarNavItem
               isActive={activeView === 'SDR_DAILY'}
               onClick={() => handleNav('SDR_DAILY')}
               icon={<List size={18} />}
               label="Daily Action Queue"
               labelSecondary="Priority tasks due today"
             />
-            <NavItem
+            <SidebarNavItem
               isActive={activeView === 'SDR_STATS'}
               onClick={() => handleNav('SDR_STATS')}
               icon={<TrendingUp size={18} />}
@@ -287,28 +303,28 @@ export function AppShell({
         {simulatedRole === 'manager' && (
           <SidebarSection>
             {tierBadge('TIER 3 — Manager Dashboard', 'teal')}
-            <NavItem
+            <SidebarNavItem
               isActive={activeView === 'MGR_DASHBOARD'}
               onClick={() => handleNav('MGR_DASHBOARD')}
               icon={<LayoutDashboard size={18} />}
               label="Team Activity Feed"
               labelSecondary="Live outreach stream"
             />
-            <NavItem
+            <SidebarNavItem
               isActive={activeView === 'MGR_APPROVALS'}
               onClick={() => handleNav('MGR_APPROVALS')}
               icon={<Check size={18} />}
               label="Sequence Approvals"
               labelSecondary="Approve SDR copy drafts"
             />
-            <NavItem
+            <SidebarNavItem
               isActive={activeView === 'MGR_CALLS'}
               onClick={() => handleNav('MGR_CALLS')}
               icon={<MessageSquare size={18} />}
               label="Call Coaching"
               labelSecondary="AI summaries & metrics"
             />
-            <NavItem
+            <SidebarNavItem
               isActive={activeView === 'MGR_FORECAST'}
               onClick={() => handleNav('MGR_FORECAST')}
               icon={<TrendingUp size={18} />}
@@ -322,28 +338,28 @@ export function AppShell({
         {simulatedRole === 'ae' && (
           <SidebarSection>
             {tierBadge('TIER 3 — AE Workspace', 'blue')}
-            <NavItem
+            <SidebarNavItem
               isActive={activeView === 'AE_PIPELINE'}
               onClick={() => handleNav('AE_PIPELINE')}
               icon={<Kanban size={18} />}
               label="Deal Pipeline Board"
               labelSecondary="Kanban opportunity flows"
             />
-            <NavItem
+            <SidebarNavItem
               isActive={activeView === 'AE_HEALTH'}
               onClick={() => handleNav('AE_HEALTH')}
               icon={<ShieldCheck size={18} />}
               label="Deal Scoring Health"
               labelSecondary="AI explainability logs"
             />
-            <NavItem
+            <SidebarNavItem
               isActive={activeView === 'AE_COPILOT'}
               onClick={() => handleNav('AE_COPILOT')}
               icon={<Sparkles size={18} />}
               label="AI Copilot CRM Assistant"
               labelSecondary="Query plain English CRM"
             />
-            <NavItem
+            <SidebarNavItem
               isActive={activeView === 'AE_BRIEFS'}
               onClick={() => handleNav('AE_BRIEFS')}
               icon={<FileText size={18} />}
@@ -357,14 +373,14 @@ export function AppShell({
         {simulatedRole === 'viewer' && (
           <SidebarSection>
             {tierBadge('TIER 3 — Viewer Read-Only', 'purple')}
-            <NavItem
+            <SidebarNavItem
               isActive={activeView === 'VIEWER_DASHBOARD'}
               onClick={() => handleNav('VIEWER_DASHBOARD')}
               icon={<LayoutDashboard size={18} />}
               label="Read-Only Metrics"
               labelSecondary="Dashboard metrics feed"
             />
-            <NavItem
+            <SidebarNavItem
               isActive={activeView === 'VIEWER_PIPELINE'}
               onClick={() => handleNav('VIEWER_PIPELINE')}
               icon={<Kanban size={18} />}
@@ -376,7 +392,7 @@ export function AppShell({
 
         {/* Settings */}
         <Box pt={2} mt={2} borderTopWidth={1} borderColor="whiteAlpha.200">
-          <NavItem
+          <SidebarNavItem
             isActive={activeView === 'SETTINGS'}
             onClick={() => handleNav('SETTINGS')}
             icon={<Settings size={18} />}
@@ -387,7 +403,7 @@ export function AppShell({
 
         {/* Theme Toggle */}
         <Box pt={4} mt={4} borderTopWidth={1} borderColor="whiteAlpha.200">
-          <NavItem
+          <SidebarNavItem
             onClick={toggleColorMode}
             icon={colorMode === 'dark' ? <Moon size={18} /> : <Sun size={18} />}
             label="Appearance"
@@ -481,7 +497,7 @@ export function AppShell({
               display={{md: 'none'}}
               onClick={onMobileOpen}
             />
-            <Box display={{base: 'flex', md: 'none'}} align="center" gap={2}>
+            <Box display={{base: 'flex', md: 'none'}} alignItems="center" gap={2}>
               <Flex
                 w={8} h={8}
                 rounded="xl"

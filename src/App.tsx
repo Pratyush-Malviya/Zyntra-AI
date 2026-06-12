@@ -39,6 +39,7 @@ import {
   FileText,
   Award,
   Sparkles,
+  Kanban,
   Database,
   RefreshCw,
   Building,
