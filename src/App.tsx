@@ -14,8 +14,7 @@ import {
   ChevronLeft,
   ChevronDown,
   Loader2, 
-  Plus, 
-  Menu,
+  Plus,
   X, 
   FileJson, 
   FileSpreadsheet, 
@@ -37,8 +36,6 @@ import {
   Trash2,
   Save,
   UserPlus,
-  Sun,
-  Moon,
   FileText,
   Award,
   Sparkles,
@@ -50,11 +47,9 @@ import {
   TrendingUp,
   CreditCard,
   PlusCircle,
-  Activity,
   Filter,
   Cpu,
   List,
-  Kanban,
   Search
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
@@ -75,6 +70,8 @@ import { OrgAdminPanel } from './components/OrgAdminPanel';
 import { ManagerWorkspacePanel } from './components/ManagerWorkspacePanel';
 import { AeWorkspacePanel } from './components/AeWorkspacePanel';
 import { SdrWorkspacePanel } from './components/SdrWorkspacePanel';
+import { AppShell } from './components/layout/AppShell';
+import type { AppView, SuperAdminTab, UserRole } from './components/layout/AppShell';
 import { 
   auth, 
   db, 
@@ -799,17 +796,7 @@ function LoginView({
 
 
 function MainApp({ user, profile, theme, setTheme, isMobileDevice }: { user: User, profile: UserProfile, theme: 'dark' | 'light', setTheme: (t: 'dark' | 'light') => void, isMobileDevice: boolean }) {
-  const [isMenuCollapsed, setIsMenuCollapsed] = useState<boolean>(() => {
-    return localStorage.getItem('zyntra-menu-collapsed') === 'true';
-  });
 
-  const toggleMenuCollapsed = () => {
-    const newVal = !isMenuCollapsed;
-    setIsMenuCollapsed(newVal);
-    localStorage.setItem('zyntra-menu-collapsed', String(newVal));
-  };
-
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activePanel, setActivePanel] = useState(-1); 
   const [simulatedRole, setSimulatedRole] = useState<'super_admin' | 'org_admin' | 'sdr' | 'manager' | 'ae' | 'viewer'>(() => {
     if (profile?.role === 'super_admin') return 'super_admin';
@@ -1955,7 +1942,22 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
   };
 
   return (
-    <div className={`min-h-screen bg-bg text-text font-sans selection:bg-brand/30 flex ${theme}`}>
+    <>
+    <AppShell
+      activeView={activeView as AppView}
+      onViewChange={(view, subTab) => {
+        setActiveView(view);
+        if (subTab) setActiveView(view);
+        if (view === 'OUTREACH') setActivePanel(-1);
+      }}
+      superAdminTab={superAdminTab}
+      onSuperAdminTabChange={(tab) => setSuperAdminTab(tab)}
+      simulatedRole={simulatedRole}
+      onRoleChange={handleSimulatedRoleChange}
+      user={user}
+      profile={profile}
+      onLogout={handleLogout}
+    >
       {/* Toast Notification */}
       <AnimatePresence>
         {toast && (
@@ -1982,437 +1984,6 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Mobile Drawer Overlay */}
-      {isMobileMenuOpen && (
-        <button 
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[55] md:hidden cursor-pointer w-full h-full border-0 text-left outline-none block"
-          onClick={() => setIsMobileMenuOpen(false)}
-          aria-label="Close menu backdrop"
-        />
-      )}
-
-      {/* Sidebar Navigation */}
-      <aside className={`fixed md:sticky top-0 left-0 h-screen z-[60] border-r border-border-subtle ${isMobileDevice ? 'bg-surface' : 'bg-[#111216]/95 md:bg-surface/50'} backdrop-blur-xl flex flex-col transition-all duration-300 md:translate-x-0 ${
-        isMobileMenuOpen 
-          ? 'w-64 translate-x-0' 
-          : `-translate-x-full md:translate-x-0 ${isMenuCollapsed ? 'w-20' : 'w-64'}`
-      }`}>
-        <div className={`p-4 flex ${isMenuCollapsed && !isMobileMenuOpen ? 'flex-col items-center gap-3' : 'items-center justify-between gap-3'} transition-all duration-300`}>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-brand to-brand-alt flex items-center justify-center shadow-lg shadow-brand/20 shrink-0">
-              <Zap className="w-6 h-6 text-white fill-current" />
-            </div>
-            {(!isMenuCollapsed || isMobileMenuOpen) && (
-              <div className="overflow-hidden transition-all duration-300 block">
-                <span className="font-syne font-extrabold text-xl tracking-tight block truncate text-text">Zyntra AI</span>
-                <div className="text-[8px] text-text-muted font-bold uppercase tracking-[0.2em]">Enterprise v1.0</div>
-              </div>
-            )}
-          </div>
-          {/* Close Menu Button on Mobile Drawer */}
-          <button 
-            onClick={() => setIsMobileMenuOpen(false)}
-            className="p-1.5 hover:bg-bg-subtle text-text-muted hover:text-text rounded-lg md:hidden transition-colors"
-            title="Close navigation menu"
-          >
-            <X className="w-5 h-5" />
-          </button>
-          {/* Toggle Menu Button on Desktop */}
-          <button 
-            onClick={toggleMenuCollapsed}
-            className="p-1.5 hover:bg-bg-subtle text-text-muted hover:text-text rounded-lg hidden md:block transition-colors cursor-pointer"
-            title={isMenuCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
-          >
-            {isMenuCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
-          </button>
-        </div>
-
-        <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto max-h-[calc(100vh-180px)] scrollbar-thin">
-          {/* TIER 1: Super Admin Menu */}
-          {simulatedRole === 'super_admin' && (
-            <div className="space-y-1.5">
-              <div className="px-3 py-1 text-[8px] font-extrabold text-[#a78bfa] uppercase tracking-widest bg-purple-500/10 border border-purple-500/20 rounded-md mb-2 text-center">
-                TIER 1 — Super Admin
-              </div>
-              <NavButton 
-                active={activeView === 'SUPER_ADMIN' && superAdminTab === 'dashboard'} 
-                onClick={() => { setActiveView('SUPER_ADMIN'); setSuperAdminTab('dashboard'); setIsMobileMenuOpen(false); }}
-                icon={Activity}
-                label="Command Dashboard"
-                subLabel="SaaS Metrics Central"
-                isCollapsed={isMenuCollapsed}
-              />
-              <NavButton 
-                active={activeView === 'SUPER_ADMIN' && superAdminTab === 'organizations'} 
-                onClick={() => { setActiveView('SUPER_ADMIN'); setSuperAdminTab('organizations'); setIsMobileMenuOpen(false); }}
-                icon={Building}
-                label="Manage Orgs"
-                subLabel="Tenant Provisioning"
-                isCollapsed={isMenuCollapsed}
-              />
-              <NavButton 
-                active={activeView === 'SUPER_ADMIN' && superAdminTab === 'employees_list'} 
-                onClick={() => { setActiveView('SUPER_ADMIN'); setSuperAdminTab('employees_list'); setIsMobileMenuOpen(false); }}
-                icon={Users}
-                label="Employees Directory"
-                subLabel="Global Directory Map"
-                isCollapsed={isMenuCollapsed}
-              />
-              <NavButton 
-                active={activeView === 'SUPER_ADMIN' && superAdminTab === 'llm_config'} 
-                onClick={() => { setActiveView('SUPER_ADMIN'); setSuperAdminTab('llm_config'); setIsMobileMenuOpen(false); }}
-                icon={Cpu}
-                label="LLM Routing Hub"
-                subLabel="Failovers & Metering"
-                isCollapsed={isMenuCollapsed}
-              />
-              <NavButton 
-                active={activeView === 'SUPER_ADMIN' && superAdminTab === 'enterprise_suite'} 
-                onClick={() => { setActiveView('SUPER_ADMIN'); setSuperAdminTab('enterprise_suite'); setIsMobileMenuOpen(false); }}
-                icon={ShieldCheck}
-                label="Enterprise Audit"
-                subLabel="Compliance & SSO Logs"
-                isCollapsed={isMenuCollapsed}
-              />
-              <NavButton 
-                active={activeView === 'SUPER_ADMIN_BILLING'} 
-                onClick={() => { setActiveView('SUPER_ADMIN_BILLING'); setIsMobileMenuOpen(false); }}
-                icon={CreditCard}
-                label="Platform Gateways"
-                subLabel="MRR & Subscription Fee"
-                isCollapsed={isMenuCollapsed}
-              />
-            </div>
-          )}
-
-          {/* TIER 2: Organization Admin Menu */}
-          {simulatedRole === 'org_admin' && (
-            <div className="space-y-1.5">
-              <div className="px-3 py-1 text-[8px] font-extrabold text-[#60a5fa] uppercase tracking-widest bg-blue-500/10 border border-blue-500/20 rounded-md mb-2 text-center">
-                TIER 2 — Org Admin
-              </div>
-              <NavButton 
-                active={activeView === 'ORG_DASHBOARD'} 
-                onClick={() => { setActiveView('ORG_DASHBOARD'); setIsMobileMenuOpen(false); }}
-                icon={LayoutDashboard}
-                label="Tenant Overview"
-                subLabel="Quota & Seat Allocation"
-                isCollapsed={isMenuCollapsed}
-              />
-              <NavButton 
-                active={activeView === 'ORG_MEMBERS'} 
-                onClick={() => { setActiveView('ORG_MEMBERS'); setIsMobileMenuOpen(false); }}
-                icon={Users}
-                label="Member Directory"
-                subLabel="Invite & Role Allocation"
-                isCollapsed={isMenuCollapsed}
-              />
-              <NavButton 
-                active={activeView === 'ORG_BRANDING'} 
-                onClick={() => { setActiveView('ORG_BRANDING'); setIsMobileMenuOpen(false); }}
-                icon={Settings}
-                label="Custom Branding"
-                subLabel="Themes & Logos Setting"
-                isCollapsed={isMenuCollapsed}
-              />
-              <NavButton 
-                active={activeView === 'ORG_DOMAIN'} 
-                onClick={() => { setActiveView('ORG_DOMAIN'); setIsMobileMenuOpen(false); }}
-                icon={Globe}
-                label="Branded Domain"
-                subLabel="DKIM / SPF DNS Wizard"
-                isCollapsed={isMenuCollapsed}
-              />
-              <NavButton 
-                active={activeView === 'ORG_BILLING'} 
-                onClick={() => { setActiveView('ORG_BILLING'); setIsMobileMenuOpen(false); }}
-                icon={CreditCard}
-                label="Billing & Plans"
-                subLabel="Enterprise Subscription"
-                isCollapsed={isMenuCollapsed}
-              />
-              <NavButton 
-                active={activeView === 'ORG_FEATURES'} 
-                onClick={() => { setActiveView('ORG_FEATURES'); setIsMobileMenuOpen(false); }}
-                icon={Zap}
-                label="Feature Controls"
-                subLabel="Toggle Admin Modules"
-                isCollapsed={isMenuCollapsed}
-              />
-              <NavButton 
-                active={activeView === 'ORG_SECURITY'} 
-                onClick={() => { setActiveView('ORG_SECURITY'); setIsMobileMenuOpen(false); }}
-                icon={ShieldCheck}
-                label="Security & MFA"
-                subLabel="Enforce IP & Sessions"
-                isCollapsed={isMenuCollapsed}
-              />
-            </div>
-          )}
-
-          {/* TIER 3-A: SDR WORKSPACE */}
-          {simulatedRole === 'sdr' && (
-            <div className="space-y-1.5">
-              <div className="px-3 py-1 text-[8px] font-extrabold text-[#f59e0b] uppercase tracking-widest bg-amber-500/10 border border-amber-500/20 rounded-md mb-2 text-center">
-                TIER 3 — SDR Workspace
-              </div>
-              <NavButton 
-                active={activeView === 'OUTREACH'} 
-                onClick={() => { setActiveView('OUTREACH'); setActivePanel(-1); setIsMobileMenuOpen(false); }}
-                icon={Target}
-                label="Outreach Campaigns"
-                subLabel="Campaigns & Lead Map"
-                isCollapsed={isMenuCollapsed}
-              />
-              <NavButton 
-                active={activeView === 'RESEARCH'} 
-                onClick={() => { setActiveView('RESEARCH'); setIsMobileMenuOpen(false); }}
-                icon={Globe}
-                label="Prospect Intel"
-                subLabel="ICP Research & Dossiers"
-                isCollapsed={isMenuCollapsed}
-              />
-              <NavButton 
-                active={activeView === 'SDR_DAILY'} 
-                onClick={() => { setActiveView('SDR_DAILY'); setIsMobileMenuOpen(false); }}
-                icon={List}
-                label="Daily Action Queue"
-                subLabel="Priority tasks due today"
-                isCollapsed={isMenuCollapsed}
-              />
-              <NavButton 
-                active={activeView === 'SDR_STATS'} 
-                onClick={() => { setActiveView('SDR_STATS'); setIsMobileMenuOpen(false); }}
-                icon={TrendingUp}
-                label="Personal Analytics"
-                subLabel="Dials & Open Rates"
-                isCollapsed={isMenuCollapsed}
-              />
-            </div>
-          )}
-
-          {/* TIER 3-B: MANAGER WORKSPACE */}
-          {simulatedRole === 'manager' && (
-            <div className="space-y-1.5">
-              <div className="px-3 py-1 text-[8px] font-extrabold text-[#14b8a6] uppercase tracking-widest bg-teal-500/10 border border-teal-500/20 rounded-md mb-2 text-center">
-                TIER 3 — Manager Dashboard
-              </div>
-              <NavButton 
-                active={activeView === 'MGR_DASHBOARD'} 
-                onClick={() => { setActiveView('MGR_DASHBOARD'); setIsMobileMenuOpen(false); }}
-                icon={LayoutDashboard}
-                label="Team Activity Feed"
-                subLabel="Live outreach stream"
-                isCollapsed={isMenuCollapsed}
-              />
-              <NavButton 
-                active={activeView === 'MGR_APPROVALS'} 
-                onClick={() => { setActiveView('MGR_APPROVALS'); setIsMobileMenuOpen(false); }}
-                icon={Check}
-                label="Sequence Approvals"
-                subLabel="Approve SDR copy drafts"
-                isCollapsed={isMenuCollapsed}
-              />
-              <NavButton 
-                active={activeView === 'MGR_CALLS'} 
-                onClick={() => { setActiveView('MGR_CALLS'); setIsMobileMenuOpen(false); }}
-                icon={MessageSquare}
-                label="Call Coaching"
-                subLabel="AI summaries & metrics"
-                isCollapsed={isMenuCollapsed}
-              />
-              <NavButton 
-                active={activeView === 'MGR_FORECAST'} 
-                onClick={() => { setActiveView('MGR_FORECAST'); setIsMobileMenuOpen(false); }}
-                icon={TrendingUp}
-                label="Forecast & Overrides"
-                subLabel="Manager commits logs"
-                isCollapsed={isMenuCollapsed}
-              />
-            </div>
-          )}
-
-          {/* TIER 3-C: ACCOUNT EXECUTIVE WORKSPACE */}
-          {simulatedRole === 'ae' && (
-            <div className="space-y-1.5">
-              <div className="px-3 py-1 text-[8px] font-extrabold text-[#3b82f6] uppercase tracking-widest bg-blue-500/10 border border-blue-500/20 rounded-md mb-2 text-center">
-                TIER 3 — AE Workspace
-              </div>
-              <NavButton 
-                active={activeView === 'AE_PIPELINE'} 
-                onClick={() => { setActiveView('AE_PIPELINE'); setIsMobileMenuOpen(false); }}
-                icon={Kanban}
-                label="Deal Pipeline Board"
-                subLabel="Kanban opportunity flows"
-                isCollapsed={isMenuCollapsed}
-              />
-              <NavButton 
-                active={activeView === 'AE_HEALTH'} 
-                onClick={() => { setActiveView('AE_HEALTH'); setIsMobileMenuOpen(false); }}
-                icon={ShieldCheck}
-                label="Deal Scoring Health"
-                subLabel="AI explainability logs"
-                isCollapsed={isMenuCollapsed}
-              />
-              <NavButton 
-                active={activeView === 'AE_COPILOT'} 
-                onClick={() => { setActiveView('AE_COPILOT'); setIsMobileMenuOpen(false); }}
-                icon={Sparkles}
-                label="AI Copilot CRM Assistant"
-                subLabel="Query plain English CRM"
-                isCollapsed={isMenuCollapsed}
-              />
-              <NavButton 
-                active={activeView === 'AE_BRIEFS'} 
-                onClick={() => { setActiveView('AE_BRIEFS'); setIsMobileMenuOpen(false); }}
-                icon={FileText}
-                label="Pre-Call Briefings"
-                subLabel="Meeting preparation intel"
-                isCollapsed={isMenuCollapsed}
-              />
-            </div>
-          )}
-
-          {/* TIER 3-D: VIEWER WORKSPACE */}
-          {simulatedRole === 'viewer' && (
-            <div className="space-y-1.5">
-              <div className="px-3 py-1 text-[8px] font-extrabold text-[#a855f7] uppercase tracking-widest bg-purple-500/10 border border-purple-500/20 rounded-md mb-2 text-center">
-                TIER 3 — Viewer Read-Only
-              </div>
-              <NavButton 
-                active={activeView === 'VIEWER_DASHBOARD'} 
-                onClick={() => { setActiveView('VIEWER_DASHBOARD'); setIsMobileMenuOpen(false); }}
-                icon={LayoutDashboard}
-                label="Read-Only Metrics"
-                subLabel="Dashboard metrics feed"
-                isCollapsed={isMenuCollapsed}
-              />
-              <NavButton 
-                active={activeView === 'VIEWER_PIPELINE'} 
-                onClick={() => { setActiveView('VIEWER_PIPELINE'); setIsMobileMenuOpen(false); }}
-                icon={Kanban}
-                label="Pipeline Visibility"
-                subLabel="Corporate deal maps"
-                isCollapsed={isMenuCollapsed}
-              />
-            </div>
-          )}
-
-          <div className="pt-2 mt-2 border-t border-border-subtle">
-            <NavButton 
-              active={activeView === 'SETTINGS'} 
-              onClick={() => { setActiveView('SETTINGS'); setIsMobileMenuOpen(false); }}
-              icon={Settings}
-              label="Settings & Labs"
-              subLabel="Integrations & API keys"
-              isCollapsed={isMenuCollapsed}
-            />
-          </div>
-
-          {true && (
-            <div className="pt-4 mt-4 border-t border-border-subtle">
-              <button 
-                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-bg-subtle transition-all group text-left cursor-pointer"
-              >
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all shrink-0 ${
-                  theme === 'dark' ? 'bg-brand/10 text-brand' : 'bg-brand-alt/10 text-brand-alt'
-                } ${isMenuCollapsed && !isMobileMenuOpen ? 'mx-auto' : ''}`}>
-                  {theme === 'dark' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
-                </div>
-                {(!isMenuCollapsed || isMobileMenuOpen) && (
-                  <div className="overflow-hidden transition-all duration-300 block">
-                    <div className="text-[10px] font-bold uppercase tracking-wider text-text">Appearance</div>
-                    <div className="text-[8px] text-text-muted uppercase tracking-widest">{theme === 'dark' ? 'Dark Mode' : 'Light Mode'}</div>
-                  </div>
-                )}
-              </button>
-            </div>
-          )}
-        </nav>
-
-        <div className="p-4 border-t border-border-subtle">
-          <div className={`flex items-center gap-3 p-2 rounded-2xl bg-bg-subtle ${isMenuCollapsed && !isMobileMenuOpen ? 'justify-center' : ''}`}>
-            <img src={user.photoURL || ""} className="w-8 h-8 rounded-full border border-border-subtle shrink-0" referrerPolicy="no-referrer" alt="User avatar" />
-            {(!isMenuCollapsed || isMobileMenuOpen) && (
-              <>
-                <div className="overflow-hidden transition-all duration-300 block">
-                  <div className="text-[10px] font-bold truncate text-text">{user.displayName}</div>
-                  <div className="text-[8px] text-text-muted uppercase tracking-wider">{(profile.role || '').replace('_', ' ')}</div>
-                </div>
-                <button onClick={handleLogout} className="ml-auto p-1.5 hover:bg-red-500/10 text-text-muted hover:text-red-500 rounded-lg transition-colors cursor-pointer">
-                  <LogOut className="w-4 h-4" />
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-      </aside>
-
-      <div className="flex-1 flex flex-col min-h-screen">
-        {/* Top Bar (Simplified) */}
-        <header className="h-20 border-b border-border-subtle flex items-center justify-between px-4 md:px-8 bg-bg/50 backdrop-blur-md sticky top-0 z-50">
-          <div className="flex items-center gap-3 md:gap-4 w-full min-w-0">
-            {/* Hamburger Menu Toggle */}
-            <button 
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="p-2 hover:bg-bg-subtle text-text hover:text-brand rounded-xl md:hidden transition-all shrink-0 cursor-pointer"
-              title="Open Navigation Menu"
-            >
-              <Menu className="w-5 h-5" />
-            </button>
-
-            {/* Mobile Logo */}
-            <div className="flex items-center gap-2 md:hidden shrink-0 flex-nowrap">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-brand to-brand-alt flex items-center justify-center shadow-lg shadow-brand/20 shrink-0">
-                <Zap className="w-4.5 h-4.5 text-white fill-current shrink-0" />
-              </div>
-              <span className="font-syne font-extrabold text-sm tracking-tight text-text shrink-0">Zyntra AI</span>
-            </div>
-
-            {/* Divider for mobile to separate logo from view title */}
-            <div className="hidden xs:block md:hidden w-px h-5 bg-border-subtle shrink-0" />
-
-            <h2 className="text-xs md:text-sm font-bold uppercase tracking-[0.1em] md:tracking-[0.2em] text-text-muted truncate min-w-0 flex-1 md:flex-none">
-              {activeView === 'OUTREACH' ? 'Outreach' : activeView === 'RESEARCH' ? 'Research' : activeView === 'ANALYTICS' ? 'Pipeline Health' : activeView === 'TEAM_ADMIN' ? 'Team' : activeView === 'SETTINGS' ? 'Settings' : 'Admin'}
-            </h2>
-            {activeView === 'OUTREACH' && currentCampaign && (
-              <>
-                <ChevronRight className="w-4 h-4 text-text-muted/40 shrink-0" />
-                <div className="px-2.5 py-1 rounded-full bg-brand/10 border border-brand/20 text-[9px] md:text-[10px] font-bold text-brand truncate max-w-[80px] xs:max-w-[120px] md:max-w-none shrink-0">
-                  {currentCampaign.name.toUpperCase()}
-                </div>
-              </>
-            )}
-          </div>
-          
-          <div className="flex items-center gap-3">
-            {/* Multi-Role Simulator Dropdown Widget */}
-            <div className="flex items-center gap-1.5 p-1 bg-[#090a0f] border border-border rounded-xl">
-              <span className="hidden lg:inline text-[9px] font-extrabold uppercase tracking-widest text-text-muted px-2">
-                WORKSPACE ROLE:
-              </span>
-              <select
-                value={simulatedRole}
-                onChange={(e) => handleSimulatedRoleChange(e.target.value as any)}
-                className="bg-surface border border-border/80 rounded-lg text-[10px] font-bold text-white px-2 mt-0.5 py-1 focus:border-brand outline-none transition-colors cursor-pointer"
-              >
-                <option value="super_admin">⚡ [Tier 1] Super Admin</option>
-                <option value="org_admin">🏢 [Tier 2] Org Admin (Settings)</option>
-                <option value="sdr">🎯 [Tier 3] SDR Outbound Campaign</option>
-                <option value="manager">🧑‍💼 [Tier 3] Manager Coach & Forecast</option>
-                <option value="ae">💼 [Tier 3] Account Executive CRM</option>
-                <option value="viewer">👁️ [Tier 3] Viewer Read-Only</option>
-              </select>
-            </div>
-
-            <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-surface border border-border">
-              <div className="w-1.5 h-1.5 rounded-full bg-brand-alt animate-pulse" />
-              <span className="text-[9px] font-bold text-text-muted uppercase tracking-wider">Online</span>
-            </div>
-          </div>
-        </header>
 
         <main className="flex-1 p-4 md:p-8 overflow-x-hidden">
           {activeView === 'SETTINGS' && (
@@ -4463,9 +4034,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
       </div>
     </div>
   </footer>
-</div>
-
-
+    </AppShell>
 
       {/* CRM OAuth / API Credentials Simulated Connection Modal */}
       <AnimatePresence>
@@ -4745,7 +4314,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
           </div>
         )}
       </AnimatePresence>
-    </div>
+    </>
   );
 }
 
