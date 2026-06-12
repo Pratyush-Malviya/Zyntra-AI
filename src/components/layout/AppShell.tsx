@@ -1,4 +1,4 @@
-import {ReactNode, useState} from 'react';
+import { ReactNode, useState } from 'react';
 import {
   Box,
   Flex,
@@ -14,20 +14,13 @@ import {
   DrawerBody,
   DrawerOverlay,
   DrawerContent,
-  Button,
+  Tooltip,
 } from '@chakra-ui/react';
-import {
-  Sidebar,
-  SidebarSection,
-  NavItem,
-  NavItemLabel,
-  SidebarToggleButton,
-} from '@saas-ui/react';
 import {
   Menu, X, Zap, Activity, Building, Users, Cpu, ShieldCheck,
   CreditCard, LayoutDashboard, Settings, Globe, Check, MessageSquare,
   TrendingUp, Target, Kanban, Sparkles, FileText, List, Sun, Moon,
-  LogOut, ChevronRight,
+  LogOut,
 } from 'lucide-react';
 
 export type AppView =
@@ -42,6 +35,13 @@ export type AppView =
 export type SuperAdminTab = 'dashboard' | 'employees_list' | 'add_employees' | 'organizations' | 'enterprise_suite' | 'llm_config';
 export type UserRole = 'super_admin' | 'org_admin' | 'sdr' | 'manager' | 'ae' | 'viewer';
 
+interface NavItem {
+  view: AppView;
+  subTab?: string;
+  icon: React.ReactNode;
+  label: string;
+}
+
 interface AppShellProps {
   children: ReactNode;
   activeView: AppView;
@@ -55,40 +55,98 @@ interface AppShellProps {
   onLogout: () => void;
 }
 
-const tierBadge = (label: string, color: string) => (
-  <Text
-    fontSize="8px"
-    fontWeight="extrabold"
-    textTransform="uppercase"
-    letterSpacing="widest"
-    textAlign="center"
-    bg={`${color}.500/10`}
-    borderWidth={1}
-    borderColor={`${color}.500/20`}
-    rounded="md"
-    px={3}
-    py={1}
-    mb={2}
-    color={`${color}.300`}
-  >
-    {label}
-  </Text>
-);
-
-function SidebarNavItem({ isActive, onClick, icon, label, labelSecondary }: {
-  isActive?: boolean;
-  onClick?: () => void;
-  icon: React.ReactElement;
+function SidebarNavItem({
+  icon,
+  label,
+  isActive,
+  collapsed,
+  onClick,
+}: {
+  icon: React.ReactNode;
   label: string;
-  labelSecondary?: string;
+  isActive?: boolean;
+  collapsed: boolean;
+  onClick?: () => void;
 }) {
+  const content = (
+    <Flex
+      onClick={onClick}
+      cursor="pointer"
+      align="center"
+      gap={3}
+      px={3}
+      py={2.5}
+      mx={2}
+      rounded="lg"
+      transition="all 0.15s"
+      role="group"
+      position="relative"
+      sx={
+        isActive
+          ? {
+              bg: 'rgba(99, 102, 241, 0.12)',
+              color: 'rgba(165, 180, 252, 1)',
+              _before: {
+                content: '""',
+                position: 'absolute',
+                left: '-8px',
+                top: '6px',
+                bottom: '6px',
+                w: '3px',
+                borderRadius: 'full',
+                bg: '#818cf8',
+              },
+            }
+          : {
+              color: 'rgba(255,255,255,0.45)',
+              _hover: {
+                bg: 'rgba(255,255,255,0.04)',
+                color: 'rgba(255,255,255,0.9)',
+              },
+            }
+      }
+    >
+      <Box boxSize={5} flexShrink={0}>
+        {icon}
+      </Box>
+      <Box
+        fontSize="sm"
+        fontWeight="medium"
+        whiteSpace="nowrap"
+        opacity={collapsed ? 0 : 1}
+        transition="opacity 0.15s"
+      >
+        {label}
+      </Box>
+    </Flex>
+  );
+
+  if (collapsed) {
+    return (
+      <Tooltip label={label} placement="right" hasArrow gutter={12}>
+        {content}
+      </Tooltip>
+    );
+  }
+
+  return content;
+}
+
+function SectionHeader({ label, collapsed }: { label: string; collapsed: boolean }) {
+  if (collapsed) return null;
   return (
-    <NavItem isActive={isActive} onClick={onClick} icon={icon}>
-      <NavItemLabel>
-        <Text fontSize="sm" fontWeight="medium">{label}</Text>
-        {labelSecondary && <Text fontSize="xs" color="gray.400">{labelSecondary}</Text>}
-      </NavItemLabel>
-    </NavItem>
+    <Text
+      fontSize="2xs"
+      fontWeight="semibold"
+      textTransform="uppercase"
+      letterSpacing="0.12em"
+      color="rgba(255,255,255,0.25)"
+      px={5}
+      pt={5}
+      pb={1.5}
+    >
+      {label}
+    </Text>
   );
 }
 
@@ -96,8 +154,8 @@ export function AppShell({
   children, activeView, onViewChange, superAdminTab, onSuperAdminTabChange,
   simulatedRole, onRoleChange, user, profile, onLogout,
 }: AppShellProps) {
-  const {colorMode, toggleColorMode} = useColorMode();
-  const {isOpen: isMobileOpen, onOpen: onMobileOpen, onClose: onMobileClose} = useDisclosure();
+  const { colorMode, toggleColorMode } = useColorMode();
+  const { isOpen: isMobileOpen, onOpen: onMobileOpen, onClose: onMobileClose } = useDisclosure();
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('zyntra-menu-collapsed') === 'true');
 
   const toggleCollapsed = () => {
@@ -111,328 +169,264 @@ export function AppShell({
     onMobileClose();
   };
 
-  const navWidth = collapsed ? '80px' : '256px';
+  const handleSuperAdminNav = (tab: SuperAdminTab) => {
+    onSuperAdminTabChange(tab);
+    onViewChange('SUPER_ADMIN', tab);
+    onMobileClose();
+  };
+
+  const navWidth = collapsed ? '68px' : '260px';
+
+  const superAdminItems: NavItem[] = [
+    { view: 'SUPER_ADMIN', subTab: 'dashboard', icon: <Activity size={18} />, label: 'Dashboard' },
+    { view: 'SUPER_ADMIN', subTab: 'organizations', icon: <Building size={18} />, label: 'Organizations' },
+    { view: 'SUPER_ADMIN', subTab: 'employees_list', icon: <Users size={18} />, label: 'Employees' },
+    { view: 'SUPER_ADMIN', subTab: 'llm_config', icon: <Cpu size={18} />, label: 'LLM Routing' },
+    { view: 'SUPER_ADMIN', subTab: 'enterprise_suite', icon: <ShieldCheck size={18} />, label: 'Enterprise Audit' },
+    { view: 'SUPER_ADMIN_BILLING', icon: <CreditCard size={18} />, label: 'Billing' },
+  ];
+
+  const orgAdminItems: NavItem[] = [
+    { view: 'ORG_DASHBOARD', icon: <LayoutDashboard size={18} />, label: 'Overview' },
+    { view: 'ORG_MEMBERS', icon: <Users size={18} />, label: 'Members' },
+    { view: 'ORG_BRANDING', icon: <Settings size={18} />, label: 'Branding' },
+    { view: 'ORG_DOMAIN', icon: <Globe size={18} />, label: 'Domain' },
+    { view: 'ORG_BILLING', icon: <CreditCard size={18} />, label: 'Billing' },
+    { view: 'ORG_FEATURES', icon: <Zap size={18} />, label: 'Features' },
+    { view: 'ORG_SECURITY', icon: <ShieldCheck size={18} />, label: 'Security' },
+  ];
+
+  const sdrItems: NavItem[] = [
+    { view: 'OUTREACH', icon: <Target size={18} />, label: 'Campaigns' },
+    { view: 'RESEARCH', icon: <Globe size={18} />, label: 'Prospect Intel' },
+    { view: 'SDR_DAILY', icon: <List size={18} />, label: 'Daily Queue' },
+    { view: 'SDR_STATS', icon: <TrendingUp size={18} />, label: 'Analytics' },
+  ];
+
+  const managerItems: NavItem[] = [
+    { view: 'MGR_DASHBOARD', icon: <LayoutDashboard size={18} />, label: 'Team Feed' },
+    { view: 'MGR_APPROVALS', icon: <Check size={18} />, label: 'Approvals' },
+    { view: 'MGR_CALLS', icon: <MessageSquare size={18} />, label: 'Call Coaching' },
+    { view: 'MGR_FORECAST', icon: <TrendingUp size={18} />, label: 'Forecast' },
+  ];
+
+  const aeItems: NavItem[] = [
+    { view: 'AE_PIPELINE', icon: <Kanban size={18} />, label: 'Pipeline' },
+    { view: 'AE_HEALTH', icon: <ShieldCheck size={18} />, label: 'Deal Health' },
+    { view: 'AE_COPILOT', icon: <Sparkles size={18} />, label: 'AI Copilot' },
+    { view: 'AE_BRIEFS', icon: <FileText size={18} />, label: 'Briefings' },
+  ];
+
+  const viewerItems: NavItem[] = [
+    { view: 'VIEWER_DASHBOARD', icon: <LayoutDashboard size={18} />, label: 'Metrics' },
+    { view: 'VIEWER_PIPELINE', icon: <Kanban size={18} />, label: 'Pipeline' },
+  ];
+
+  const isSuperAdminActive = (tab: string) =>
+    activeView === 'SUPER_ADMIN' && superAdminTab === tab as SuperAdminTab;
 
   const sidebarContent = (inDrawer: boolean) => (
     <VStack h="full" spacing={0} align="stretch">
-      {/* Logo */}
       <Flex
-        p={4}
+        h="56px"
+        px={collapsed && !inDrawer ? 3 : 4}
         align="center"
         justify={collapsed && !inDrawer ? 'center' : 'space-between'}
-        gap={3}
+        flexShrink={0}
       >
         <Flex align="center" gap={3}>
           <Flex
-            w={10} h={10}
-            rounded="2xl"
-            bgGradient="linear(to-br, brand.500, brand.300)"
-            align="center" justify="center"
-            boxShadow="lg"
+            w={8}
+            h={8}
+            rounded="lg"
+            bgGradient="linear(to-br, #6366f1, #818cf8)"
+            align="center"
+            justify="center"
           >
-            <Zap size={24} color="white" fill="white" />
+            <Zap size={16} color="white" fill="white" />
           </Flex>
           {(!collapsed || inDrawer) && (
             <Box>
-              <Text fontWeight="extrabold" fontSize="xl" lineHeight="tight" color="whiteAlpha.900">
+              <Text fontWeight="extrabold" fontSize="md" lineHeight="tight" color="white">
                 Zyntra AI
-              </Text>
-              <Text fontSize="8px" fontWeight="bold" textTransform="uppercase" letterSpacing="0.2em" color="whiteAlpha.500">
-                Enterprise v1.0
               </Text>
             </Box>
           )}
         </Flex>
         {!inDrawer && (
-          <SidebarToggleButton onClick={toggleCollapsed} />
+          <IconButton
+            aria-label="Toggle sidebar"
+            icon={<Menu size={14} />}
+            variant="ghost"
+            size="xs"
+            color="rgba(255,255,255,0.3)"
+            _hover={{ color: 'rgba(255,255,255,0.7)' }}
+            onClick={toggleCollapsed}
+          />
         )}
         {inDrawer && (
           <IconButton
             aria-label="Close menu"
-            icon={<X size={20} />}
+            icon={<X size={18} />}
             variant="ghost"
             size="sm"
+            color="rgba(255,255,255,0.5)"
             onClick={onMobileClose}
           />
         )}
       </Flex>
 
-      {/* Nav Items */}
-      <Box flex={1} overflowY="auto" px={4} py={6}>
-        {/* Super Admin */}
+      <Box flex={1} overflowY="auto" py={2}>
         {simulatedRole === 'super_admin' && (
-          <SidebarSection>
-            {tierBadge('TIER 1 — Super Admin', 'purple')}
-            <SidebarNavItem
-              isActive={activeView === 'SUPER_ADMIN' && superAdminTab === 'dashboard'}
-              onClick={() => handleNav('SUPER_ADMIN', 'dashboard')}
-              icon={<Activity size={18} />}
-              label="Command Dashboard"
-              labelSecondary="SaaS Metrics Central"
-            />
-            <SidebarNavItem
-              isActive={activeView === 'SUPER_ADMIN' && superAdminTab === 'organizations'}
-              onClick={() => handleNav('SUPER_ADMIN', 'organizations')}
-              icon={<Building size={18} />}
-              label="Manage Orgs"
-              labelSecondary="Tenant Provisioning"
-            />
-            <SidebarNavItem
-              isActive={activeView === 'SUPER_ADMIN' && superAdminTab === 'employees_list'}
-              onClick={() => handleNav('SUPER_ADMIN', 'employees_list')}
-              icon={<Users size={18} />}
-              label="Employees Directory"
-              labelSecondary="Global Directory Map"
-            />
-            <SidebarNavItem
-              isActive={activeView === 'SUPER_ADMIN' && superAdminTab === 'llm_config'}
-              onClick={() => handleNav('SUPER_ADMIN', 'llm_config')}
-              icon={<Cpu size={18} />}
-              label="LLM Routing Hub"
-              labelSecondary="Failovers & Metering"
-            />
-            <SidebarNavItem
-              isActive={activeView === 'SUPER_ADMIN' && superAdminTab === 'enterprise_suite'}
-              onClick={() => handleNav('SUPER_ADMIN', 'enterprise_suite')}
-              icon={<ShieldCheck size={18} />}
-              label="Enterprise Audit"
-              labelSecondary="Compliance & SSO Logs"
-            />
-            <SidebarNavItem
-              isActive={activeView === 'SUPER_ADMIN_BILLING'}
-              onClick={() => handleNav('SUPER_ADMIN_BILLING')}
-              icon={<CreditCard size={18} />}
-              label="Platform Gateways"
-              labelSecondary="MRR & Subscription Fee"
-            />
-          </SidebarSection>
+          <>
+            <SectionHeader label="Super Admin" collapsed={collapsed && !inDrawer} />
+            {superAdminItems.map((item) => (
+              <SidebarNavItem
+                key={item.view + (item.subTab || '')}
+                icon={item.icon}
+                label={item.label}
+                collapsed={collapsed && !inDrawer}
+                isActive={
+                  item.subTab
+                    ? isSuperAdminActive(item.subTab)
+                    : activeView === item.view
+                }
+                onClick={() =>
+                  item.subTab
+                    ? handleSuperAdminNav(item.subTab as SuperAdminTab)
+                    : handleNav(item.view)
+                }
+              />
+            ))}
+          </>
         )}
 
-        {/* Org Admin */}
         {simulatedRole === 'org_admin' && (
-          <SidebarSection>
-            {tierBadge('TIER 2 — Org Admin', 'blue')}
-            <SidebarNavItem
-              isActive={activeView === 'ORG_DASHBOARD'}
-              onClick={() => handleNav('ORG_DASHBOARD')}
-              icon={<LayoutDashboard size={18} />}
-              label="Tenant Overview"
-              labelSecondary="Quota & Seat Allocation"
-            />
-            <SidebarNavItem
-              isActive={activeView === 'ORG_MEMBERS'}
-              onClick={() => handleNav('ORG_MEMBERS')}
-              icon={<Users size={18} />}
-              label="Member Directory"
-              labelSecondary="Invite & Role Allocation"
-            />
-            <SidebarNavItem
-              isActive={activeView === 'ORG_BRANDING'}
-              onClick={() => handleNav('ORG_BRANDING')}
-              icon={<Settings size={18} />}
-              label="Custom Branding"
-              labelSecondary="Themes & Logos Setting"
-            />
-            <SidebarNavItem
-              isActive={activeView === 'ORG_DOMAIN'}
-              onClick={() => handleNav('ORG_DOMAIN')}
-              icon={<Globe size={18} />}
-              label="Branded Domain"
-              labelSecondary="DKIM / SPF DNS Wizard"
-            />
-            <SidebarNavItem
-              isActive={activeView === 'ORG_BILLING'}
-              onClick={() => handleNav('ORG_BILLING')}
-              icon={<CreditCard size={18} />}
-              label="Billing & Plans"
-              labelSecondary="Enterprise Subscription"
-            />
-            <SidebarNavItem
-              isActive={activeView === 'ORG_FEATURES'}
-              onClick={() => handleNav('ORG_FEATURES')}
-              icon={<Zap  size={18} />}
-              label="Feature Controls"
-              labelSecondary="Toggle Admin Modules"
-            />
-            <SidebarNavItem
-              isActive={activeView === 'ORG_SECURITY'}
-              onClick={() => handleNav('ORG_SECURITY')}
-              icon={<ShieldCheck size={18} />}
-              label="Security & MFA"
-              labelSecondary="Enforce IP & Sessions"
-            />
-          </SidebarSection>
+          <>
+            <SectionHeader label="Org Admin" collapsed={collapsed && !inDrawer} />
+            {orgAdminItems.map((item) => (
+              <SidebarNavItem
+                key={item.view}
+                icon={item.icon}
+                label={item.label}
+                collapsed={collapsed && !inDrawer}
+                isActive={activeView === item.view}
+                onClick={() => handleNav(item.view)}
+              />
+            ))}
+          </>
         )}
 
-        {/* SDR */}
         {simulatedRole === 'sdr' && (
-          <SidebarSection>
-            {tierBadge('TIER 3 — SDR Workspace', 'orange')}
-            <SidebarNavItem
-              isActive={activeView === 'OUTREACH'}
-              onClick={() => handleNav('OUTREACH')}
-              icon={<Target size={18} />}
-              label="Outreach Campaigns"
-              labelSecondary="Campaigns & Lead Map"
-            />
-            <SidebarNavItem
-              isActive={activeView === 'RESEARCH'}
-              onClick={() => handleNav('RESEARCH')}
-              icon={<Globe size={18} />}
-              label="Prospect Intel"
-              labelSecondary="ICP Research & Dossiers"
-            />
-            <SidebarNavItem
-              isActive={activeView === 'SDR_DAILY'}
-              onClick={() => handleNav('SDR_DAILY')}
-              icon={<List size={18} />}
-              label="Daily Action Queue"
-              labelSecondary="Priority tasks due today"
-            />
-            <SidebarNavItem
-              isActive={activeView === 'SDR_STATS'}
-              onClick={() => handleNav('SDR_STATS')}
-              icon={<TrendingUp size={18} />}
-              label="Personal Analytics"
-              labelSecondary="Dials & Open Rates"
-            />
-          </SidebarSection>
+          <>
+            <SectionHeader label="SDR Workspace" collapsed={collapsed && !inDrawer} />
+            {sdrItems.map((item) => (
+              <SidebarNavItem
+                key={item.view}
+                icon={item.icon}
+                label={item.label}
+                collapsed={collapsed && !inDrawer}
+                isActive={activeView === item.view}
+                onClick={() => handleNav(item.view)}
+              />
+            ))}
+          </>
         )}
 
-        {/* Manager */}
         {simulatedRole === 'manager' && (
-          <SidebarSection>
-            {tierBadge('TIER 3 — Manager Dashboard', 'teal')}
-            <SidebarNavItem
-              isActive={activeView === 'MGR_DASHBOARD'}
-              onClick={() => handleNav('MGR_DASHBOARD')}
-              icon={<LayoutDashboard size={18} />}
-              label="Team Activity Feed"
-              labelSecondary="Live outreach stream"
-            />
-            <SidebarNavItem
-              isActive={activeView === 'MGR_APPROVALS'}
-              onClick={() => handleNav('MGR_APPROVALS')}
-              icon={<Check size={18} />}
-              label="Sequence Approvals"
-              labelSecondary="Approve SDR copy drafts"
-            />
-            <SidebarNavItem
-              isActive={activeView === 'MGR_CALLS'}
-              onClick={() => handleNav('MGR_CALLS')}
-              icon={<MessageSquare size={18} />}
-              label="Call Coaching"
-              labelSecondary="AI summaries & metrics"
-            />
-            <SidebarNavItem
-              isActive={activeView === 'MGR_FORECAST'}
-              onClick={() => handleNav('MGR_FORECAST')}
-              icon={<TrendingUp size={18} />}
-              label="Forecast & Overrides"
-              labelSecondary="Manager commits logs"
-            />
-          </SidebarSection>
+          <>
+            <SectionHeader label="Manager" collapsed={collapsed && !inDrawer} />
+            {managerItems.map((item) => (
+              <SidebarNavItem
+                key={item.view}
+                icon={item.icon}
+                label={item.label}
+                collapsed={collapsed && !inDrawer}
+                isActive={activeView === item.view}
+                onClick={() => handleNav(item.view)}
+              />
+            ))}
+          </>
         )}
 
-        {/* AE */}
         {simulatedRole === 'ae' && (
-          <SidebarSection>
-            {tierBadge('TIER 3 — AE Workspace', 'blue')}
-            <SidebarNavItem
-              isActive={activeView === 'AE_PIPELINE'}
-              onClick={() => handleNav('AE_PIPELINE')}
-              icon={<Kanban size={18} />}
-              label="Deal Pipeline Board"
-              labelSecondary="Kanban opportunity flows"
-            />
-            <SidebarNavItem
-              isActive={activeView === 'AE_HEALTH'}
-              onClick={() => handleNav('AE_HEALTH')}
-              icon={<ShieldCheck size={18} />}
-              label="Deal Scoring Health"
-              labelSecondary="AI explainability logs"
-            />
-            <SidebarNavItem
-              isActive={activeView === 'AE_COPILOT'}
-              onClick={() => handleNav('AE_COPILOT')}
-              icon={<Sparkles size={18} />}
-              label="AI Copilot CRM Assistant"
-              labelSecondary="Query plain English CRM"
-            />
-            <SidebarNavItem
-              isActive={activeView === 'AE_BRIEFS'}
-              onClick={() => handleNav('AE_BRIEFS')}
-              icon={<FileText size={18} />}
-              label="Pre-Call Briefings"
-              labelSecondary="Meeting preparation intel"
-            />
-          </SidebarSection>
+          <>
+            <SectionHeader label="AE Workspace" collapsed={collapsed && !inDrawer} />
+            {aeItems.map((item) => (
+              <SidebarNavItem
+                key={item.view}
+                icon={item.icon}
+                label={item.label}
+                collapsed={collapsed && !inDrawer}
+                isActive={activeView === item.view}
+                onClick={() => handleNav(item.view)}
+              />
+            ))}
+          </>
         )}
 
-        {/* Viewer */}
         {simulatedRole === 'viewer' && (
-          <SidebarSection>
-            {tierBadge('TIER 3 — Viewer Read-Only', 'purple')}
-            <SidebarNavItem
-              isActive={activeView === 'VIEWER_DASHBOARD'}
-              onClick={() => handleNav('VIEWER_DASHBOARD')}
-              icon={<LayoutDashboard size={18} />}
-              label="Read-Only Metrics"
-              labelSecondary="Dashboard metrics feed"
-            />
-            <SidebarNavItem
-              isActive={activeView === 'VIEWER_PIPELINE'}
-              onClick={() => handleNav('VIEWER_PIPELINE')}
-              icon={<Kanban size={18} />}
-              label="Pipeline Visibility"
-              labelSecondary="Corporate deal maps"
-            />
-          </SidebarSection>
+          <>
+            <SectionHeader label="Viewer" collapsed={collapsed && !inDrawer} />
+            {viewerItems.map((item) => (
+              <SidebarNavItem
+                key={item.view}
+                icon={item.icon}
+                label={item.label}
+                collapsed={collapsed && !inDrawer}
+                isActive={activeView === item.view}
+                onClick={() => handleNav(item.view)}
+              />
+            ))}
+          </>
         )}
 
-        {/* Settings */}
-        <Box pt={2} mt={2} borderTopWidth={1} borderColor="whiteAlpha.200">
+        <Box mt={4} mx={2} borderTopWidth={1} borderColor="rgba(255,255,255,0.06)" pt={3}>
           <SidebarNavItem
+            icon={<Settings size={18} />}
+            label="Settings"
+            collapsed={collapsed && !inDrawer}
             isActive={activeView === 'SETTINGS'}
             onClick={() => handleNav('SETTINGS')}
-            icon={<Settings size={18} />}
-            label="Settings & Labs"
-            labelSecondary="Integrations & API keys"
           />
-        </Box>
-
-        {/* Theme Toggle */}
-        <Box pt={4} mt={4} borderTopWidth={1} borderColor="whiteAlpha.200">
           <SidebarNavItem
-            onClick={toggleColorMode}
             icon={colorMode === 'dark' ? <Moon size={18} /> : <Sun size={18} />}
-            label="Appearance"
-            labelSecondary={colorMode === 'dark' ? 'Dark Mode' : 'Light Mode'}
+            label={colorMode === 'dark' ? 'Dark Mode' : 'Light Mode'}
+            collapsed={collapsed && !inDrawer}
+            onClick={toggleColorMode}
           />
         </Box>
       </Box>
 
-      {/* User Footer */}
-      <Box p={4} borderTopWidth={1} borderColor="whiteAlpha.200">
-        <Flex align="center" gap={3} p={2} rounded="2xl" bg="whiteAlpha.100">
-          <Avatar size="sm" src={user?.photoURL} name={user?.displayName} />
+      <Box p={3} borderTopWidth={1} borderColor="rgba(255,255,255,0.06)" flexShrink={0}>
+        <Flex
+          align="center"
+          gap={2.5}
+          px={2.5}
+          py={2}
+          rounded="lg"
+          role="group"
+          cursor="pointer"
+          _hover={{ bg: 'rgba(255,255,255,0.04)' }}
+        >
+          <Avatar size="xs" src={user?.photoURL} name={user?.displayName} />
           {(!collapsed || inDrawer) && (
             <>
-              <Box flex={1}>
-                <Text fontSize="10px" fontWeight="bold" noOfLines={1} color="whiteAlpha.900">
-                  {user?.displayName}
+              <Box flex={1} minW={0}>
+                <Text fontSize="xs" fontWeight="semibold" color="white" noOfLines={1}>
+                  {user?.displayName || 'User'}
                 </Text>
-                <Text fontSize="8px" textTransform="uppercase" letterSpacing="wider" color="whiteAlpha.500">
+                <Text fontSize="2xs" color="rgba(255,255,255,0.35)" noOfLines={1}>
                   {profile?.role?.replace('_', ' ')}
                 </Text>
               </Box>
               <IconButton
                 aria-label="Logout"
-                icon={<LogOut size={16} />}
+                icon={<LogOut size={14} />}
                 variant="ghost"
                 size="xs"
-                color="whiteAlpha.500"
-                _hover={{color: 'red.400'}}
+                color="rgba(255,255,255,0.3)"
+                _hover={{ color: '#ef4444' }}
                 onClick={onLogout}
               />
             </>
@@ -444,151 +438,155 @@ export function AppShell({
 
   return (
     <Flex h="100vh" overflow="hidden">
-      {/* Desktop Sidebar */}
       <Box
-        display={{base: 'none', md: 'block'}}
+        display={{ base: 'none', md: 'block' }}
         w={navWidth}
         h="100vh"
+        bg="#0d0d19"
         borderRightWidth={1}
-        borderColor="whiteAlpha.200"
-        transition="width 0.3s"
+        borderColor="rgba(255,255,255,0.06)"
+        transition="width 0.2s"
         overflow="hidden"
-        bg="gray.900"
+        flexShrink={0}
       >
-        <Sidebar variant={collapsed ? 'condensed' : 'default'}>
-          {sidebarContent(false)}
-        </Sidebar>
+        {sidebarContent(false)}
       </Box>
 
-      {/* Mobile Drawer */}
       <Drawer placement="left" onClose={onMobileClose} isOpen={isMobileOpen}>
-        <DrawerOverlay />
-        <DrawerContent bg="gray.900">
+        <DrawerOverlay bg="rgba(0,0,0,0.6)" />
+        <DrawerContent bg="#0d0d19" maxW="280px">
           <DrawerBody p={0}>
-            <Sidebar>
-              {sidebarContent(true)}
-            </Sidebar>
+            {sidebarContent(true)}
           </DrawerBody>
         </DrawerContent>
       </Drawer>
 
-      {/* Main Content */}
       <Flex direction="column" flex={1} minW={0}>
-        {/* Header */}
         <Flex
           as="header"
-          h="80px"
+          h="56px"
           borderBottomWidth={1}
-          borderColor="whiteAlpha.200"
+          borderColor="rgba(255,255,255,0.06)"
           align="center"
           justify="space-between"
-          px={{base: 4, md: 8}}
-          bg="rgba(0,0,0,0.3)"
-          backdropFilter="blur(12px)"
+          px={{ base: 4, md: 6 }}
+          bg="rgba(7,7,13,0.8)"
+          backdropFilter="blur(16px)"
           position="sticky"
           top={0}
-          zIndex={50}
+          zIndex={40}
+          flexShrink={0}
         >
           <HStack spacing={3} minW={0}>
             <IconButton
               aria-label="Open menu"
-              icon={<Menu size={20} />}
+              icon={<Menu size={18} />}
               variant="ghost"
-              display={{md: 'none'}}
+              size="sm"
+              display={{ md: 'none' }}
+              color="rgba(255,255,255,0.5)"
               onClick={onMobileOpen}
             />
-            <Box display={{base: 'flex', md: 'none'}} alignItems="center" gap={2}>
+            <Box display={{ base: 'flex', md: 'none' }} alignItems="center" gap={2}>
               <Flex
-                w={8} h={8}
-                rounded="xl"
-                bgGradient="linear(to-br, brand.500, brand.300)"
-                align="center" justify="center"
+                w={7} h={7}
+                rounded="lg"
+                bgGradient="linear(to-br, #6366f1, #818cf8)"
+                align="center"
+                justify="center"
               >
-                <Zap size={18} color="white" fill="white" />
+                <Zap size={14} color="white" fill="white" />
               </Flex>
-              <Text fontWeight="extrabold" fontSize="sm" color="whiteAlpha.900">
-                Zyntra AI
-              </Text>
             </Box>
             <Text
-              fontSize={{base: 'xs', md: 'sm'}}
-              fontWeight="bold"
+              fontSize="xs"
+              fontWeight="semibold"
               textTransform="uppercase"
-              letterSpacing={{base: '0.1em', md: '0.2em'}}
-              color="whiteAlpha.600"
+              letterSpacing="0.1em"
+              color="rgba(255,255,255,0.4)"
               noOfLines={1}
             >
-              {activeView === 'OUTREACH' ? 'Outreach' : activeView === 'RESEARCH' ? 'Research' : activeView === 'ANALYTICS' ? 'Pipeline Health' : activeView === 'TEAM_ADMIN' ? 'Team' : activeView === 'SETTINGS' ? 'Settings' : 'Admin'}
+              {activeView === 'OUTREACH' ? 'Outreach Campaigns'
+                : activeView === 'RESEARCH' ? 'Prospect Intel'
+                : activeView === 'ANALYTICS' ? 'Pipeline Health'
+                : activeView === 'TEAM_ADMIN' ? 'Team Admin'
+                : activeView === 'SETTINGS' ? 'Settings'
+                : activeView === 'JOURNEY' ? 'Pipeline Journey'
+                : activeView === 'AE_PIPELINE' ? 'Deal Pipeline'
+                : activeView === 'AE_HEALTH' ? 'Deal Health'
+                : activeView === 'AE_COPILOT' ? 'AI Copilot'
+                : activeView === 'AE_BRIEFS' ? 'Pre-Call Briefings'
+                : activeView === 'SDR_DAILY' ? 'Daily Queue'
+                : activeView === 'SDR_STATS' ? 'Analytics'
+                : activeView === 'MGR_DASHBOARD' ? 'Team Dashboard'
+                : activeView === 'MGR_APPROVALS' ? 'Approvals'
+                : activeView === 'MGR_CALLS' ? 'Call Coaching'
+                : activeView === 'MGR_FORECAST' ? 'Forecast'
+                : activeView === 'VIEWER_DASHBOARD' ? 'Dashboard'
+                : activeView === 'VIEWER_PIPELINE' ? 'Pipeline'
+                : activeView === 'SUPER_ADMIN' ? 'Super Admin'
+                : activeView === 'SUPER_ADMIN_BILLING' ? 'Billing'
+                : activeView === 'ORG_DASHBOARD' ? 'Org Overview'
+                : activeView === 'ORG_MEMBERS' ? 'Members'
+                : activeView === 'ORG_BRANDING' ? 'Branding'
+                : activeView === 'ORG_DOMAIN' ? 'Domain'
+                : activeView === 'ORG_BILLING' ? 'Billing'
+                : activeView === 'ORG_FEATURES' ? 'Features'
+                : activeView === 'ORG_SECURITY' ? 'Security'
+                : 'Admin'}
             </Text>
           </HStack>
 
-          <HStack spacing={3}>
+          <HStack spacing={2}>
             <Flex
               align="center"
               gap={1.5}
-              p={1}
-              bg="gray.900"
+              p={0.5}
+              bg="rgba(255,255,255,0.04)"
               borderWidth={1}
-              borderColor="whiteAlpha.200"
-              rounded="xl"
+              borderColor="rgba(255,255,255,0.06)"
+              rounded="lg"
             >
-              <Text
-                display={{base: 'none', lg: 'inline'}}
-                fontSize="9px"
-                fontWeight="extrabold"
-                textTransform="uppercase"
-                letterSpacing="widest"
-                color="whiteAlpha.500"
-                px={2}
-              >
-                WORKSPACE ROLE:
-              </Text>
               <Select
                 value={simulatedRole}
                 onChange={(e) => onRoleChange(e.target.value as UserRole)}
                 variant="unstyled"
-                size="sm"
-                fontSize="10px"
-                fontWeight="bold"
-                color="white"
-                bg="whiteAlpha.100"
-                borderWidth={1}
-                borderColor="whiteAlpha.200"
-                rounded="lg"
+                size="xs"
+                fontSize="2xs"
+                fontWeight="semibold"
+                color="rgba(255,255,255,0.7)"
                 px={2}
                 py={1}
-                minW="140px"
+                minW="130px"
                 cursor="pointer"
+                icon={<Box as="span" />}
               >
-                <option value="super_admin">⚡ [Tier 1] Super Admin</option>
-                <option value="org_admin">🏢 [Tier 2] Org Admin (Settings)</option>
-                <option value="sdr">🎯 [Tier 3] SDR Outbound Campaign</option>
-                <option value="manager">🧑‍💼 [Tier 3] Manager Coach & Forecast</option>
-                <option value="ae">💼 [Tier 3] Account Executive CRM</option>
-                <option value="viewer">👁️ [Tier 3] Viewer Read-Only</option>
+                <option value="super_admin">Super Admin</option>
+                <option value="org_admin">Org Admin</option>
+                <option value="sdr">SDR</option>
+                <option value="manager">Manager</option>
+                <option value="ae">AE</option>
+                <option value="viewer">Viewer</option>
               </Select>
             </Flex>
 
             <Flex
-              display={{base: 'none', md: 'flex'}}
+              display={{ base: 'none', md: 'flex' }}
               align="center"
               gap={2}
-              px={3}
-              py={1.5}
-              rounded="xl"
-              bg="whiteAlpha.100"
-              borderWidth={1}
-              borderColor="whiteAlpha.200"
+              px={2.5}
+              py={1}
+              rounded="lg"
+              bg="rgba(255,255,255,0.04)"
             >
-              <Box w={1.5} h={1.5} rounded="full" bg="green.400" animation="pulse 2s infinite" />
-              <Text fontSize="9px" fontWeight="bold" textTransform="uppercase" letterSpacing="wider" color="whiteAlpha.600">
+              <Box w={1.5} h={1.5} rounded="full" bg="#10b981" />
+              <Text fontSize="2xs" fontWeight="semibold" textTransform="uppercase" letterSpacing="0.08em" color="rgba(255,255,255,0.4)">
                 Online
               </Text>
             </Flex>
           </HStack>
         </Flex>
 
-        {/* Page Content */}
         <Box flex={1} overflow="auto">
           {children}
         </Box>
