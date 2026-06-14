@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import {
   Box,
   Flex,
@@ -15,12 +15,27 @@ import {
   DrawerOverlay,
   DrawerContent,
   Tooltip,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalCloseButton,
+  Input,
+  Kbd,
+  Button,
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+  PopoverHeader,
+  PopoverBody,
+  PopoverArrow,
 } from '@chakra-ui/react';
 import {
   Menu, X, Zap, Activity, Building, Users, Cpu, ShieldCheck,
   CreditCard, LayoutDashboard, Settings, Globe, Check, MessageSquare,
   TrendingUp, Target, Kanban, Sparkles, FileText, List, Sun, Moon,
-  LogOut,
+  LogOut, Mic, Link2, Mail, BarChart2, DollarSign, Workflow, Search, ChevronRight,
 } from 'lucide-react';
 
 export type AppView =
@@ -30,7 +45,9 @@ export type AppView =
   | 'VIEWER_DASHBOARD' | 'VIEWER_PIPELINE'
   | 'SUPER_ADMIN' | 'SUPER_ADMIN_BILLING'
   | 'ORG_DASHBOARD' | 'ORG_MEMBERS' | 'ORG_BRANDING' | 'ORG_DOMAIN' | 'ORG_BILLING' | 'ORG_FEATURES' | 'ORG_SECURITY'
-  | 'SETTINGS' | 'TEAM_ADMIN' | 'JOURNEY' | 'ANALYTICS';
+  | 'SETTINGS' | 'TEAM_ADMIN' | 'JOURNEY' | 'ANALYTICS'
+  | 'MEETINGS' | 'AFFILIATES' | 'EMAIL_SEQUENCES'
+  | 'PIPELINE_ANALYTICS' | 'AI_COSTS' | 'INTEGRATIONS';
 
 export type SuperAdminTab = 'dashboard' | 'employees_list' | 'add_employees' | 'organizations' | 'enterprise_suite' | 'llm_config';
 export type UserRole = 'super_admin' | 'org_admin' | 'sdr' | 'manager' | 'ae' | 'viewer';
@@ -156,7 +173,20 @@ export function AppShell({
 }: AppShellProps) {
   const { colorMode, toggleColorMode } = useColorMode();
   const { isOpen: isMobileOpen, onOpen: onMobileOpen, onClose: onMobileClose } = useDisclosure();
+  const { isOpen: isSearchOpen, onOpen: onSearchOpen, onClose: onSearchClose } = useDisclosure();
+  const [searchQuery, setSearchQuery] = useState('');
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('zyntra-menu-collapsed') === 'true');
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        onSearchOpen();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onSearchOpen]);
 
   const toggleCollapsed = () => {
     const next = !collapsed;
@@ -200,6 +230,9 @@ export function AppShell({
     { view: 'OUTREACH', icon: <Target size={18} />, label: 'Campaigns' },
     { view: 'RESEARCH', icon: <Globe size={18} />, label: 'Prospect Intel' },
     { view: 'SDR_DAILY', icon: <List size={18} />, label: 'Daily Queue' },
+    { view: 'MEETINGS' as AppView, icon: <Mic size={18} />, label: 'Meetings' },
+    { view: 'EMAIL_SEQUENCES' as AppView, icon: <Mail size={18} />, label: 'Email Sequences' },
+    { view: 'AFFILIATES' as AppView, icon: <Link2 size={18} />, label: 'Affiliates' },
     { view: 'SDR_STATS', icon: <TrendingUp size={18} />, label: 'Analytics' },
   ];
 
@@ -215,6 +248,9 @@ export function AppShell({
     { view: 'AE_HEALTH', icon: <ShieldCheck size={18} />, label: 'Deal Health' },
     { view: 'AE_COPILOT', icon: <Sparkles size={18} />, label: 'AI Copilot' },
     { view: 'AE_BRIEFS', icon: <FileText size={18} />, label: 'Briefings' },
+    { view: 'MEETINGS' as AppView, icon: <Mic size={18} />, label: 'Meetings' },
+    { view: 'PIPELINE_ANALYTICS' as AppView, icon: <BarChart2 size={18} />, label: 'Pipeline Analytics' },
+    { view: 'AI_COSTS' as AppView, icon: <DollarSign size={18} />, label: 'AI Costs' },
   ];
 
   const viewerItems: NavItem[] = [
@@ -533,15 +569,98 @@ export function AppShell({
                 : activeView === 'ORG_BILLING' ? 'Billing'
                 : activeView === 'ORG_FEATURES' ? 'Features'
                 : activeView === 'ORG_SECURITY' ? 'Security'
+                : (activeView as string) === 'MEETINGS' ? 'Meeting Intelligence'
+                : (activeView as string) === 'AFFILIATES' ? 'Affiliate Partners'
+                : (activeView as string) === 'EMAIL_SEQUENCES' ? 'Email Sequences'
+                : (activeView as string) === 'PIPELINE_ANALYTICS' ? 'Pipeline Analytics'
+                : (activeView as string) === 'AI_COSTS' ? 'AI Cost Tracker'
+                : (activeView as string) === 'INTEGRATIONS' ? 'Integrations'
                 : 'Admin'}
             </Text>
           </HStack>
 
           <HStack spacing={2}>
+            {/* Search Palette Trigger */}
+            <Button
+              size="xs"
+              variant="outline"
+              bg="rgba(255,255,255,0.02)"
+              borderColor="rgba(255,255,255,0.08)"
+              _hover={{ bg: "rgba(255,255,255,0.06)", borderColor: "rgba(255,255,255,0.15)" }}
+              onClick={onSearchOpen}
+              leftIcon={<Search size={12} />}
+              color="rgba(255,255,255,0.4)"
+              fontSize="2xs"
+              fontWeight="normal"
+              borderRadius="md"
+              px={2}
+              py={1}
+              h="26px"
+              display={{ base: 'none', sm: 'flex' }}
+            >
+              Search... <Kbd ml={2} bg="rgba(0,0,0,0.3)" border="none" color="rgba(255,255,255,0.6)" fontSize="3xs">⌘K</Kbd>
+            </Button>
+
+            {/* AI Agent Status Indicator */}
+            <Popover trigger="hover" placement="bottom-end">
+              <PopoverTrigger>
+                <Flex
+                  align="center"
+                  gap={1.5}
+                  px={2}
+                  py={1}
+                  h="26px"
+                  rounded="md"
+                  bg="rgba(99, 102, 241, 0.08)"
+                  borderWidth={1}
+                  borderColor="rgba(99, 102, 241, 0.2)"
+                  cursor="pointer"
+                  _hover={{ bg: "rgba(99, 102, 241, 0.15)" }}
+                >
+                  <Box w={1.5} h={1.5} rounded="full" bg="#818cf8" className="animate-pulse" />
+                  <Text fontSize="3xs" fontWeight="bold" color="#a5b4fc" textTransform="uppercase" letterSpacing="0.08em">
+                    AI: Idle
+                  </Text>
+                </Flex>
+              </PopoverTrigger>
+              <PopoverContent bg="#12131a" borderColor="rgba(255,255,255,0.08)" color="white" w="220px">
+                <PopoverArrow bg="#12131a" />
+                <PopoverHeader borderBottomWidth={1} borderColor="rgba(255,255,255,0.06)" py={1.5} px={3}>
+                  <Text fontSize="2xs" fontWeight="bold">Active AI Copilots</Text>
+                </PopoverHeader>
+                <PopoverBody p={2}>
+                  <VStack align="stretch" spacing={1.5}>
+                    <Flex justify="space-between" align="center" py={0.5}>
+                      <HStack spacing={1.5}>
+                        <Search size={10} className="text-indigo-400" />
+                        <Text fontSize="3xs">Research Agent</Text>
+                      </HStack>
+                      <Text fontSize="3xs" color="gray.500">Idle</Text>
+                    </Flex>
+                    <Flex justify="space-between" align="center" py={0.5}>
+                      <HStack spacing={1.5}>
+                        <Mic size={10} className="text-purple-400" />
+                        <Text fontSize="3xs">Post-Meeting Agent</Text>
+                      </HStack>
+                      <Text fontSize="3xs" color="gray.500">Idle</Text>
+                    </Flex>
+                    <Flex justify="space-between" align="center" py={0.5}>
+                      <HStack spacing={1.5}>
+                        <Mail size={10} className="text-emerald-400" />
+                        <Text fontSize="3xs">Outreach Writer</Text>
+                      </HStack>
+                      <Text fontSize="3xs" color="gray.500">Idle</Text>
+                    </Flex>
+                  </VStack>
+                </PopoverBody>
+              </PopoverContent>
+            </Popover>
+
             <Flex
               align="center"
               gap={1.5}
               p={0.5}
+              h="26px"
               bg="rgba(255,255,255,0.04)"
               borderWidth={1}
               borderColor="rgba(255,255,255,0.06)"
@@ -556,7 +675,7 @@ export function AppShell({
                 fontWeight="semibold"
                 color="rgba(255,255,255,0.7)"
                 px={2}
-                py={1}
+                py={0}
                 minW="130px"
                 cursor="pointer"
                 icon={<Box as="span" />}
@@ -576,6 +695,7 @@ export function AppShell({
               gap={2}
               px={2.5}
               py={1}
+              h="26px"
               rounded="lg"
               bg="rgba(255,255,255,0.04)"
             >
@@ -591,6 +711,74 @@ export function AppShell({
           {children}
         </Box>
       </Flex>
+
+      {/* Cmd+K Search Palette */}
+      <Modal isOpen={isSearchOpen} onClose={onSearchClose} size="lg">
+        <ModalOverlay bg="rgba(0,0,0,0.6)" backdropFilter="blur(4px)" />
+        <ModalContent bg="#12131a" border="1px solid rgba(255,255,255,0.08)" borderRadius="2xl" color="white" mt="15vh">
+          <ModalHeader pb={2} borderBottomWidth={1} borderColor="rgba(255,255,255,0.06)">
+            <Flex align="center" gap={2}>
+              <Search size={16} className="text-indigo-400" />
+              <Text fontSize="sm" fontWeight="bold">Global Search Palette</Text>
+            </Flex>
+          </ModalHeader>
+          <ModalCloseButton color="gray.400" />
+          <ModalBody p={4}>
+            <VStack align="stretch" spacing={4}>
+              <Input
+                placeholder="Search leads, meetings, affiliates, templates..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                variant="filled"
+                bg="rgba(0,0,0,0.2)"
+                border="1px solid rgba(255,255,255,0.06)"
+                _focus={{ bg: "rgba(0,0,0,0.3)", borderColor: "indigo.400" }}
+                color="white"
+                fontSize="sm"
+                borderRadius="xl"
+              />
+              
+              <Box maxH="280px" overflowY="auto">
+                <Text fontSize="2xs" fontWeight="bold" textTransform="uppercase" color="gray.500" mb={2}>
+                  Suggested Navigation
+                </Text>
+                <VStack align="stretch" spacing={1.5}>
+                  {[
+                    { label: 'Go to Deal Pipeline Board', view: 'JOURNEY', desc: 'Manage CRM stages and BANT scores' },
+                    { label: 'Go to Meeting Intelligence', view: 'MEETINGS', desc: 'Audio transcriptions & action items' },
+                    { label: 'Go to Email Sequence Manager', view: 'EMAIL_SEQUENCES', desc: 'Configure multi-touch drip campaigns' },
+                    { label: 'Go to Affiliate Management', view: 'AFFILIATES', desc: 'Referred leads & commissions' },
+                    { label: 'Go to Advanced Analytics', view: 'PIPELINE_ANALYTICS', desc: 'Conversion funnel & velocity' },
+                  ]
+                    .filter(item => item.label.toLowerCase().includes(searchQuery.toLowerCase()) || item.desc.toLowerCase().includes(searchQuery.toLowerCase()))
+                    .map((item, i) => (
+                      <Flex
+                        key={i}
+                        p={2.5}
+                        bg="rgba(255,255,255,0.02)"
+                        borderRadius="xl"
+                        align="center"
+                        justify="space-between"
+                        cursor="pointer"
+                        _hover={{ bg: "rgba(255,255,255,0.06)" }}
+                        onClick={() => {
+                          handleNav(item.view as AppView);
+                          onSearchClose();
+                        }}
+                      >
+                        <Box>
+                          <Text fontSize="xs" fontWeight="semibold">{item.label}</Text>
+                          <Text fontSize="3xs" color="gray.400">{item.desc}</Text>
+                        </Box>
+                        <ChevronRight size={14} className="text-gray-500" />
+                      </Flex>
+                    ))}
+                </VStack>
+              </Box>
+            </VStack>
+          </ModalBody>
+        </ModalContent>
+      </Modal>
     </Flex>
   );
 }

@@ -837,6 +837,23 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
     return searchMatch && tagMatch && agentMatch;
   });
 
+  // BANT score styles mapping
+  const getBantBadge = (bantScore?: string) => {
+    if (!bantScore) return null;
+    const config: Record<string, { label: string, bg: string, text: string }> = {
+      A: { label: 'BANT: A', bg: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400', text: 'text-emerald-400' },
+      B: { label: 'BANT: B', bg: 'bg-blue-500/10 border-blue-500/20 text-blue-400', text: 'text-blue-400' },
+      C: { label: 'BANT: C', bg: 'bg-amber-500/10 border-amber-500/20 text-amber-400', text: 'text-amber-400' },
+      D: { label: 'BANT: D', bg: 'bg-rose-500/10 border-rose-500/20 text-rose-400', text: 'text-rose-400' },
+    };
+    const cfg = config[bantScore] || { label: `BANT: ${bantScore}`, bg: 'bg-zinc-500/10 border-zinc-500/20 text-zinc-400', text: 'text-zinc-400' };
+    return (
+      <span className={`inline-flex items-center px-1.5 py-0.5 text-[8px] font-mono font-bold border rounded ${cfg.bg}`}>
+        {cfg.label}
+      </span>
+    );
+  };
+
   // Hot, warm, cold style mappings
   const getHealthBadge = (health: string | undefined) => {
     switch(health) {
@@ -1267,6 +1284,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                                           <div className="flex items-center justify-between border-t border-border pt-1.5 text-[9px]">
                                             <span className="font-bold text-brand-alt">${deal.value.toLocaleString()}</span>
                                             <div className="flex items-center gap-1">
+                                              {getBantBadge((associatedLead as any)?.bantScore)}
                                               <span className="inline-flex items-center gap-0.5 px-1 py-0.2 text-[8px] font-mono font-bold text-brand bg-brand/10 border border-brand/20 rounded">
                                                 {associatedLead?.score || 80}%
                                               </span>
@@ -1631,6 +1649,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                                 <span className="font-black text-brand-alt">${deal.value.toLocaleString()}</span>
                                 
                                 <div className="flex items-center gap-1">
+                                  {getBantBadge((associatedLead as any)?.bantScore)}
                                   {/* AI score rating */}
                                   <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[9px] font-mono font-bold text-brand bg-brand/10 border border-brand/20 rounded-md">
                                     <Sparkles className="w-2.5 h-2.5 text-brand" />

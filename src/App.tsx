@@ -73,6 +73,12 @@ import { AeWorkspacePanel } from './components/AeWorkspacePanel';
 import { SdrWorkspacePanel } from './components/SdrWorkspacePanel';
 import { AppShell } from './components/layout/AppShell';
 import type { AppView, SuperAdminTab, UserRole } from './components/layout/AppShell';
+import MeetingsPanel from './components/meetings/MeetingsPanel';
+import AffiliatesPanel from './components/affiliates/AffiliatesPanel';
+import EmailSequenceManager from './components/outreach/EmailSequenceManager';
+import { PipelineFunnelChart } from './components/analytics/PipelineFunnelChart';
+import { AiCostTracker } from './components/analytics/AiCostTracker';
+import IntegrationStatusPanel from './components/settings/IntegrationStatusPanel';
 import { 
   auth, 
   db, 
@@ -4014,6 +4020,51 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
         campaigns={campaigns} 
         showToast={showToast} 
       />
+    )}
+    {(activeView as string) === 'MEETINGS' && (
+      <MeetingsPanel
+        orgId={profile?.orgId || user?.uid || 'default'}
+        profile={profile}
+      />
+    )}
+    {(activeView as string) === 'AFFILIATES' && (
+      <AffiliatesPanel
+        orgId={profile?.orgId || user?.uid || 'default'}
+        profile={profile}
+      />
+    )}
+    {(activeView as string) === 'EMAIL_SEQUENCES' && (
+      <EmailSequenceManager
+        orgId={profile?.orgId || user?.uid || 'default'}
+        profile={profile}
+      />
+    )}
+    {(activeView as string) === 'PIPELINE_ANALYTICS' && (
+      <div className="p-6 max-w-5xl mx-auto space-y-6">
+        <div>
+          <h1 className="text-xl font-bold text-text">Pipeline Analytics</h1>
+          <p className="text-xs text-text-secondary mt-0.5">Stage funnel, channel attribution, BANT distribution</p>
+        </div>
+        <PipelineFunnelChart orgId={profile?.orgId || user?.uid || 'default'} />
+      </div>
+    )}
+    {(activeView as string) === 'AI_COSTS' && (
+      <div className="p-6 max-w-4xl mx-auto space-y-6">
+        <div>
+          <h1 className="text-xl font-bold text-text">AI Cost Tracker</h1>
+          <p className="text-xs text-text-secondary mt-0.5">Token usage, model breakdown, and per-lead costs</p>
+        </div>
+        <AiCostTracker orgId={profile?.orgId || user?.uid || 'default'} />
+      </div>
+    )}
+    {(activeView as string) === 'INTEGRATIONS' && (
+      <div className="p-6 max-w-3xl mx-auto">
+        <div className="mb-6">
+          <h1 className="text-xl font-bold text-text">Integrations</h1>
+          <p className="text-xs text-text-secondary mt-0.5">Manage Listmonk, n8n, Whisper, and Meilisearch services</p>
+        </div>
+        <IntegrationStatusPanel />
+      </div>
     )}
   </main>
   <footer className="py-8 border-t border-border-subtle/50 mt-auto">

@@ -492,6 +492,21 @@ let deals: Deal[] = [
 
 let pipelines: Pipeline[] = [
   {
+    id: "pipe-playbook",
+    orgId: "org-default",
+    name: "8-Stage Playbook Pipeline",
+    stages: [
+      { id: "lead_identified", name: "Lead Identified", color: "#6366f1", probability: 10, slaDays: 3, statuses: ["Awaiting Contact", "Engaged"] },
+      { id: "meeting_booked", name: "Meeting Booked", color: "#8b5cf6", probability: 20, slaDays: 2, statuses: ["Calendar Invites Sent"] },
+      { id: "discovery_completed", name: "Discovery Completed", color: "#3b82f6", probability: 40, slaDays: 5, statuses: ["Pain Confirmed", "BANT Scored"] },
+      { id: "demo_scheduled", name: "Demo Scheduled", color: "#06b6d4", probability: 60, slaDays: 3, statuses: ["Preparation In Progress"] },
+      { id: "demo_completed", name: "Demo Completed", color: "#10b981", probability: 70, slaDays: 5, statuses: ["Objections Addressed", "Proposal Requested"] },
+      { id: "proposal_pilot", name: "Proposal / Pilot", color: "#f59e0b", probability: 85, slaDays: 10, statuses: ["Drafting Proposal", "Pilot Trial Active"] },
+      { id: "closing", name: "Closing", color: "#f97316", probability: 95, slaDays: 7, statuses: ["Legal Review", "Signatures Awaiting"] },
+      { id: "customer_handoff", name: "Customer Handoff", color: "#22c55e", probability: 100, slaDays: 3, statuses: ["Handoff Call Booked"] }
+    ]
+  },
+  {
     id: "pipe-default",
     orgId: "org-default",
     name: "Enterprise Sales Pipeline",

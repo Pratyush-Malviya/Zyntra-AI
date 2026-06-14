@@ -1,8 +1,10 @@
 import React, { useEffect, useState, useRef } from "react";
 import { 
   Key, Plus, Trash2, Mail, ShieldAlert, Link, RefreshCw, Check, 
-  ExternalLink, Globe, Wifi, Send, CheckCircle2, XCircle, AlertTriangle
+  ExternalLink, Globe, Wifi, Send, CheckCircle2, XCircle, AlertTriangle,
+  Mic, Search, Webhook, Settings
 } from "lucide-react";
+
 
 interface ApiKey {
   id: string;
@@ -53,6 +55,27 @@ export const SettingsApiKeysPanel: React.FC<SettingsApiKeysPanelProps> = ({ show
   // Delivery log states
   const [webhookLogs, setWebhookLogs] = useState<WebhookLog[]>([]);
   const [isRefreshingLogs, setIsRefreshingLogs] = useState(false);
+
+  // Service overrides states
+  const [listmonkUrl, setListmonkUrl] = useState(localStorage.getItem("zy_listmonk_url") || "http://localhost:9000");
+  const [listmonkApiKey, setListmonkApiKey] = useState(localStorage.getItem("zy_listmonk_api_key") || "");
+  const [whisperUrl, setWhisperUrl] = useState(localStorage.getItem("zy_whisper_url") || "http://localhost:8178");
+  const [n8nWebhookUrl, setN8nWebhookUrl] = useState(localStorage.getItem("zy_n8n_webhook_url") || "http://localhost:5678");
+  const [meilisearchUrl, setMeilisearchUrl] = useState(localStorage.getItem("zy_meilisearch_url") || "http://localhost:7700");
+  const [meilisearchKey, setMeilisearchKey] = useState(localStorage.getItem("zy_meilisearch_key") || "");
+
+  const handleSaveServiceSettings = (e: React.FormEvent) => {
+    e.preventDefault();
+    localStorage.setItem("zy_listmonk_url", listmonkUrl);
+    localStorage.setItem("zy_listmonk_api_key", listmonkApiKey);
+    localStorage.setItem("zy_whisper_url", whisperUrl);
+    localStorage.setItem("zy_n8n_webhook_url", n8nWebhookUrl);
+    localStorage.setItem("zy_meilisearch_url", meilisearchUrl);
+    localStorage.setItem("zy_meilisearch_key", meilisearchKey);
+    showToast("Integration Service configurations updated successfully!", "success");
+    window.dispatchEvent(new Event("storage"));
+  };
+
 
   const fetchApiKeys = async () => {
     try {
@@ -526,6 +549,135 @@ export const SettingsApiKeysPanel: React.FC<SettingsApiKeysPanelProps> = ({ show
           </div>
         </div>
 
+      </div>
+
+      {/* 3. Integration Service Settings */}
+      <div className="bg-surface border border-border rounded-3xl p-6 md:p-8 space-y-6 glow-brand/5">
+        <div className="space-y-1">
+          <h3 className="text-sm font-extrabold text-white flex items-center gap-2 font-sans">
+            <Settings className="w-4.5 h-4.5 text-brand" />
+            External Services & Docker Integration Config
+          </h3>
+          <p className="text-[10px] text-text-muted">
+            Configure local URLs and security keys for Listmonk email outreach, Whisper audio transcriptions, n8n orchestrations, and Meilisearch engine.
+          </p>
+        </div>
+
+        <form onSubmit={handleSaveServiceSettings} className="space-y-6 p-5 bg-[#090a0f]/40 border border-border/70 rounded-2xl">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 font-sans">
+            
+            {/* Listmonk Config */}
+            <div className="space-y-3 p-4 bg-[#090a0f] border border-border/50 rounded-xl">
+              <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#00d4aa] flex items-center gap-1.5">
+                <Mail className="w-3.5 h-3.5" />
+                Listmonk (Email)
+              </h4>
+              <div className="space-y-2">
+                <div>
+                  <label className="text-[9px] font-bold uppercase tracking-widest text-text-muted block mb-1">Service URL</label>
+                  <input
+                    type="url"
+                    value={listmonkUrl}
+                    onChange={(e) => setListmonkUrl(e.target.value)}
+                    className="w-full px-3 py-2 bg-surface border border-border hover:border-brand rounded-lg font-mono text-[10px] text-white focus:outline-none"
+                    placeholder="http://localhost:9000"
+                  />
+                </div>
+                <div>
+                  <label className="text-[9px] font-bold uppercase tracking-widest text-text-muted block mb-1">API Key / Token</label>
+                  <input
+                    type="password"
+                    value={listmonkApiKey}
+                    onChange={(e) => setListmonkApiKey(e.target.value)}
+                    className="w-full px-3 py-2 bg-surface border border-border hover:border-brand rounded-lg font-mono text-[10px] text-white focus:outline-none"
+                    placeholder="••••••••••••••••"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Whisper Config */}
+            <div className="space-y-3 p-4 bg-[#090a0f] border border-border/50 rounded-xl">
+              <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#00d4aa] flex items-center gap-1.5">
+                <Mic className="w-3.5 h-3.5" />
+                Whisper.cpp (Transcription)
+              </h4>
+              <div className="space-y-2">
+                <div>
+                  <label className="text-[9px] font-bold uppercase tracking-widest text-text-muted block mb-1">Service URL</label>
+                  <input
+                    type="url"
+                    value={whisperUrl}
+                    onChange={(e) => setWhisperUrl(e.target.value)}
+                    className="w-full px-3 py-2 bg-surface border border-border hover:border-brand rounded-lg font-mono text-[10px] text-white focus:outline-none"
+                    placeholder="http://localhost:8178"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* n8n Workflows Config */}
+            <div className="space-y-3 p-4 bg-[#090a0f] border border-border/50 rounded-xl">
+              <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#00d4aa] flex items-center gap-1.5">
+                <Webhook className="w-3.5 h-3.5" />
+                n8n Webhook
+              </h4>
+              <div className="space-y-2">
+                <div>
+                  <label className="text-[9px] font-bold uppercase tracking-widest text-text-muted block mb-1">Webhook URL</label>
+                  <input
+                    type="url"
+                    value={n8nWebhookUrl}
+                    onChange={(e) => setN8nWebhookUrl(e.target.value)}
+                    className="w-full px-3 py-2 bg-surface border border-border hover:border-brand rounded-lg font-mono text-[10px] text-white focus:outline-none"
+                    placeholder="http://localhost:5678"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Meilisearch Config */}
+            <div className="space-y-3 p-4 bg-[#090a0f] border border-border/50 rounded-xl">
+              <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#00d4aa] flex items-center gap-1.5">
+                <Search className="w-3.5 h-3.5" />
+                Meilisearch (Search Index)
+              </h4>
+              <div className="space-y-2">
+                <div>
+                  <label className="text-[9px] font-bold uppercase tracking-widest text-text-muted block mb-1">Service URL</label>
+                  <input
+                    type="url"
+                    value={meilisearchUrl}
+                    onChange={(e) => setMeilisearchUrl(e.target.value)}
+                    className="w-full px-3 py-2 bg-surface border border-border hover:border-brand rounded-lg font-mono text-[10px] text-white focus:outline-none"
+                    placeholder="http://localhost:7700"
+                  />
+                </div>
+                <div>
+                  <label className="text-[9px] font-bold uppercase tracking-widest text-text-muted block mb-1">Master Key</label>
+                  <input
+                    type="password"
+                    value={meilisearchKey}
+                    onChange={(e) => setMeilisearchKey(e.target.value)}
+                    className="w-full px-3 py-2 bg-surface border border-border hover:border-brand rounded-lg font-mono text-[10px] text-white focus:outline-none"
+                    placeholder="••••••••••••••••"
+                  />
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <div className="flex justify-end border-t border-border/40 pt-4">
+            <button
+              type="submit"
+              className="px-5 py-2.5 bg-brand hover:bg-brand/90 text-[#090a0f] font-extrabold rounded-xl transition-all cursor-pointer flex items-center gap-1.5 text-xs"
+            >
+              <Check className="w-4 h-4 stroke-[3]" />
+              Save Integration Overrides
+            </button>
+          </div>
+        </form>
       </div>
 
     </div>
