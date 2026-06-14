@@ -618,54 +618,57 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
         {/* Left Control Room / History Column */}
         <div className={`space-y-6 transition-all duration-300 ${isFullWidth && activeResearch ? 'hidden lg:hidden' : 'lg:col-span-4 block'}`}>
           {/* Research Engine Launcher Card */}
-          <div className="bg-surface border border-border rounded-[24px] md:rounded-[32px] p-5 md:p-8 space-y-6 glow-brand/5 relative overflow-hidden">
-            <div className="absolute top-0 right-0 -mr-6 -mt-6 w-32 h-32 bg-brand/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="bg-[#0f0f18]/65 backdrop-blur-md border border-border/80 rounded-[28px] p-6 md:p-8 space-y-6 shadow-2xl relative overflow-hidden group hover:border-primary/30 transition-all duration-300">
+            <div className="absolute top-0 right-0 -mr-6 -mt-6 w-32 h-32 bg-primary/10 rounded-full blur-3xl pointer-events-none group-hover:bg-primary/20 transition-all duration-500" />
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-brand/10 flex items-center justify-center text-brand">
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-primary/25 to-primary-light/10 flex items-center justify-center text-primary border border-primary/20 shadow-inner">
                 <Search className="w-5 h-5" />
               </div>
-              <h2 className="text-lg font-syne font-bold">Research Sprint Launcher</h2>
+              <div>
+                <h2 className="text-lg font-syne font-bold tracking-tight text-white">Research Launcher</h2>
+                <span className="text-[9px] text-primary font-bold uppercase tracking-wider block -mt-0.5">Deep Intelligence Engine</span>
+              </div>
             </div>
             
-            <p className="text-xs text-text-muted leading-relaxed">
-              Input a company website URL and the prospect's LinkedIn profile URL. Zyntra will execute a deep intelligence sprint across public data, corporate filings, and professional profiles to customize absolute pain alignment.
+            <p className="text-xs text-text-secondary leading-relaxed">
+              Execute a deep intelligence sprint across public data, corporate filings, and professional profiles to customize absolute pain alignment.
             </p>
 
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-[10px] text-text-muted font-bold uppercase tracking-widest">Company Info / Website URL</label>
-                <div className="relative">
+            <div className="space-y-5">
+              <div className="space-y-1.5">
+                <label className="text-[10px] text-text-secondary font-bold uppercase tracking-widest block">Company Info / Website URL</label>
+                <div className="relative group/input">
                   <input
-                    className="w-full bg-surface-alt border border-border focus:border-brand rounded-2xl p-4 pl-12 text-sm outline-none transition-all placeholder:text-text-muted"
+                    className="w-full bg-[#07070d]/60 border border-border/80 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-2xl p-4 pl-12 text-sm outline-none transition-all duration-300 placeholder:text-text-tertiary text-white hover:border-primary/40"
                     placeholder="e.g. https://birlatyre.com"
                     value={inputVal}
                     onChange={e => setInputVal(e.target.value)}
                     disabled={loading}
                     onKeyDown={e => { if (e.key === 'Enter') startResearch(inputVal, linkedinVal); }}
                   />
-                  <Globe className="w-4 h-4 text-text-muted/60 absolute left-4 top-1/2 -translate-y-1/2" />
+                  <Globe className="w-4.5 h-4.5 text-text-secondary group-focus-within/input:text-primary transition-colors absolute left-4 top-1/2 -translate-y-1/2" />
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-[10px] text-text-muted font-bold uppercase tracking-widest">Prospect LinkedIn URL</label>
-                <div className="relative">
+              <div className="space-y-1.5">
+                <label className="text-[10px] text-text-secondary font-bold uppercase tracking-widest block">Prospect LinkedIn URL</label>
+                <div className="relative group/input">
                   <input
-                    className="w-full bg-surface-alt border border-border focus:border-brand rounded-2xl p-4 pl-12 text-sm outline-none transition-all placeholder:text-text-muted"
+                    className="w-full bg-[#07070d]/60 border border-border/80 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-2xl p-4 pl-12 text-sm outline-none transition-all duration-300 placeholder:text-text-tertiary text-white hover:border-primary/40"
                     placeholder="e.g. https://linkedin.com/in/prospect-profile"
                     value={linkedinVal}
                     onChange={e => setLinkedinVal(e.target.value)}
                     disabled={loading}
                     onKeyDown={e => { if (e.key === 'Enter') startResearch(inputVal, linkedinVal); }}
                   />
-                  <Linkedin className="w-4 h-4 text-text-muted/60 absolute left-4 top-1/2 -translate-y-1/2" />
+                  <Linkedin className="w-4.5 h-4.5 text-text-secondary group-focus-within/input:text-primary transition-colors absolute left-4 top-1/2 -translate-y-1/2" />
                 </div>
               </div>
 
               <button
                 onClick={() => startResearch(inputVal, linkedinVal)}
                 disabled={loading}
-                className="w-full bg-brand hover:bg-brand/90 text-white font-bold py-4 rounded-2xl transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50 shadow-lg shadow-brand/20 cursor-pointer"
+                className="w-full bg-gradient-to-r from-primary to-primary-light hover:from-primary-dark hover:to-primary text-white font-bold py-4 rounded-2xl transition-all duration-300 flex items-center justify-center gap-2 text-sm disabled:opacity-50 shadow-lg shadow-primary/20 hover:shadow-primary/30 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
               >
                 {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
                 Launch Research Sprint
@@ -673,8 +676,8 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
             </div>
           </div>
 
-          {/* Past Researches History Column */}
-          <div className="bg-surface border border-border rounded-[24px] md:rounded-[32px] p-5 md:p-8 space-y-5">
+          {/* Past Researches History Card */}
+          <div className="bg-surface border border-border rounded-[24px] md:rounded-[28px] p-5 md:p-6 space-y-5 shadow-lg">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <History className="w-4 h-4 text-text-muted" />
@@ -1309,21 +1312,21 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
                         
                         {/* Expand Leads Injector menu dropdown */}
                         <div className="flex items-center gap-2">
-                          <span className="text-xs text-text-muted font-semibold">Select Campaign:</span>
+                          <span className="text-xs text-text-secondary font-semibold font-sans">Select Campaign:</span>
                           <select
-                            className="bg-surface-alt border border-border text-xs rounded-xl px-4 py-2 font-medium focus:border-brand outline-none"
+                            className="bg-[#07070d]/80 border border-border text-xs rounded-xl px-4 py-2.5 font-medium focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none hover:border-primary/40 transition-all text-white cursor-pointer"
                             value={targetCampaignId}
                             onChange={(e) => setTargetCampaignId(e.target.value)}
                           >
                             <option value="">-- Choose Campaign --</option>
                             {campaigns.map(c => (
-                              <option key={c.id} value={c.id}>{c.name.toUpperCase()}</option>
+                              <option key={c.id} value={c.id} className="bg-[#0f0f18] text-white">{c.name.toUpperCase()}</option>
                             ))}
                           </select>
                           <button
                             onClick={exportAsLead}
                             disabled={exportingLead}
-                            className="bg-brand hover:bg-brand/90 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-md shadow-brand/20 cursor-pointer"
+                            className="bg-gradient-to-r from-primary to-primary-light hover:from-primary-dark hover:to-primary text-white font-bold px-5 py-2.5 rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-md shadow-primary/20 hover:shadow-primary/30 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
                           >
                             <PlusCircle className="w-4 h-4" />
                             {exportingLead ? 'Injecting...' : 'Inject as Lead'}
