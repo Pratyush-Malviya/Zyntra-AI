@@ -1,6 +1,6 @@
 import OpenAI from 'openai';
 
-const NVIDIA_MODEL = "deepseek-ai/deepseek-v4-pro";
+const NVIDIA_MODEL = "nvidia/nemotron-3-ultra-550b-a55b";
 
 async function callNvidiaAI(prompt: string, systemPrompt?: string, customNvidia?: { apiKey?: string; model?: string }): Promise<string> {
   const apiKey = customNvidia?.apiKey || process.env.NVIDIA_API_KEY || "";
@@ -327,14 +327,8 @@ export async function generateOutreachBackend(lead: any, config: any, customNvid
     Lead: Name=${lead.name}, Role=${lead.role || '?'}, Company=${lead.company || '?'}, Industry=${lead.industry || '?'}, Country=${lead.country || '?'}
   `;
 
-  try {
-    const deepseekResult = await callNvidiaAI(prompt, "You are a B2B sales expert writing omnichannel cold outreach. Return a structured JSON object matching the requested schema exactly. ONLY return valid minified JSON without markdown code fences or explanations.", customNvidia);
-    return cleanAndParseJSON(deepseekResult);
-  } catch (error) {
-    console.error("DeepSeek generation failed:", error);
-    console.warn("Activating high-fidelity mock fallback for outreach generation");
-    return getMockOutreach(lead, config);
-  }
+  const deepseekResult = await callNvidiaAI(prompt, "You are a B2B sales expert writing omnichannel cold outreach. Return a structured JSON object matching the requested schema exactly. ONLY return valid minified JSON without markdown code fences or explanations.", customNvidia);
+  return cleanAndParseJSON(deepseekResult);
 }
 
 export async function generateProspectResearchBackend(companyInput: string, customNvidia?: any): Promise<any> {
@@ -385,14 +379,8 @@ export async function generateProspectResearchBackend(companyInput: string, cust
     8. FUNDING & LAUNCHED PRODUCTS: Research recent funding rounds, venture capital/private equity backing, or security filings to indicate if they have raised funding recently or not. Research recent press announcements or product logs to discover any latest products or services they have launched, or are planning to launch soon.
   `;
 
-  try {
-    const deepseekResult = await callNvidiaAI(prompt, "You are an elite enterprise B2B management consultant and AI solutions architect. Return a structured consulting report JSON. ONLY return valid minified JSON without markdown code fences or explanations.", customNvidia);
-    return cleanAndParseJSON(deepseekResult);
-  } catch (error) {
-    console.error("DeepSeek generation failed:", error);
-    console.warn("Activating high-fidelity mock fallback for prospect research on server");
-    return getMockProspectResearch(companyInput);
-  }
+  const deepseekResult = await callNvidiaAI(prompt, "You are an elite enterprise B2B management consultant and AI solutions architect. Return a structured consulting report JSON. ONLY return valid minified JSON without markdown code fences or explanations.", customNvidia);
+  return cleanAndParseJSON(deepseekResult);
 }
 
 export async function analyzeBenchmarkDriftBackend(leads: any[], customNvidia?: any): Promise<any> {
@@ -415,14 +403,8 @@ export async function analyzeBenchmarkDriftBackend(leads: any[], customNvidia?: 
     4. Strategic target reallocation or ICP adjustment advice to restore benchmark scores.
   `;
 
-  try {
-    const deepseekResult = await callNvidiaAI(prompt, "You are an elite enterprise B2B sales strategist and CRO consultant. Return a structured JSON report matching the requested schema exactly. ONLY return valid minified JSON without markdown code fences or explanations.", customNvidia);
-    return cleanAndParseJSON(deepseekResult);
-  } catch (error) {
-    console.error("DeepSeek generation failed:", error);
-    console.warn("Activating high-fidelity mock fallback for benchmark drift analysis on server");
-    return getMockBenchmarkDrift(leads);
-  }
+  const deepseekResult = await callNvidiaAI(prompt, "You are an elite enterprise B2B sales strategist and CRO consultant. Return a structured JSON report matching the requested schema exactly. ONLY return valid minified JSON without markdown code fences or explanations.", customNvidia);
+  return cleanAndParseJSON(deepseekResult);
 }
 
 // -------------------------------------------------------------

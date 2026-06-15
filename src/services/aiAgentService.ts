@@ -8,7 +8,7 @@ import type { BantSignals, BantScore, Meeting, EmailTouch } from './firestoreSch
 
 async function callAIBackend(endpoint: string, body: Record<string, unknown>): Promise<any> {
   const nvidiaKey = localStorage.getItem('zy_nvidia_api_key') || '';
-  const nvidiaModel = localStorage.getItem('zy_nvidia_selected_model') || 'google/gemma-3n-e2b-it';
+  const nvidiaModel = 'nvidia/nemotron-3-ultra-550b-a55b';
 
   const response = await fetch(endpoint, {
     method: 'POST',
@@ -81,12 +81,7 @@ export async function runResearchAgent(input: ResearchAgentInput): Promise<Resea
       tokenCount: result.tokenCount,
     };
   } catch (err) {
-    // Fallback: generate structured response from prompt directly
-    const fallbackResult = await callAIBackend('/api/ai/generate-outreach', {
-      lead: { name: input.prospectName, role: input.prospectRole, company: input.companyName, website: input.websiteUrl },
-      config: { company: 'SarvaX.ai', product: 'AI Employee Platform', vp: 'Pre-Call Research', sender: 'Sales Team', cta: 'Book a discovery call' },
-    });
-    return buildFallbackResearchOutput(input, fallbackResult);
+    throw err;
   }
 }
 
@@ -227,9 +222,8 @@ export async function runPostMeetingAgent(input: PostMeetingAgentInput): Promise
       followUpEmailDraft: result.email_body || generateFollowUpEmail(input),
       recommendedNextStep: getRecommendedNextStep(bantScore),
     };
-  } catch {
-    const bantScore = deriveBantScore(input.transcript);
-    return buildFallbackPostMeeting(input, bantScore);
+  } catch (err) {
+    throw err;
   }
 }
 
@@ -392,8 +386,8 @@ export async function runOutreachPersonalisationAgent(input: PersonalisationAgen
     });
 
     return buildVariantsFromResult(result, input);
-  } catch {
-    return buildFallbackVariants(input);
+  } catch (err) {
+    throw err;
   }
 }
 
@@ -488,12 +482,7 @@ export async function scoreTranscriptBant(transcript: string): Promise<{ score: 
       signals: deriveBantSignals(transcript),
       rationale: result.email_body || `BANT Score ${score} based on transcript analysis.`,
     };
-  } catch {
-    const score = deriveBantScore(transcript);
-    return {
-      score,
-      signals: deriveBantSignals(transcript),
-      rationale: `Score ${score} derived from keyword analysis of transcript.`,
-    };
+  } catch (err) {
+    throw err;
   }
 }
