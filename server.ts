@@ -316,10 +316,10 @@ async function processKbFileBackground(file: KbFile) {
             ],
             temperature: 1,
             top_p: 0.95,
-            max_tokens: 16384,
+            max_tokens: 4096,
             extra_body: {
               "chat_template_kwargs": { "enable_thinking": true },
-              "reasoning_budget": 16384
+              "reasoning_budget": 2048
             },
             stream: false
           })
@@ -643,10 +643,10 @@ async function runAiDealAnalysis(deal: Deal, lead: Lead | undefined, activities:
           ],
           temperature: 1,
           top_p: 0.95,
-          max_tokens: 16384,
+          max_tokens: 4096,
           extra_body: {
             "chat_template_kwargs": { "enable_thinking": true },
-            "reasoning_budget": 16384
+            "reasoning_budget": 2048
           },
           stream: false
         })
@@ -1729,10 +1729,10 @@ Raw Rows Data: ${JSON.stringify(rows.slice(0, 50))} (Analyze and clean up to the
           ],
           temperature: 1,
           top_p: 0.95,
-          max_tokens: 16384,
+          max_tokens: 4096,
           extra_body: {
             "chat_template_kwargs": { "enable_thinking": true },
-            "reasoning_budget": 16384
+            "reasoning_budget": 2048
           },
           stream: false
         })
@@ -2372,10 +2372,10 @@ Raw Rows Data: ${JSON.stringify(rows.slice(0, 50))} (Analyze and clean up to the
               ],
               temperature: 1,
               top_p: 0.95,
-              max_tokens: 16384,
+              max_tokens: 4096,
               extra_body: {
                 "chat_template_kwargs": { "enable_thinking": true },
-                "reasoning_budget": 16384
+                "reasoning_budget": 2048
               },
               stream: false
             })

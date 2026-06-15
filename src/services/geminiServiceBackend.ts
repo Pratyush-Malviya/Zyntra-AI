@@ -348,10 +348,10 @@ Please return ONLY a valid, raw, and parsable JSON object conforming to the stru
         ],
         temperature: 1,
         top_p: 0.95,
-        max_tokens: 16384,
+        max_tokens: 4096,
         extra_body: {
           "chat_template_kwargs": { "enable_thinking": true },
-          "reasoning_budget": 16384
+          "reasoning_budget": 2048
         },
         stream: false
       } as any);
@@ -447,10 +447,10 @@ Please return ONLY a valid, raw, and parsable JSON object conforming to the stru
         ],
         temperature: 1,
         top_p: 0.95,
-        max_tokens: 16384,
+        max_tokens: 4096,
         extra_body: {
           "chat_template_kwargs": { "enable_thinking": true },
-          "reasoning_budget": 16384
+          "reasoning_budget": 2048
         },
         stream: false
       } as any, {
@@ -503,10 +503,10 @@ Please return ONLY a valid, raw, and parsable JSON object conforming to the stru
         ],
         temperature: 1,
         top_p: 0.95,
-        max_tokens: 16384,
+        max_tokens: 4096,
         extra_body: {
           "chat_template_kwargs": { "enable_thinking": true },
-          "reasoning_budget": 16384
+          "reasoning_budget": 2048
         },
         stream: false
       } as any);
@@ -613,10 +613,10 @@ Please return ONLY a valid, raw, and parsable JSON object conforming to the requ
         ],
         temperature: 1,
         top_p: 0.95,
-        max_tokens: 16384,
+        max_tokens: 4096,
         extra_body: {
           "chat_template_kwargs": { "enable_thinking": true },
-          "reasoning_budget": 16384
+          "reasoning_budget": 2048
         },
         stream: false
       } as any);
