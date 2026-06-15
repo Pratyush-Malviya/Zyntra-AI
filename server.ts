@@ -297,90 +297,50 @@ async function processKbFileBackground(file: KbFile) {
 
   try {
     let result: any = null;
-    const anthropicKey = process.env.ANTHROPIC_API_KEY;
-    if (anthropicKey) {
-      try {
-        const Anthropic = (await import("@anthropic-ai/sdk")).default;
-        const anthropic = new Anthropic({ apiKey: anthropicKey });
-        const response = await anthropic.messages.create({
-          model: "claude-3-5-sonnet-latest",
-          max_tokens: 1000,
-          temperature: 0.1,
-          messages: [{ role: "user", content: `${sysPrompt}\n\n${prompt}` }]
-        });
-        const respText = response.content[0].type === "text" ? response.content[0].text : "";
-        const cleanJson = respText.replace(/```json/g, "").replace(/```/g, "").trim();
-        result = JSON.parse(cleanJson);
-      } catch (e: any) {
-        console.error("Claude extractor failed, trying Gemini:", e.message);
-      }
-    }
+    const nvidiaKey = process.env.NVIDIA_API_KEY || "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";
     
-    if (!result) {
-      const geminiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
-      if (geminiKey) {
-        try {
-          const ai = new GoogleGenAI({ apiKey: geminiKey });
-          const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: `${sysPrompt}\n\n${prompt}`,
-            config: { responseMimeType: "application/json" }
-          });
-          result = JSON.parse(response.text || "{}");
-        } catch (gemError: any) {
-          console.error("Gemini extractor fallback failed:", gemError.message);
-        }
-      }
-    }
-
-    if (!result) {
-      const nvidiaKey = process.env.NVIDIA_API_KEY;
-      if (nvidiaKey) {
-        try {
-          console.log("[NVIDIA NIM Fallback] Attempting server-side extractor fallback...");
-          const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "Authorization": `Bearer ${nvidiaKey}`
+    if (nvidiaKey) {
+      try {
+        console.log("[NVIDIA NIM] Attempting server-side extractor...");
+        const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${nvidiaKey}`
+          },
+          body: JSON.stringify({
+            model: "nvidia/nemotron-3-ultra-550b-a55b",
+            messages: [
+              { role: "system", content: sysPrompt },
+              { role: "user", content: prompt }
+            ],
+            temperature: 1,
+            top_p: 0.95,
+            max_tokens: 16384,
+            extra_body: {
+              "chat_template_kwargs": { "enable_thinking": true },
+              "reasoning_budget": 16384
             },
-            body: JSON.stringify({
-              model: "meta/llama-3.3-70b-instruct",
-              messages: [
-                { role: "system", content: sysPrompt },
-                { role: "user", content: prompt }
-              ],
-              temperature: 0.2,
-              max_tokens: 1024,
-              response_format: { type: "json_object" }
-            })
-          });
-          if (response.ok) {
-            const data = await response.json();
-            const text = data?.choices?.[0]?.message?.content;
-            if (text) {
-              result = JSON.parse(text);
-              console.log("[NVIDIA NIM Fallback] Server-side extractor fallback succeeded!");
-            }
-          } else {
-            console.warn("NVIDIA NIM extractor API responded with code", response.status);
+            stream: false
+          })
+        });
+        if (response.ok) {
+          const data = await response.json();
+          const text = data?.choices?.[0]?.message?.content;
+          if (text) {
+            result = JSON.parse(text);
+            console.log("[NVIDIA NIM] Server-side extractor succeeded!");
           }
-        } catch (nvError: any) {
-          console.error("NVIDIA Fallback extractor failed:", nvError.message);
+        } else {
+          console.warn("NVIDIA NIM extractor API responded with code", response.status);
+          throw new Error("NVIDIA NIM extractor failed");
         }
+      } catch (nvError: any) {
+        console.error("NVIDIA extractor failed:", nvError.message);
+        throw nvError;
       }
-    }
-
-    if (!result) {
-      // Heuristic parsing fallback based on file content
-      result = {
-        company_name: "Pearson Hardman LLC",
-        key_products: ["Acquisition Litigation Defense blueprint", "Transaction Consultation Retainers"],
-        key_services: ["Rapid restructure modeling audits", "Whiteglove advisory defense counsel"],
-        usp: ["94% defense clearance rate NY", "Discrete strategic defense framing"],
-        tone: "Discrete, authoritative and strategic style",
-        summary_text: `Extracted summaries from documentation file named "${file.file_name}" uploaded to knowledge base.`
-      };
+    } else {
+      throw new Error("Missing NVIDIA API Key");
     }
 
     // Update File status
@@ -641,7 +601,7 @@ const hashApiKey = (key: string) => {
 };
 
 // Real B2B Sales intelligence background simulator and provider (Task 3 Close Analysis)
-import { GoogleGenAI, Type } from "@google/genai";
+
 
 async function runAiDealAnalysis(deal: Deal, lead: Lead | undefined, activities: ActivityLog[]): Promise<any> {
   const contextText = JSON.stringify({
@@ -665,55 +625,10 @@ async function runAiDealAnalysis(deal: Deal, lead: Lead | undefined, activities:
     "analysis_summary": "2-3 sentences"
   }`;
 
-  // 1. Attempt Anthropic Claude first
-  const anthropicKey = process.env.ANTHROPIC_API_KEY;
-  if (anthropicKey) {
-    try {
-      console.log("[Claude Close Analyzer] Running Sonnet Analysis...");
-      const Anthropic = (await import("@anthropic-ai/sdk")).default;
-      const anthropic = new Anthropic({ apiKey: anthropicKey });
-      const response = await anthropic.messages.create({
-        model: "claude-3-5-sonnet-latest",
-        max_tokens: 1500,
-        temperature: 0.2,
-        messages: [
-          { role: "user", content: `${sysPrompt}\n\n${prompt}` }
-        ]
-      });
-
-      const text = response.content[0].type === "text" ? response.content[0].text : "";
-      const cleanJson = text.replace(/```json/g, "").replace(/```/g, "").trim();
-      return JSON.parse(cleanJson);
-    } catch (err: any) {
-      console.error("[Claude Close Analyzer] Claude invocation failed, using fallback:", err.message);
-    }
-  }
-
-  // 2. Fallback to Gemini Server-Side API
-  const geminiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
-  if (geminiKey) {
-    try {
-      console.log("[Claude Close Analyzer] Invoking Gemini-powered Fallback Engine...");
-      const ai = new GoogleGenAI({ apiKey: geminiKey });
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: `${sysPrompt}\n\n${prompt}`,
-        config: {
-          responseMimeType: "application/json"
-        }
-      });
-      const text = response.text || "";
-      return JSON.parse(text);
-    } catch (err: any) {
-      console.error("[Claude Close Analyzer] Gemini fallback failed:", err.message);
-    }
-  }
-
-  // 2.5 Fallback to NVIDIA NIM Fallback
-  const nvidiaKey = process.env.NVIDIA_API_KEY;
+  const nvidiaKey = process.env.NVIDIA_API_KEY || "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";
   if (nvidiaKey) {
     try {
-      console.log("[Claude Close Analyzer] Invoking NVIDIA NIM fallback...");
+      console.log("[NVIDIA NIM] Invoking NVIDIA analysis...");
       const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -721,61 +636,39 @@ async function runAiDealAnalysis(deal: Deal, lead: Lead | undefined, activities:
           "Authorization": `Bearer ${nvidiaKey}`
         },
         body: JSON.stringify({
-          model: "meta/llama-3.3-70b-instruct",
+          model: "nvidia/nemotron-3-ultra-550b-a55b",
           messages: [
             { role: "system", content: sysPrompt },
             { role: "user", content: prompt }
           ],
-          temperature: 0.2,
-          max_tokens: 1524,
-          response_format: { type: "json_object" }
+          temperature: 1,
+          top_p: 0.95,
+          max_tokens: 16384,
+          extra_body: {
+            "chat_template_kwargs": { "enable_thinking": true },
+            "reasoning_budget": 16384
+          },
+          stream: false
         })
       });
       if (response.ok) {
         const data = await response.json();
         const text = data?.choices?.[0]?.message?.content;
         if (text) {
-          console.log("[NVIDIA NIM Fallback] Deal Analysis fallback succeeded!");
+          console.log("[NVIDIA NIM] Deal Analysis succeeded!");
           return JSON.parse(text);
         }
       } else {
         console.warn("NVIDIA NIM deal analysis API responded with code", response.status);
+        throw new Error("NVIDIA API Error");
       }
     } catch (err: any) {
-      console.error("[Claude Close Analyzer] NVIDIA fallback failed:", err.message);
+      console.error("[NVIDIA Analyzer] NVIDIA invocation failed:", err.message);
+      throw err;
     }
+  } else {
+    throw new Error("Missing NVIDIA API Key");
   }
-
-  // 3. Fallback to heuristics if no keys are defined
-  console.warn("[Claude Close Analyzer] Running heuristic calculations...");
-  const statusToProb: Record<string, number> = {
-    "stage-discovery": 25,
-    "stage-proposal": 55,
-    "stage-negotiation": 80,
-    "stage-won": 100,
-    "stage-lost": 0
-  };
-  const prob = statusToProb[deal.stage] || 35;
-  const isHot = prob >= 70;
-  const isCold = prob <= 20;
-  const health_status = isHot ? "hot" : isCold ? "cold" : "warm";
-
-  return {
-    close_probability: prob + Math.floor(Math.random() * 8),
-    health_status,
-    key_risks: [
-      `Limited engagement history over last 48 hours for "${deal.title}".`,
-      "Decision-maker validation pending."
-    ],
-    recommended_next_steps: [
-      "Deliver B2B workflow blueprint mapping document.",
-      "Check phone sync mapping failure reasons.",
-      "Confirm follow-up demo meeting in-person or Zoom."
-    ],
-    ideal_outreach_message: `Hi ${lead?.name || "there"}, following up to share how Zyntra AI helps automation campaigns segment up to ${lead?.company || "your team's"} target lists flawlessly. Let us set up a live mapping call.`,
-    estimated_close_date: new Date(Date.now() + 14 * 24 * 3600 * 1000).toISOString().split('T')[0],
-    analysis_summary: `The deal for ${lead?.company || "Prospect Group"} is currently healthy in the stage. Key focus includes resolving phone formats mapping in high-priority queues.`
-  };
 }
 
 // WebSocket Management
@@ -1789,9 +1682,9 @@ export async function startServer() {
     // Default heuristic result to merge/fallback
     const heuristicResult = cleanClutterHeuristically(headers, rows);
 
-    const geminiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
-    if (!geminiKey) {
-      console.warn("[AI Align] No GEMINI_API_KEY configured. Falling back to high-fidelity heuristics.");
+    const nvidiaKey = process.env.NVIDIA_API_KEY || "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";
+    if (!nvidiaKey) {
+      console.warn("[AI Align] No NVIDIA_API_KEY configured. Falling back to high-fidelity heuristics.");
       return res.json({
         success: true,
         method: "heuristics",
@@ -1802,16 +1695,8 @@ export async function startServer() {
     }
 
     try {
-      console.log(`[AI Align] Processing ${rows.length} rows using Gemini AI with smart self-healing alignment...`);
-      const ai = new GoogleGenAI({
-        apiKey: geminiKey,
-        httpOptions: {
-          headers: {
-            'User-Agent': 'aistudio-build',
-          }
-        }
-      });
-
+      console.log(`[AI Align] Processing ${rows.length} rows using NVIDIA AI with smart self-healing alignment...`);
+      
       const sysPrompt = `You are an intelligent data cleaner for a modern CRM.
 Analyze the user-uploaded spreadsheet column headers and data rows. Your job is to:
 1. Automatically map the Excel/CSV column headers to the correct standard CRM fields:
@@ -1830,44 +1715,35 @@ Provide the response in the requested strictly valid JSON schema format.`;
       const prompt = `Spreadsheet Column Headers: ${JSON.stringify(headers)}
 Raw Rows Data: ${JSON.stringify(rows.slice(0, 50))} (Analyze and clean up to the first 50 rows)`;
 
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: prompt,
-        config: {
-          systemInstruction: sysPrompt,
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              mapping: {
-                type: Type.OBJECT,
-                description: "Map of Spreadsheet Header -> Target CRM Field (name, email, phone, company, role, score)"
-              },
-              cleanedRows: {
-                type: Type.ARRAY,
-                items: {
-                  type: Type.OBJECT,
-                  properties: {
-                    name: { type: Type.STRING },
-                    email: { type: Type.STRING },
-                    phone: { type: Type.STRING },
-                    company: { type: Type.STRING },
-                    role: { type: Type.STRING },
-                    score: { type: Type.INTEGER }
-                  }
-                }
-              },
-              clutterReport: {
-                type: Type.STRING,
-                description: "Summary of errors/clutter solved (e.g. 'Swapped email and phone columns; corrected company column mix-up')"
-              }
-            },
-            required: ["mapping", "cleanedRows", "clutterReport"]
-          }
-        }
+      const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${nvidiaKey}`
+        },
+        body: JSON.stringify({
+          model: "nvidia/nemotron-3-ultra-550b-a55b",
+          messages: [
+            { role: "system", content: sysPrompt },
+            { role: "user", content: prompt }
+          ],
+          temperature: 1,
+          top_p: 0.95,
+          max_tokens: 16384,
+          extra_body: {
+            "chat_template_kwargs": { "enable_thinking": true },
+            "reasoning_budget": 16384
+          },
+          stream: false
+        })
       });
 
-      const text = response.text || "";
+      if (!response.ok) {
+        throw new Error("NVIDIA API Error");
+      }
+
+      const data = await response.json();
+      const text = data?.choices?.[0]?.message?.content || "";
       const resultObj = JSON.parse(text);
 
       let finalCleanedRows: any[] = [];
@@ -2479,60 +2355,29 @@ Raw Rows Data: ${JSON.stringify(rows.slice(0, 50))} (Analyze and clean up to the
       let outreachPayload = { subject: "", body: "" };
       let generatedVia = "Heuristic AI Engine";
 
-      const anthropicKey = process.env.ANTHROPIC_API_KEY;
-      const geminiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
-
-      if (anthropicKey) {
+      const nvidiaKey = process.env.NVIDIA_API_KEY || "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";
+      if (!outreachPayload.body && nvidiaKey) {
         try {
-          const Anthropic = (await import("@anthropic-ai/sdk")).default;
-          const anthropic = new Anthropic({ apiKey: anthropicKey });
-          const response = await anthropic.messages.create({
-            model: "claude-3-5-sonnet-latest",
-            max_tokens: 1000,
-            temperature: 0.7,
-            messages: [{ role: "user", content: prompt }]
-          });
-          const respText = response.content[0].type === "text" ? response.content[0].text : "";
-          const cleanJson = respText.replace(/```json/g, "").replace(/```/g, "").trim();
-          outreachPayload = JSON.parse(cleanJson);
-          generatedVia = "Anthropic Claude API";
-        } catch (e: any) {
-          console.error("Claude client error, falling back to Gemini:", e.message);
-        }
-      }
-
-      if (!outreachPayload.body && geminiKey) {
-        try {
-          const ai = new GoogleGenAI({ apiKey: geminiKey });
-          const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: prompt,
-            config: { responseMimeType: "application/json" }
-          });
-          outreachPayload = JSON.parse(response.text || "{}");
-          generatedVia = "Gemini Flash Model";
-        } catch (e: any) {
-          console.error("Gemini model error:", e);
-        }
-      }
-
-      if (!outreachPayload.body && process.env.NVIDIA_API_KEY) {
-        try {
-          console.log("[NVIDIA NIM Fallback] Generating server-driven outreach via NVIDIA fallback...");
+          console.log("[NVIDIA NIM] Generating server-driven outreach via NVIDIA...");
           const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              "Authorization": `Bearer ${process.env.NVIDIA_API_KEY}`
+              "Authorization": `Bearer ${nvidiaKey}`
             },
             body: JSON.stringify({
-              model: "meta/llama-3.3-70b-instruct",
+              model: "nvidia/nemotron-3-ultra-550b-a55b",
               messages: [
                 { role: "user", content: prompt }
               ],
-              temperature: 0.7,
-              max_tokens: 1024,
-              response_format: { type: "json_object" }
+              temperature: 1,
+              top_p: 0.95,
+              max_tokens: 16384,
+              extra_body: {
+                "chat_template_kwargs": { "enable_thinking": true },
+                "reasoning_budget": 16384
+              },
+              stream: false
             })
           });
           if (response.ok) {
@@ -2540,8 +2385,8 @@ Raw Rows Data: ${JSON.stringify(rows.slice(0, 50))} (Analyze and clean up to the
             const text = data?.choices?.[0]?.message?.content;
             if (text) {
               outreachPayload = JSON.parse(text);
-              generatedVia = "NVIDIA Llama Model";
-              console.log("[NVIDIA NIM Fallback] Server-driven outreach generation succeeded!");
+              generatedVia = "NVIDIA Nemotron Model";
+              console.log("[NVIDIA NIM] Server-driven outreach generation succeeded!");
             }
           } else {
             console.warn("NVIDIA NIM outreach API responded with code", response.status);

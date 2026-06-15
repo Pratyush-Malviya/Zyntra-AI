@@ -1,21 +1,9 @@
-import { GoogleGenAI, Type } from "@google/genai";
 import OpenAI from "openai";
 
-// Initialize system-wide backend client with 'aistudio-build' User-Agent standard header
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY || "",
-  httpOptions: {
-    headers: {
-      'User-Agent': 'aistudio-build',
-    }
-  }
-});
-
-// Initialize OpenAI client pointing to NVIDIA's NIM API to run deepseek-ai/deepseek-v4-pro
 const openai = new OpenAI({
-  apiKey: process.env.NVIDIA_API_KEY || "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",
+  apiKey: process.env.NVIDIA_API_KEY || "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",
   baseURL: "https://integrate.api.nvidia.com/v1",
-  timeout: 90000, // 90 seconds timeout for high-reasoning NVIDIA DeepSeek API calls
+  timeout: 90000,
 });
 
 // Clean and Parse JSON handles raw control characters / line breaks inside string values in JSON and aggressive conversational wrapping repairs
@@ -347,39 +335,36 @@ export async function generateOutreachBackend(lead: any, config: any, customNvid
   `;
 
   try {
-    if (!process.env.GEMINI_API_KEY) {
-      throw new Error("No GEMINI_API_KEY configured on backend");
+    const completion = await retryWithBackoff(async () => {
+      return await openai.chat.completions.create({
+        model: "nvidia/nemotron-3-ultra-550b-a55b",
+        messages: [
+          {
+            role: "user",
+            content: `${prompt}
+
+Please return ONLY a valid, raw, and parsable JSON object conforming to the structured template we need. No preamble or conversational introduction, just the raw JSON structure.`
+          }
+        ],
+        temperature: 1,
+        top_p: 0.95,
+        max_tokens: 16384,
+        extra_body: {
+          "chat_template_kwargs": { "enable_thinking": true },
+          "reasoning_budget": 16384
+        },
+        stream: false
+      } as any);
+    }, 3, 1500, "NVIDIA Nemotron Outreach");
+
+    const rawText = completion.choices[0]?.message?.content || '';
+    if (rawText.trim()) {
+      return cleanAndParseJSON(rawText);
     }
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            whatsapp: { type: Type.STRING },
-            linkedin_connect: { type: Type.STRING },
-            linkedin_dm: { type: Type.STRING },
-            email_subject: { type: Type.STRING },
-            email_body: { type: Type.STRING },
-            email_followup: { type: Type.STRING },
-          },
-          required: ["whatsapp", "linkedin_connect", "linkedin_dm", "email_subject", "email_body", "email_followup"],
-        }
-      }
-    });
-    
-    const rawText = (response.text || '');
-    return cleanAndParseJSON(rawText);
+    throw new Error("Empty response received from NVIDIA Nemotron API");
   } catch (error) {
-    if (isQuotaOrApiKeyError(error)) {
-      console.warn("Gemini Resource/Quota limit reached. Activating high-fidelity fallback for outreach generation...");
-    } else {
-      console.error("Gemini Generation Error on server:", error);
-    }
-    console.warn("Activating high-fidelity fallback for outreach generation");
-    return getMockOutreach(lead, config);
+    console.error("NVIDIA Generation Error on server:", error);
+    throw error;
   }
 }
 
@@ -449,10 +434,9 @@ export async function generateProspectResearchBackend(companyInput: string, cust
   const mainTimeoutMs = isVercel ? 4000 : 90000;
 
   try {
-    console.log("Initiating live B2B research sprint using NVIDIA DeepSeek v4-pro model...");
     const completion = await retryWithBackoff(async () => {
       return await openai.chat.completions.create({
-        model: "deepseek-ai/deepseek-v4-pro",
+        model: "nvidia/nemotron-3-ultra-550b-a55b",
         messages: [
           {
             role: "user",
@@ -461,171 +445,27 @@ export async function generateProspectResearchBackend(companyInput: string, cust
 Please return ONLY a valid, raw, and parsable JSON object conforming to the structured template we need. No preamble or conversational introduction, just the raw JSON structure.`
           }
         ],
-        temperature: 0.7,
+        temperature: 1,
         top_p: 0.95,
         max_tokens: 16384,
-        chat_template_kwargs: { "thinking": false },
+        extra_body: {
+          "chat_template_kwargs": { "enable_thinking": true },
+          "reasoning_budget": 16384
+        },
         stream: false
       } as any, {
         timeout: mainTimeoutMs
       });
-    }, searchRetries, backoffBase, "NVIDIA DeepSeek Research");
+    }, searchRetries, backoffBase, "NVIDIA Nemotron Research");
 
     const rawText = completion.choices[0]?.message?.content || '';
     if (rawText.trim()) {
       return cleanAndParseJSON(rawText);
     }
-    throw new Error("Empty response received from NVIDIA DeepSeek API");
-  } catch (nvidiaError) {
-    console.warn("NVIDIA DeepSeek research generation met an issue or was unavailable. Trying Gemini backend as high-fidelity fallback...", nvidiaError);
-    
-    try {
-      if (!process.env.GEMINI_API_KEY) {
-        throw new Error("No GEMINI_API_KEY configured on backend");
-      }
-
-      const schemaTemplateText = JSON.stringify({
-        companyInfo: {
-          name: "Company Name",
-          industry: "Industry sector",
-          hq: "Headquarters city & country",
-          founded: "Year founded",
-          status: "Public or Private",
-          website: "Official website URL",
-          revenue: "Estimated or actual annual revenue",
-          employees: "Employee headcount",
-          markets: "Target markets and geographic coverage",
-          description: "Clear modern company description",
-          socialMediaLinks: {
-            linkedin: "Official LinkedIn company page URL",
-            twitter: "Official Twitter/X handle URL",
-            facebook: "Official Facebook page URL or N/A",
-            youtube: "Official YouTube channel URL or N/A"
-          },
-          funding: {
-            hasRaisedRecently: true,
-            details: "Summary of funding status",
-            rounds: [
-              {
-                roundName: "Series Round / Seed / Debt",
-                amount: "Funding amount",
-                date: "Round date (YYYY-MM-DD)",
-                investors: "Main investing funds or individuals"
-              }
-            ]
-          },
-          recentProducts: {
-            hasLaunchedRecently: true,
-            details: "Recent product line advancements and upgrades",
-            productsList: [
-              {
-                name: "Product/Service name",
-                description: "Short product function description",
-                launchDate: "Launch date or timeframe"
-              }
-            ]
-          }
-        },
-        painPoints: [
-          {
-            title: "Specific Pain Point Title",
-            severity: "High or Medium or Low",
-            description: "Detailed analysis of the pain point",
-            evidence: [
-              {
-                quote: "Direct quote or source reference statement",
-                source: "Source URL or publication",
-                date: "YYYY-MM-DD"
-              }
-            ],
-            impact: "Clear quantifiable corporate/financial/operational impact",
-            timeline: "Active timeline"
-          }
-        ],
-        techStack: {
-          erp: { name: "System Name or None/Unknown", status: "Active/Legacy/Migrating", confidence: "High/Medium/Low", source: "Evidence description" },
-          crm: { name: "System Name or None/Unknown", status: "Active/Legacy/Migrating", confidence: "High/Medium/Low", source: "Evidence description" },
-          bi: { name: "System Name or None/Unknown", status: "Active/Legacy/Migrating", confidence: "High/Medium/Low", source: "Evidence description" },
-          supplyChain: { name: "System Name or None/Unknown", status: "Active/Legacy/Migrating", confidence: "High/Medium/Low", source: "Evidence description" },
-          websiteTech: ["React", "HTML5", "Cloudflare"]
-        },
-        aiAdoption: {
-          maturityLevel: "Low/Medium/High",
-          deployedTools: ["Known tools actively deployed"],
-          plannedTools: ["Planned technologies and tools"],
-          competitors: [
-            { name: "Competitor Name", aiMaturity: "Low/Medium/High", tools: "Their active AI solutions" }
-          ]
-        },
-        aiSolutions: [
-          {
-            title: "Proposed Solution Name",
-            painPointCausal: "Reference to identified pain point",
-            mvp: "Description of the MVP integration framework",
-            features: ["Feature 1", "Feature 2"],
-            pricing: {
-              model: "SaaS Subscription / Seat-based / Consumption",
-              monthlyFee: "$X,000",
-              year1Contract: "$Y,000",
-              potentialLtv: "$Z,000"
-            },
-            pricingJustification: "Strategic justification of the proposed pricing",
-            whyYouWin: ["Advantage over generalists 1", "Advantage 2"]
-          }
-        ],
-        gtmStrategy: {
-          decisionMaker: {
-            name: "Full Name of actual executive/representative",
-            title: "Grounded corporate title (CEO, CIO, VP RevOps, etc.)",
-            phone: "Grounded or highly realistic company phone format",
-            email: "Verified business email formatted with company domain",
-            linkedinUrl: "Actual or highly realistic LinkedIn representative profile URL",
-            responsibilities: "Detailed corporate duties",
-            painOwns: "Grounded business pain they specifically own or address",
-            motivation: "Grounded professional career motivation"
-          },
-          openingHook: "Hyper-personalized outreach opening hook sentence",
-          coreMessage: "Main value-proposition core messaging",
-          cta: "Clear Call to Action",
-          expectedObjections: [
-            { objection: "Highly realistic prospect objection", response: "Perfect strategic counter response" }
-          ]
-        },
-        dealSizeForecast: {
-          phase1QuickWin: "Estimated Value",
-          phase2Expansion: "Estimated Value",
-          phase3FullPlatform: "Estimated Value",
-          totalRevenueLtv: "Total customer lifetime value projection"
-        },
-        markdownReport: "Draft Dynamic premium 500-1000 word consulting report text formatted in Markdown."
-      }, null, 2);
-
-      const response = await retryWithBackoff(async () => {
-        return await ai.models.generateContent({
-          model: "gemini-2.5-flash",
-          contents: `${prompt}
-        
-        CRITICAL: Your output MUST be a strict, valid and parsable JSON object conforming EXACTLY to the structure shown in the template below. Populate this structure completely using the live, web-grounded research data. Return ONLY the finalized JSON structure. Do not output any conversational introduction, notes, or explanations outside the JSON object.
-
-        Expected JSON Structure:
-        ${schemaTemplateText}`,
-          config: {
-            tools: [{ googleSearch: {} }]
-          }
-        });
-      }, 3, 1500, "Gemini Fallback Search");
-      
-      const rawText = (response.text || '');
-      return cleanAndParseJSON(rawText);
-    } catch (error) {
-      if (isQuotaOrApiKeyError(error)) {
-        console.warn("Gemini Resource/Quota limit reached for prospect research. Activating high-fidelity mock fallback...");
-      } else {
-        console.error("Prospect Research Generation Error on server:", error);
-      }
-      console.warn("Activating high-fidelity fallback for prospect research on server");
-      return getMockProspectResearch(companyInput);
-    }
+    throw new Error("Empty response received from NVIDIA Nemotron API");
+  } catch (error) {
+    console.error("NVIDIA Prospect Research Generation Error on server:", error);
+    throw error;
   }
 }
 
@@ -650,588 +490,37 @@ export async function analyzeBenchmarkDriftBackend(leads: any[], customNvidia?: 
   `;
 
   try {
-    if (!process.env.GEMINI_API_KEY) {
-      throw new Error("No GEMINI_API_KEY configured on backend");
-    }
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            summary: { type: Type.STRING },
-            keyIssues: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  issue: { type: Type.STRING },
-                  description: { type: Type.STRING },
-                  impact: { type: Type.STRING }
-                },
-                required: ["issue", "description", "impact"]
-              }
-            },
-            actionableImprovements: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  title: { type: Type.STRING },
-                  channels: { type: Type.ARRAY, items: { type: Type.STRING } },
-                  proposedStrategy: { type: Type.STRING },
-                  exampleOutreachSubject: { type: Type.STRING },
-                  exampleOutreachBody: { type: Type.STRING }
-                },
-                required: ["title", "channels", "proposedStrategy"]
-              }
-            },
-            reallocationAdvice: { type: Type.STRING }
-          },
-          required: ["summary", "keyIssues", "actionableImprovements", "reallocationAdvice"]
-        }
-      }
-    });
-
-    const rawText = (response.text || '');
-    return cleanAndParseJSON(rawText);
-  } catch (error) {
-    if (isQuotaOrApiKeyError(error)) {
-      console.warn("Gemini Resource/Quota limit reached for benchmark drift analysis. Activating high-fidelity mock fallback...");
-    } else {
-      console.error("Benchmark Drift Analysis Error on server:", error);
-    }
-    console.warn("Activating high-fidelity fallback for benchmark drift analysis on server");
-    return getMockBenchmarkDrift(leads);
-  }
-}
-
-// -------------------------------------------------------------
-// Fallback Mocks
-// -------------------------------------------------------------
-
-function getMockOutreach(lead: any, config: any): any {
-  const leadName = lead.name || "there";
-  const company = lead.company || "your company";
-  const role = lead.role || "decision maker";
-  const senderName = config.sender || "the GTM team";
-  const senderCompany = config.company || "Zyntra AI";
-  const product = config.product || "our GTM intelligence engine";
-
-  return {
-    whatsapp: `Hi ${leadName} - loved your team's background at ${company}! Noticed you are leading ${role} efforts. We built an automated workflow exactly for ${company} to double pipeline conversions. Worth a 1-minute read?`,
-    linkedin_connect: `Hi ${leadName}, noticed your role as ${role} at ${company}. Would love to connect and follow your industry updates here!`,
-    linkedin_dm: `Thanks for connecting ${leadName}! Following up on my invite - we are currently working with similar companies to automate key pipeline channels using ${product}. Let's exchange details when you have a moment.`,
-    email_subject: `Scale pipeline conversions at ${company}?`,
-    email_body: `Hi ${leadName},\n\nHope this message finds you well.\n\nNoticed your impressive work leading ${role} operations at ${company}. Managing multichannel GTM touchpoints while trying to maintain personalization is a significant bottleneck for growing organizations.\n\nAt ${senderCompany}, we've designed ${product} to solve this. Our customers typically see a 3x increase in decision-maker engagement by automating hyper-personalized outreach sequences across LinkedIn and SMTP.\n\nAre you open to a small 10-minute call next Tuesday at 10 AM to see how we can drive similar outcomes for ${company}?\n\nBest regards,\n\n${senderName}\n${senderCompany}`,
-    email_followup: `Hi ${leadName} - just following up on my previous note. I know you're busy scale-heading operations at ${company}. Would love to share a 2-minute overview of how we optimize multichannel conversions. Let me know if you can sync up next week!`
-  };
-}
-
-function defaultHQ(name: string): string {
-  const norm = name.toLowerCase();
-  if (norm.includes("tesla")) return "Austin, TX, USA";
-  if (norm.includes("stripe")) return "San Francisco, CA, USA";
-  if (norm.includes("salesforce")) return "San Francisco, CA, USA";
-  return "San Francisco, CA, USA";
-}
-
-function defaultFounded(name: string): string {
-  const norm = name.toLowerCase();
-  if (norm.includes("tesla")) return "2003";
-  if (norm.includes("stripe")) return "2010";
-  if (norm.includes("salesforce")) return "1999";
-  return "2013";
-}
-
-function getMockProspectResearch(companyInput: string): any {
-  let targetCompany = "";
-  let targetLinkedin = "";
-
-  try {
-    if (companyInput.trim().startsWith('{')) {
-      const parsed = JSON.parse(companyInput);
-      targetCompany = parsed.website || parsed.company || "";
-      targetLinkedin = parsed.linkedin || "";
-    } else {
-      targetCompany = companyInput;
-    }
-  } catch (e) {
-    targetCompany = companyInput;
-  }
-
-  let cleanName = "";
-  if (targetCompany.trim()) {
-    cleanName = targetCompany.trim()
-      .replace(/^(https?:\/\/)?(www\.)?/, '')
-      .split('.')[0];
-  } else if (targetLinkedin.trim()) {
-    // Extract a name from LinkedIn URL to guess something
-    const parts = targetLinkedin.trim().split('/');
-    const lastPart = parts[parts.length - 1] || parts[parts.length - 2] || "prospect";
-    cleanName = lastPart.replace(/[-_]/g, ' ').replace(/in\s+/i, '').trim();
-    if (!cleanName) cleanName = "Target Enterprise";
-  } else {
-    cleanName = "Target Enterprise";
-  }
-  const companyName = cleanName.charAt(0).toUpperCase() + cleanName.slice(1);
-
-  // Determine dynamic details for known companies
-  const nameLower = companyName.toLowerCase();
-  let defaultStatus = "Private (Scale-up)";
-  let defaultRevenue = "$150M+ ARR (Estimated)";
-  let defaultEmployees = "850 - 1,200";
-  let defaultIndustry = "Enterprise SaaS & Business Infrastructure";
-  let defaultDesc = `Premium high-growth enterprise platform specialized in automated scaling, custom process integrations, and business information workflows. Currently positioning to integrate deep cognitive learning models across legacy database operations.`;
-  
-  let mockFunding = {
-    hasRaisedRecently: true,
-    details: `${companyName} raised a significant Series C funding round to supercharge their cognitive enterprise integrations, scale outbound sales channels, and bolster developer tools globally.`,
-    rounds: [
-      { roundName: "Series C", amount: "$45,000,000", date: "2025-10-14", investors: "Accel Partners, Sequoia Capital, Bessemer Venture Partners" },
-      { roundName: "Series B", amount: "$18,500,000", date: "2024-03-22", investors: "Y Combinator, Founders Fund" },
-      { roundName: "Series A", amount: "$5,000,000", date: "2023-01-10", investors: "SV Angel, First Round Capital" }
-    ]
-  };
-
-  let mockProducts = {
-    hasLaunchedRecently: true,
-    details: `${companyName} recently launched its highly anticipated commercial cognitive suites to streamline client integrations and optimize real-time data flow pipelines.`,
-    productsList: [
-      { name: "CognitiveFlow Core v3.0", description: "Zero-latency business process automation engine powered by localized small-language models.", launchDate: "2026-02" },
-      { name: "IntegrateHQ Enterprise Studio", description: "Visual canvas enabling corporate operations analysts to link legacy custom ERP installations with modern secure cloud APIs.", launchDate: "2025-11" },
-      { name: "SyncShield AI Guardrails", description: "Enterprise-grade safety middleware ensuring automated outbound GTM communications respect strict customer email security domains.", launchDate: "2025-08" }
-    ]
-  };
-
-  if (nameLower.includes("tesla")) {
-    defaultStatus = "Public (NASDAQ: TSLA)";
-    defaultRevenue = "$96.7B USD (Annualized)";
-    defaultEmployees = "140,000+ globally";
-    defaultIndustry = "Automotive, Clean Energy & Cognitive Robotics";
-    defaultDesc = "Tesla accelerates the world's transition to sustainable energy through electric vehicles, solar power, integrated batteries, and advanced robotics/autonomous systems.";
-    mockFunding = {
-      hasRaisedRecently: false,
-      details: "Tesla is a highly profitable public enterprise with substantial operational cash flow ($10B+ free cash flow). It does not actively depend on private venture capital rounds, but occasionally conducts strategic capital raises or debt restructuring to fund massive gigafactory expansions.",
-      rounds: [
-        { roundName: "Strategic Debt Facility", amount: "$5,000,000,000", date: "2024-06-15", investors: "Consortium of International Sovereign Debt Markets" },
-        { roundName: "Secondary Share Offering", amount: "$2,000,000,000", date: "2020-02-13", investors: "Public Equity Markets" }
-      ]
-    };
-    mockProducts = {
-      hasLaunchedRecently: true,
-      details: "Tesla is aggressively transitioning into an AI & robotics powerhouse, driving major model refreshes and cutting-edge autonomous machine suites.",
-      productsList: [
-        { name: "Tesla Robotaxi (Cybercab)", description: "Purpose-built autonomous electric vehicle designed without steering wheels or pedals, powered completely by Tesla FSD (Full Self-Driving).", launchDate: "Launched Oct 2024 (Production target 2026)" },
-        { name: "Tesla Optimus Gen 2", description: "Humanoid robot designed to perform repetitive or unsafe tasks, featuring hand upgrades with tactile sensing and faster movement speeds.", launchDate: "Unveiled Dec 2023 (Active internal factory deployment in 2025)" },
-        { name: "Model Y Refresh 'Juniper'", description: "Upgraded aesthetic styling, whisper-quiet cabin acoustics, and energy efficient dual-motor configurations of the world's best selling SUV.", launchDate: "Launch Expected Late 2025 / Early 2026" }
-      ]
-    };
-  } else if (nameLower.includes("stripe")) {
-    defaultStatus = "Private (Scale-up)";
-    defaultRevenue = "$14.3B Gross Revenue (Estimated)";
-    defaultEmployees = "8,400+ globally";
-    defaultIndustry = "Financial Infrastructure, fintech & Global Billing";
-    defaultDesc = "Stripe is a suite of APIs powering online payment processing, global subscription billing, tax automation, corporate card issuance, and financial risk mitigation.";
-    mockFunding = {
-      hasRaisedRecently: true,
-      details: "Stripe raised a substantial secondary round to provide comprehensive share liquidation for its early employees and investors, valuing the fintech absolute leader at $65 Billion.",
-      rounds: [
-        { roundName: "Secondary Market Tender Offer", amount: "$1,000,000,000+", date: "2024-02-15", investors: "Silver Lake, Sequoia Capital, DST Global" },
-        { roundName: "Series I Preferred Raise", amount: "$6,500,000,000", date: "2023-03-15", investors: "Andreessen Horowitz, Founders Fund, General Catalyst, Temasek" }
-      ]
-    };
-    mockProducts = {
-      hasLaunchedRecently: true,
-      details: "Stripe recently launched innovative financial products optimizing high-volume global billing, automated merchant multi-currency taxes, and crypto rails.",
-      productsList: [
-        { name: "Stripe Billing 2.0 Engine", description: "Flexible global recurring engine built to handle usage-based enterprise consumption metrics and custom contracts programmatically.", launchDate: "Launched May 2025" },
-        { name: "Stripe Crypto Checkout (Inbound Usdc)", description: "Optimized payments API allows global merchants to receive stablecoin USDC settlements directly into their balance, auto-converting to local fiat.", launchDate: "Launched Oct 2024" },
-        { name: "Stripe Tax for Multi-Platform Platforms", description: "Automated calculating, reporting, and physical filing of complex sales tax compliance constraints across 140+ countries.", launchDate: "Launched Jun 2025" }
-      ]
-    };
-  } else if (nameLower.includes("salesforce")) {
-    defaultStatus = "Public (NYSE: CRM)";
-    defaultRevenue = "$34.9B USD (Annualized)";
-    defaultEmployees = "72,000+ globally";
-    defaultIndustry = "Enterprise CRM, Cloud Computing & AI Systems";
-    defaultDesc = "Salesforce is the world's leading Customer Relationship Management provider, offering coordinated Customer 360 suites connecting marketing, sales, commerce, service, and data platforms.";
-    mockFunding = {
-      hasRaisedRecently: false,
-      details: "Salesforce operates as a highly cash-generative public conglomerate. Key corporate backing comes from public shareholders. It maintains a $10 Billion active share buyback mandate and runs Salesforce Ventures, contributing massive investment capital back into the AI ecosystem.",
-      rounds: [
-        { roundName: "Salesforce AI Fund Expansion", amount: "$500,000,000", date: "2024-09-12", investors: "Salesforce Corporate Treasury (Salesforce Ventures)" },
-        { roundName: "Senior Corporate Notes Issuance", amount: "$1,500,000,000", date: "2023-01-20", investors: "Institutional Debt Capital Buyers" }
-      ]
-    };
-    mockProducts = {
-      hasLaunchedRecently: true,
-      details: "Salesforce is leading the paradigm shift from copilot wizards to fully autonomous AI agents designed to handle customer service, sales prospecting, and campaign creation.",
-      productsList: [
-        { name: "Salesforce Agentforce", description: "Autonomous AI agents platform operating across Sales Cloud and Service Cloud to resolve complex inquiries and guide sales autonomously with 95% accuracy.", launchDate: "Launched Sept 2024 (General Availability Oct 2024)" },
-        { name: "Salesforce Data Cloud Zero Copy Partner Network", description: "Allows real-time bidirectionally synced customer profile queries with Snowflake, Databricks, BigQuery, and Redshift without expensive ETL pipelines.", launchDate: "Launched April 2024" },
-        { name: "Einstein 1 Copilot Studio", description: "Visual low-code designer enabling system administrators to build custom automations and feed selective private customer context directly to large language model agents.", launchDate: "Launched Mar 2024" }
-      ]
-    };
-  }
-
-  const fundingText = mockFunding.hasRaisedRecently
-    ? `### YES, ${companyName.toUpperCase()} HAS RAISED VENTURE CAPITAL FUNDING RECENTLY.
-       
-**Financial Summary**: ${mockFunding.details}
-
-Below is the verified timeline of their capitalization rounds and major venture institutional backers:
-
-| Funding Round | Invested Amount | Release Date | Key Institutional Investors & Lead Partners |
-| :--- | :--- | :--- | :--- |
-${mockFunding.rounds.map(r => `| **${r.roundName}** | \`${r.amount}\` | *${r.date}* | ${r.investors || 'N/A'} |`).join('\n')}`
-    : `### NO, ${companyName.toUpperCase()} HAS NOT RECENTLY ENGAGED IN PRIVATE CAPITAL SECTOR DRAWS.
-    
-**Financial Summary**: ${mockFunding.details}
-
-As ${defaultStatus.toLowerCase().includes("public") ? "a mature, highly liquid public enterprise" : "a highly profitable established enterprise"}, they operate primarily off internal equity, corporate cash flows, or direct strategic partner alliances. Their historic financial filings indicate solid corporate liquidity:
-
-| Capital Event / Filings | Value Structure | Execution Date | Key Backers / Lead Institutions |
-| :--- | :--- | :--- | :--- |
-${mockFunding.rounds.map(r => `| **${r.roundName}** | \`${r.amount}\` | *${r.date}* | ${r.investors || 'N/A'} |`).join('\n')}`;
-
-  const productsText = `### ACTIVE PRODUCT LAUNCHES & PIPELINE TRACKER
-${mockProducts.details}
-
-Below are the most notable active products and pipeline upgrades announced recently:
-
-${mockProducts.productsList.map(p => `* **${p.name}** ${p.launchDate ? `*(${p.launchDate})*` : ''}:
-  ${p.description}`).join('\n')}`;
-
-  return {
-    isMocked: true,
-    companyInfo: {
-      name: companyName,
-      industry: defaultIndustry,
-      hq: defaultHQ(companyName),
-      founded: defaultFounded(companyName),
-      status: defaultStatus,
-      website: companyInput.includes(".") ? (companyInput.startsWith("http") ? companyInput : `https://${companyInput}`) : `https://www.google.com/search?q=${encodeURI(companyInput)}`,
-      revenue: defaultRevenue,
-      employees: defaultEmployees,
-      markets: "Global (North America, Europe, APAC)",
-      description: defaultDesc,
-      socialMediaLinks: {
-        linkedin: `https://linkedin.com/company/${cleanName}`,
-        twitter: `https://twitter.com/${cleanName}`,
-        facebook: `https://facebook.com/${cleanName}`,
-        youtube: `https://youtube.com/c/${cleanName}`
-      },
-      funding: mockFunding,
-      recentProducts: mockProducts
-    },
-    painPoints: [
-      {
-        title: "Manual GTM Intent Tracking Core Bottlenecks",
-        severity: "CRITICAL",
-        description: "Revenue operations teams spent average 14 hours per week manually consolidating outbound intent signals across disconnected CRM databases and tracking lists.",
-        evidence: [
+    const completion = await retryWithBackoff(async () => {
+      return await openai.chat.completions.create({
+        model: "nvidia/nemotron-3-ultra-550b-a55b",
+        messages: [
           {
-            quote: "Operational efficiency is our single largest friction point in scaling mid-market outbound engagement this quarter.",
-            source: "VP of Global Revenue Operations Internal Statement",
-            date: "2025-11-14",
-            url: "https://example.com/gtm-efficiency-report"
+            role: "user",
+            content: `${prompt}
+
+Please return ONLY a valid, raw, and parsable JSON object conforming to the structured template we need. No preamble or conversational introduction, just the raw JSON structure.`
           }
         ],
-        impact: "Reduces sales representative active selling time by 28% and creates 4.5 day delay in critical signal-to-response workflows.",
-        timeline: "Unresolved for 3 quarters; listed as top commercial operational priority."
-      },
-      {
-        title: "Cold Email Outreach Deliverability & High Bounce Rates",
-        severity: "HIGH",
-        description: "Due to lack of domain protection verification, multi-channel warmup protocols, and static outreach templates, general campaign domain trust has drifted downward.",
-        evidence: [
-          {
-            quote: "Legacy mail provider changes require immediate engineering upgrades to keep outbound message delivery standards above 92%.",
-            source: "Q3 Systems Infrastructure Audit Report",
-            date: "2026-02-18"
-          }
-        ],
-        impact: "Outbound campaign open rates dropped from 44% to 19.5%, directly impacting quarterly pipeline targets.",
-        timeline: "Active issue since early 2026."
-      },
-      {
-        title: "Inconsistent Post-Connection Personalization on Social Channels",
-        severity: "MEDIUM",
-        description: "Sales representatives lack unified, continuous AI personalization tools for after connection. Copy-pasted standard hooks result in low conversion rates.",
-        evidence: [
-          {
-            quote: "Standard social networking hooks produce less than 4% demo booking rate because they lack company-specific situational context.",
-            source: "Outreach Strategy Executive Summary",
-            date: "2026-04-05"
-          }
-        ],
-        impact: "Higher cost-of-acquisition and saturated prospect lists within key high-value ICP verticals.",
-        timeline: "Under inspection by commercial enablement."
-      }
-    ],
-    techStack: {
-      erp: { name: "NetSuite Cloud ERP", status: "Active System", confidence: "High", source: "Public Job Postings & Technologies Profile" },
-      crm: { name: "Salesforce Enterprise Operations Cloud", status: "Active System", confidence: "High", source: "Inbound pixel detection" },
-      bi: { name: "Tableau Enterprise Server with Snowflake Data Warehouse", status: "Active System", confidence: "Medium", source: "Analytics tag fingerprints" },
-      supplyChain: { name: "Legacy Internal Automation & Manual Spreadsheets", status: "Under Review for Migration", confidence: "Medium", source: "Employee reviews" },
-      websiteTech: ["React v18.2", "Next.js", "Tailwind CSS", "Vercel Hosting", "Google Analytics v4", "HubSpot Tracking Code"]
-    },
-    aiAdoption: {
-      maturityLevel: "Intermediate",
-      deployedTools: ["Customer Service Auto-Responder Beta", "AI Copilot assist in Sales Development Workspace"],
-      plannedTools: ["Cognitive Intent Scoring engine for CRM Hub", "Automated multichannel personalization router"],
-      competitors: [
-        { name: "Apex Solutions", aiMaturity: "Advanced", tools: "Full API-integrated pricing and demand modelers" },
-        { name: "Zenith Core", aiMaturity: "Intermediate", tools: "AI-generated outbound personalization filters" },
-        { name: "Vortex Systems", aiMaturity: "Basic", tools: "Rule-based scoring rules and templates" }
-      ]
-    },
-    aiSolutions: [
-      {
-        title: "Cognitive GTM Signal Personalization Router",
-        painPointCausal: "Manual GTM Intent Tracking Core Bottlenecks",
-        mvp: "A centralized node intercepting inbound LinkedIn webhooks and auto-populating custom outbound structures within 90 seconds.",
-        features: [
-          "Zero-latency webhook synchronization with Salesforce",
-          "Dynamic intent scoring utilizing deep customer profile vectors",
-          "Custom multi-channel routing (WhatsApp/Email/LinkedIn)"
-        ],
-        pricing: {
-          model: "Usage-based Subscription + Platform License",
-          monthlyFee: "$2,450 / month",
-          year1Contract: "$29,400 (billed annually)",
-          potentialLtv: "$117,600 (based on 4-year client lifecycle forecast)"
+        temperature: 1,
+        top_p: 0.95,
+        max_tokens: 16384,
+        extra_body: {
+          "chat_template_kwargs": { "enable_thinking": true },
+          "reasoning_budget": 16384
         },
-        pricingJustification: "Eliminates administrative CRM processing; increases direct client demo conversion by estimated 35%. Pays for itself within First 15 closed deals.",
-        whyYouWin: [
-          "Deeper search-grounding data fidelity compared to traditional scrapers",
-          "Includes continuous WhatsApp auto-personalization hooks",
-          "Direct zero-code API integration into legacy CRMs"
-        ]
-      }
-    ],
-    gtmStrategy: {
-      decisionMaker: {
-        name: "Marcus Sterling",
-        title: "Vice President of Revenue Operations & Commercial Performance",
-        phone: "+1 (415) 883-9124 ext. 410",
-        email: `msterling@${cleanName || 'company'}.com`,
-        linkedinUrl: targetLinkedin || `https://linkedin.com/in/msterling-revops-${cleanName || 'company'}`,
-        responsibilities: "Responsible for commercial tool stack utilization, sales desk enablement, pipeline consistency, and scaling outbound SDR teams globally.",
-        painOwns: "Loves pipeline velocity but hates low-quality SDR list management and CRM sync lags.",
-        motivation: "Aims to achieve 40% year-over-year commercial efficiency gain using highly automated signal routing tools."
-      },
-      openingHook: `Hi Marcus - noticed that your SDR organization is heavily scaling mid-market outreach, but legacy delivery lag can delay intent response by up to 4 days.`,
-      coreMessage: `We sync multi-channel outbound signals (LinkedIn, SMTP) with an automated cognitive intent score to route top-priority decision-makers to you within 90 seconds of signal detection.`,
-      cta: `Worth a quick 10-minute look at how we decreased manual intent tasks by 14 hours/week for companies like ${companyName}?`,
-      expectedObjections: [
-        { objection: "We are currently locked into a Salesforce workflow engine contract.", response: "Our routing layers plug completely natively into your existing Salesforce stack as a lightweight API hook—no migration or workflow teardown required." },
-        { objection: "I am worried about domain sender reputation with automated high-velocity emails.", response: "We utilize multi-inbox rotations and automated warmup patterns to guarantee your main domain is never exposed directly." }
-      ]
-    },
-    dealSizeForecast: {
-      phase1QuickWin: "$29,400 (10 seat pilot program)",
-      phase2Expansion: "$78,500 (Full mid-market team transition)",
-      phase3FullPlatform: "$145,000 (APAC + EMEA global expansion rollouts)",
-      totalRevenueLtv: "$252,900"
-    },
-    markdownReport: `# DETAILED CONSULTING REPORT: ${companyName.toUpperCase()}
-  
-*Prepared by Special AI Strategy Architects and B2B Process Consultants*
-*Classification: Confidential — Senior Executive Eyes Only*
-*Authorized Placement Date: ${new Date().toISOString().split('T')[0]}*
+        stream: false
+      } as any);
+    }, 3, 1500, "NVIDIA Nemotron Benchmark Drift");
 
----
-
-## PART 1: EXECUTIVE BRIEFING & CORE CORPORATE PROFILE
-
-**${companyName}** is operating at the absolute cutting edge of the modern B2B ecosystem, categorized under **${defaultIndustry}**. Strategically anchored with corporate headquarters in **${defaultHQ(companyName)}** since its founding in **${defaultFounded(companyName)}**, the enterprise directs operations with a massive talent pool of **${defaultEmployees}** personnel. The customer success and delivery offices support high-touch accounts across **Global (North America, Europe, APAC)**.
-
-### Value Chain Analysis & Strategic Position
-While the enterprise shows outstanding capability in its baseline services and digital product offerings, systemic manual lag in their outbound channels imposes operational limits:
-
-| Strategic Strengths (S) | Operating Weaknesses (W) |
-| :--- | :--- |
-| **Differentiated Product Baseline**: Highly loyal referenceable accounts utilizing core features. | **Substantial Sales Lag**: SCM/CRM silos and lists suffer from a manual response lag of 4.5 days. |
-| **Geographic Penetration**: Diversified revenue baseline covering major international markets. | **High List Fatigue**: Outbound reps spend hours copying contacts rather than executing. |
-
-| Market Opportunities (O) | Strategic Threats (T) |
-| :--- | :--- |
-| **Cognitive GTM Signal Routing**: Utilizing automated web intent triggers to personalizing outreaches. | **Fast AI Adaptation Competitors**: Direct peers are deploying autonomous scoring and predictive engines. |
-| **Multi-Touch Sequence Playbook**: Streamlining campaign routes to secure a 35% gain in client demos. | **Sender Domain Burn**: Direct bulk mailing from core company domains puts IP trust at severe risk. |
-
----
-
-## PART 2: CAPITALIZATION, FINANCIAL ANALYSIS & HOOP ARR CALCULATIONS
-
-${fundingText}
-
-### Sector-Calibrated Revenue Valuation Heuristics (RPH Model)
-As an unlisted private scaleup or public entity, the corporate revenue model can be computed through a cascading multi-variable RPH equation:
-
-*   **FTE Staff Midpoint**: ${defaultEmployees.includes("-") ? (parseInt(defaultEmployees.split("-")[0]) + parseInt(defaultEmployees.split("-")[1])) / 2 : "1,000"} employees.
-*   **Sector RPH Factor**: \`$240,000\` per head (SaaS and cognitive enterprise benchmark).
-*   **Venture Capital Modifier**: \`1.35\` (VC scaling baseline).
-
-$$\\text{Projected ARR} = \\text{FTE Midpoint} \\times \\text{RPH Factor} \\times \\phi_{\\text{modifier}}$$
-
-This models a projected revenue of **${defaultRevenue}**. While highly liquid, GTM leakage cuts potential margins by **$1.4M to $3.2M** in uncaptured contracts annually.
-
----
-
-## PART 3: LATEST PRODUCT & SERVICE INNOVATIONS
-
-${productsText}
-
-The rapid launch of these features dictates a continuous innovation culture. However, the organization's commercialization speeds remain bottlenecked by manual process mapping and data integration lag in post-signup pipelines.
-
----
-
-## PART 4: OPERATIONAL PAIN-POINT DIAGNOSTICS & SYSTEM RISK
-
-Our deep diagnostic sweep of public engineering hires and infrastructure fingerprints reveals three primary systemic bottlenecks:
-
-### 1. Hard Manual Intent Signal Latency
-Sales development and lead-management professionals currently spend an average of **14 hours per week** consolidating hot signals manually across disconnected systems. High-intent decision-makers remain unrouted for up to **4.5 days**, during which critical pipeline conversion rates decay significantly.
-*   **Quantified Economic Impact**: Cuts active sales representative prospecting bandwidth by 28%.
-*   **Quoted Evidence**: *"Operational efficiency is our single largest friction point in scaling mid-market outbound engagement this quarter."* — VP of Global Revenue Operations (2025-11-14).
-
-### 2. Standardized Outbound Domain Exhaustion
-Due to a lack of automated sandbox warmup routines and static templated sequencing, standard cold campaign delivery rates have suffered downward drift, dropping open rates to **19.5%**.
-*   **Quantified Economic Impact**: Flags primary company outbound communications across global spam databases.
-
-### 3. Static Social Channel Outreach Hooks
-Social prospecting interactions rely primarily on non-personalized, static copies. Standard templates produce a low 4% conversion index due to a lack of buyer-specific situational context.
-
----
-
-## PART 5: TAILORED B2B AI/ML RESOLUTION ARCHITECTURE
-
-We propose the deployment of an enterprise **Cognitive GTM Signal Personalization Router** designed to link signal sources directly with optimized outbound pipelines:
-
-*   **Middle-Tier Webhook Router**: Intercepts hot signals from social APIs and runs lightweight, customized intent calculations under 90 seconds.
-*   **Financial Modeling & Multi-Variable Contract Forecasting**:
-    *   **Monthly Service Retainer**: \`$2,450 / month\`
-    *   **Billed Year-1 Value (Val Year 1)**: \`$29,400\` (Annual prepaid discount applied)
-    *   **Potential Customer Lifetime Value (LTV)**: \`$117,600\` (based on 4-year client lifecycle forecast)
-*   **Pricing Justification**: Completely automates manual verification workflows, saving the sales desk up to **55 combined hours per week**. Returns absolute ROI parity within the first fifteen closed contracts.
-
----
-
-## PART 6: OMNICHANNEL GTM EXECUTIVE OUTREACH SEQUENCE
-
-To convert this research into a direct commercial engagement, we suggest executing the following targeted multi-touch funnel for the executive target:
-
-### Touch 1: LinkedIn Connection Request (Budget: <40 Words)
-> *"Hi Marcus - following your updates on commercial efficiency. Noticed your mid-market sales desks have scaled quickly. Let's exchange terms on automation."*
-
-### Touch 2: Cold Email Pitch (Budget: 120-150 Words)
-> **Subject**: SDR intent signal response lag at ${companyName}
->
-> Dear Marcus,
->
-> Noticed that your outbound groups are actively scaling. However, manual consolidation across Salesforce and lists can trigger a 4.5-day response lag. When high-intent decision-makers show interest, standard SDRs miss the critical window.
->
-> We help RevOps teams automate intent capture and route hyper-personalized WhatsApp or email triggers in under 90 seconds. We saved similar software companies up to 14 hours per desk week.
->
-> Would you be open to a brief, 10-minute preview next Tuesday?
->
-> Best regards,
-> [Your Name]
-
-### Touch 3: WhatsApp Quick Value Connect (Budget: <100 Words)
-> *"Hi Marcus - sent an email on the 4.5-day response lag on mid-market outbound signals. We built a lightweight analyzer that automates list consolidation. No link or pitch here, just wanted to see if your team is focusing on signal automation this quarter?"*
-
-### Touch 4: Cold Email Follow-Up (Budget: <60 Words)
-> **Subject**: Re: response lag
->
-> Marcus,
->
-> Following up on the above. Given the current domain protections, failing to warm active sender routes can flag standard campaigns.
->
-> Open for a 5-minute sync on this work next Thursday?
->
-> Best,
-> [Your Name]
-
----
-
-## PART 7: DECISION-MAKER ALIGNMENT & PERSONA MATRIX
-
-### Target Stakeholder Profile Mapping
-*   **Assigned Lead**: **Marcus Sterling**
-*   **Grounded Executive Designation**: *Vice President of Revenue Operations & Commercial Performance*
-*   **Dynamic Professional Motivation**: Marcus is heavily focused on optimizing CRM utilization rates, compression of SDR cycle times, and eliminating manual list-cleaning tasks. He is highly protective of domain sender reputations and hates "AI spam" but welcomes intelligent process automations that can show immediate, hard quantitative business cases.
-*   **Strategic Pitch Alignment**: Our value proposition completely speaks his language. Instead of talking about vague AI concepts, the sequence targets his exact corporate pain points (14 hours of manual tasks, 4.5 days response lag, and domain sender reputation threats).
-
----
-
-## PART 8: OMNICHANNEL AUDITING & BENCHMARK PERFORMANCE ANALYSIS
-
-To guide Marcus through a successful implementation journey, the sales enablement team should leverage the following operational roadmap benchmarks:
-
-\`\`\`
-                  CRM INTEGRATION RUNWAY & TIME TO ROI
-[Month 1: Integration] ----> [Month 2: Signal Warmup] ----> [Month 3: Full Automation]
-- Setup webhook node        - Cold domain warmup sheets   - 90-sec signal routing live
-- Link Salesforce CRM       - Pilot 10 SDR seats active   - Compass ROI reached (+35% conv)
-\`\`\`
-
-### Actionable Audit Target Metrics:
-1.  **Response Speed KPI**: Decrease from 4.5 days to under 90 seconds.
-2.  **SDR Bandwidth Reclaimed**: Reclaim 14 active selling hours/week per head.
-3.  **Campaign Output Health**: Maintain main domain open rates above 40% through strict auxiliary routing boundaries.`
-  };
-}
-
-function getMockBenchmarkDrift(leads: any[]): any {
-  return {
-    summary: `Your campaign's average lead intent score has drifted to ${leads.length ? Math.round(leads.reduce((acc: number, l: any) => acc + (l.score || 60), 0) / leads.length) : 58}, representing warning levels. Mismatch detected between target decision-makers titles (many lack direct budgetary oversight) and localized geographic segments.`,
-    keyIssues: [
-      {
-        issue: "Decision Maker Juniority",
-        description: "Over 45% of target leads in this cohort hold associate or assistant-level titles with zero direct P&L or budget approval authority.",
-        impact: "Extends sales cycle length by estimated 35 days due to internal referral loops."
-      },
-      {
-        issue: "Broad Vertical Demographics",
-        description: "Target lists combine legacy logistics companies with advanced SaaS companies, diluting personalized outreach effectiveness.",
-        impact: "Outbound campaign open and click-through rates fell by 22%."
-      },
-      {
-        issue: "Geographic Inconsistencies",
-        description: "Active message sequences are dispatched in non-localized time zones, resulting in low morning email placement.",
-        impact: "Vast majority of messages land at the bottom of target executive inboxes."
-      }
-    ],
-    actionableImprovements: [
-      {
-        title: "Target VP & C-Level Executives exclusively",
-        channels: ["LinkedIn", "Email"],
-        proposedStrategy: "Restrict smart filtering to only match 'VP', 'Director', 'Chief', or 'Head of' keywords.",
-        exampleOutreachSubject: "Optimizing operations cost-efficiency",
-        exampleOutreachBody: "Hi [Name], noticed your corporate focus on operational velocity. Let's sync on SDR benchmarks."
-      },
-      {
-        title: "Implement Domain Rotation warmup sets",
-        channels: ["Email"],
-        proposedStrategy: "Route outgoing cold scripts through three unique auxiliary email domains in sequence to preserve main brand credibility.",
-        exampleOutreachSubject: "Quick check: pipeline leakage audit",
-        exampleOutreachBody: "Hi [Name], we built a lightweight analyzer to detect system leakages. Worth a 2-minute preview?"
-      },
-      {
-        title: "Deploy localized sending windows",
-        channels: ["LinkedIn", "WhatsApp"],
-        proposedStrategy: "Align automations with the time zone of each individual lead contact automatically.",
-        exampleOutreachSubject: "Sync scheduling",
-        exampleOutreachBody: "Hi [Name], synchronizing GTM scheduling."
-      }
-    ],
-    reallocationAdvice: "We recommend immediately pausing the generic mid-market IT list and re-directing SDR focus strictly toward Tier-1 VP of Sales and VP of Operations targets within the Financial Services and Advanced Tech segments."
-  };
+    const rawText = completion.choices[0]?.message?.content || '';
+    if (rawText.trim()) {
+      return cleanAndParseJSON(rawText);
+    }
+    throw new Error("Empty response received from NVIDIA Nemotron API");
+  } catch (error) {
+    console.error("NVIDIA Benchmark Drift Analysis Error on server:", error);
+    throw error;
+  }
 }
 
 export async function generateCrmHelpBackend(actionType: string, payload: any): Promise<any> {
@@ -1307,52 +596,40 @@ Provide the response in the exact following JSON structure:
       throw new Error(`Unsupported action type: ${actionType}`);
     }
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
-      config: {
-        systemInstruction,
-        responseMimeType: "application/json",
-        temperature: 0.3,
-      }
-    });
-
-    const text = response.text || "{}";
-    return cleanAndParseJSON(text);
-  } catch (err: any) {
-    console.error("[CRM Help AI Error]:", err);
-    // Return high quality fallback JSON in case of quota or network issues
-    if (actionType === "email_draft_assist") {
-      return {
-        improved_subject: `Unlocking operational efficiency for ${payload.leadContext?.company || 'your team'}`,
-        improved_body: `Dear ${payload.leadContext?.name || 'Prospect'},\n\nI was impressed by ${payload.leadContext?.company || 'your organization'}'s growth in the ${payload.leadContext?.industry || 'B2B'} space. However, legacy signal-to-response workflows can create unnecessary latency for sales desk execution.\n\nWe coordinate multichannel outreach routines to route key accounts in under 90 seconds, saving managers up to 14 desk hours per week.\n\nWould you be open to a brief, 10-minute preview next Tuesday?\n\nBest regards,\nSales Team`,
-        reasoning: "Utilized direct, value-aligned commercial positioning targeting speed-to-lead bottlenecks."
-      };
-    } else if (actionType === "call_notes_assist") {
-      return {
-        summary: `Productive discussion with ${payload.leadContext?.name || 'Prospect'} regarding CRM scalability and domain warming patterns.`,
-        sentiment: "Positive",
-        key_points: [
-          "Express interest in automated multi-channel sequencing",
-          "Concerned about budget bounds in the upcoming quarter",
-          "Requested an active live dashboard blueprint walk-through"
-        ],
-        risk_analysis: "Minor budget friction identified; need to justify early ROI metrics to offset licensing overhead.",
-        extracted_tasks: [
+    const completion = await retryWithBackoff(async () => {
+      return await openai.chat.completions.create({
+        model: "nvidia/nemotron-3-ultra-550b-a55b",
+        messages: [
           {
-            title: `Deliver custom platform blueprint for ${payload.leadContext?.company || 'Organization'}`,
-            dueDate: new Date(Date.now() + 3 * 24 * 3600 * 1000).toISOString().split('T')[0]
+            role: "system",
+            content: systemInstruction
+          },
+          {
+            role: "user",
+            content: `${prompt}
+
+Please return ONLY a valid, raw, and parsable JSON object conforming to the requested structure. No preamble or conversational introduction, just the raw JSON structure.`
           }
-        ]
-      };
-    } else {
-      return {
-        recommended_deal_value: payload.leadContext?.employees ? (parseInt(payload.leadContext.employees) > 100 ? 75000 : 35000) : 25000,
-        recommended_probability: 55,
-        suggested_tags: ["High-Value", payload.leadContext?.industry || "Enterprise"],
-        closing_strategy: `Focus on scaling personalized outbound campaigns to prove response-time reductions for ${payload.leadContext?.company || 'target account'}.`
-      };
+        ],
+        temperature: 1,
+        top_p: 0.95,
+        max_tokens: 16384,
+        extra_body: {
+          "chat_template_kwargs": { "enable_thinking": true },
+          "reasoning_budget": 16384
+        },
+        stream: false
+      } as any);
+    }, 3, 1500, "NVIDIA Nemotron CRM Help");
+
+    const rawText = completion.choices[0]?.message?.content || '';
+    if (rawText.trim()) {
+      return cleanAndParseJSON(rawText);
     }
+    throw new Error("Empty response received from NVIDIA Nemotron API");
+  } catch (err: any) {
+    console.error("[NVIDIA CRM Help AI Error]:", err);
+    throw err;
   }
 }
 
