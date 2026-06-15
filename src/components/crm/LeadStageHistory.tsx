@@ -67,7 +67,7 @@ export default function LeadStageHistory({ isOpen, onClose, leadId, leadName }: 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
+            className="fixed inset-0 bg-black/50 z-50"
             onClick={onClose}
           />
 
@@ -77,7 +77,7 @@ export default function LeadStageHistory({ isOpen, onClose, leadId, leadName }: 
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 250 }}
-            className="fixed right-0 top-0 h-full w-full max-w-md z-50 flex flex-col shadow-2xl"
+            className="fixed right-0 top-0 h-full w-full max-w-md z-50 flex flex-col"
             style={{ background: 'var(--surface)', borderLeft: '1px solid var(--border)' }}
           >
             {/* Header */}
@@ -86,7 +86,7 @@ export default function LeadStageHistory({ isOpen, onClose, leadId, leadName }: 
                 <h2 className="text-base font-bold text-text">Stage Audit Trail</h2>
                 <p className="text-xs text-text-secondary">{leadName}</p>
               </div>
-              <button onClick={onClose} className="p-2 rounded-lg hover:bg-surface-elevated text-text-secondary">
+              <button onClick={onClose} className="p-2 rounded-xl hover:bg-surface-elevated text-text-secondary">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -155,7 +155,7 @@ export default function LeadStageHistory({ isOpen, onClose, leadId, leadName }: 
                           {daysSpent !== null && toStage.slaDays > 0 && (
                             <div className="flex items-center justify-between text-3xs border-t border-border/50 pt-2">
                               <span className="text-text-secondary">SLA Limit: {toStage.slaDays} days</span>
-                              <span className={`font-semibold ${isSlaBreached ? 'text-rose-400' : 'text-emerald-400'}`}>
+                              <span className={`font-semibold${isSlaBreached ? 'text-rose-400' : 'text-emerald-400'}`}>
                                 {isSlaBreached
                                   ? `Breached (${daysSpent} days)`
                                   : `Under Limit (${daysSpent} days)`}
@@ -164,7 +164,7 @@ export default function LeadStageHistory({ isOpen, onClose, leadId, leadName }: 
                           )}
 
                           {entry.notes && (
-                            <p className="text-xs text-text-secondary italic bg-surface/30 p-2 rounded-lg border border-border/30 mt-2">
+                            <p className="text-xs text-text-secondary italic bg-surface/30 p-2 rounded-xl border border-border/30 mt-2">
                               "{entry.notes}"
                             </p>
                           )}

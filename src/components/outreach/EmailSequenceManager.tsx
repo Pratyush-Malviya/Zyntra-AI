@@ -143,7 +143,7 @@ export default function EmailSequenceManager({ orgId, profile }: EmailSequenceMa
     return (
       <div className="p-6 space-y-6 max-w-2xl mx-auto">
         <div className="flex items-center gap-3">
-          <button onClick={() => setView('list')} className="p-2 rounded-lg hover:bg-surface-elevated text-text-secondary">
+          <button onClick={() => setView('list')} className="p-2 rounded-xl hover:bg-surface-elevated text-text-secondary">
             <ChevronRight className="w-4 h-4 rotate-180" />
           </button>
           <div>
@@ -205,7 +205,7 @@ export default function EmailSequenceManager({ orgId, profile }: EmailSequenceMa
           <button
             onClick={handlePersonalise}
             disabled={!form.contactName || !form.companyName || generating}
-            className="w-full py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-sm font-semibold hover:opacity-90 disabled:opacity-40 flex items-center justify-center gap-2"
+            className="w-full py-2.5 rounded-xl text-text text-sm font-semibold hover:opacity-90 disabled:opacity-40 flex items-center justify-center gap-2"
           >
             {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
             {generating ? 'Personalising...' : 'AI Personalise All 3 Touches'}
@@ -219,7 +219,7 @@ export default function EmailSequenceManager({ orgId, profile }: EmailSequenceMa
             <div key={idx} className="card p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="w-6 h-6 rounded-full bg-primary text-white text-[11px] font-bold flex items-center justify-center">
+                  <span className="w-6 h-6 rounded-full bg-primary text-text text-[11px] font-bold flex items-center justify-center">
                     {idx + 1}
                   </span>
                   <span className="text-sm font-semibold text-text">Day {touch.day}</span>
@@ -231,7 +231,7 @@ export default function EmailSequenceManager({ orgId, profile }: EmailSequenceMa
                 </div>
                 <button
                   onClick={() => setEditingTouch(editingTouch === idx ? null : idx)}
-                  className="p-1.5 rounded-lg hover:bg-surface-elevated text-text-secondary transition-colors"
+                  className="p-1.5 rounded-xl hover:bg-surface-elevated text-text-secondary transition-colors"
                 >
                   <Edit3 className="w-3.5 h-3.5" />
                 </button>
@@ -239,7 +239,7 @@ export default function EmailSequenceManager({ orgId, profile }: EmailSequenceMa
 
               <div>
                 <div className="text-[10px] font-bold text-text-secondary uppercase mb-1">Subject</div>
-                <div className="text-sm text-text bg-surface-elevated px-3 py-2 rounded-lg border border-border">
+                <div className="text-sm text-text bg-surface-elevated px-3 py-2 rounded-xl border border-border">
                   {touch.subject}
                 </div>
               </div>
@@ -266,7 +266,7 @@ export default function EmailSequenceManager({ orgId, profile }: EmailSequenceMa
           <button
             onClick={handleCreate}
             disabled={!form.sequenceName}
-            className="flex-1 py-3 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-semibold text-sm hover:opacity-90 disabled:opacity-40"
+            className="flex-1 py-3 rounded-xl text-text font-semibold text-sm hover:opacity-90 disabled:opacity-40"
           >
             Launch Sequence
           </button>
@@ -279,7 +279,7 @@ export default function EmailSequenceManager({ orgId, profile }: EmailSequenceMa
     return (
       <div className="p-6 space-y-6">
         <div className="flex items-center gap-3">
-          <button onClick={() => setView('list')} className="p-2 rounded-lg hover:bg-surface-elevated text-text-secondary">
+          <button onClick={() => setView('list')} className="p-2 rounded-xl hover:bg-surface-elevated text-text-secondary">
             <ChevronRight className="w-4 h-4 rotate-180" />
           </button>
           <div>
@@ -337,7 +337,7 @@ export default function EmailSequenceManager({ orgId, profile }: EmailSequenceMa
           </button>
           <button
             onClick={() => setView('create')}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-sm font-semibold hover:opacity-90"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-text text-sm font-semibold hover:opacity-90"
           >
             <Plus className="w-4 h-4" />
             New Sequence
@@ -356,7 +356,7 @@ export default function EmailSequenceManager({ orgId, profile }: EmailSequenceMa
         ].map(({ label, value, icon: Icon, color }) => (
           <div key={label} className="card p-4">
             <div className="flex items-center justify-between mb-2">
-              <div className="p-1.5 rounded-lg" style={{ background: color + '15' }}>
+              <div className="p-1.5 rounded-xl" style={{ background: color + '15' }}>
                 <Icon className="w-4 h-4" style={{ color }} />
               </div>
               <span className="text-2xl font-bold text-text">{value}</span>
@@ -369,7 +369,7 @@ export default function EmailSequenceManager({ orgId, profile }: EmailSequenceMa
       {/* Listmonk integration info */}
       <div className="card p-4 border border-amber-500/20 bg-amber-500/5">
         <div className="flex items-start gap-3">
-          <div className="p-2 rounded-lg bg-amber-500/10">
+          <div className="p-2 rounded-xl bg-amber-500/10">
             <Zap className="w-4 h-4 text-amber-400" />
           </div>
           <div className="flex-1">
@@ -441,7 +441,7 @@ export default function EmailSequenceManager({ orgId, profile }: EmailSequenceMa
 
                   <button
                     onClick={() => handleToggleStatus(seq)}
-                    className="p-2 rounded-lg hover:bg-surface-elevated text-text-secondary transition-colors"
+                    className="p-2 rounded-xl hover:bg-surface-elevated text-text-secondary transition-colors"
                   >
                     {seq.status === 'active' ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
                   </button>

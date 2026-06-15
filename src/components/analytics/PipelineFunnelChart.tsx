@@ -120,7 +120,7 @@ export function PipelineFunnelChart({ orgId }: PipelineFunnelChartProps) {
         ].map(({ label, value, icon: Icon, color, delta }) => (
           <div key={label} className="card p-4">
             <div className="flex items-center justify-between mb-2">
-              <div className="p-1.5 rounded-lg" style={{ background: color + '15' }}>
+              <div className="p-1.5 rounded-xl" style={{ background: color + '15' }}>
                 <Icon className="w-4 h-4" style={{ color }} />
               </div>
               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400">
@@ -139,7 +139,7 @@ export function PipelineFunnelChart({ orgId }: PipelineFunnelChartProps) {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+            className="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
             style={{
               background: activeTab === tab.id ? 'var(--color-primary)' : 'transparent',
               color: activeTab === tab.id ? 'white' : 'var(--text-secondary)',
@@ -160,9 +160,9 @@ export function PipelineFunnelChart({ orgId }: PipelineFunnelChartProps) {
                 <div className="w-32 text-[11px] text-text-secondary font-medium truncate shrink-0">
                   {stage.label}
                 </div>
-                <div className="flex-1 h-8 bg-surface-elevated rounded-lg overflow-hidden relative">
+                <div className="flex-1 h-8 bg-surface-elevated rounded-xl overflow-hidden relative">
                   <motion.div
-                    className="h-full rounded-lg flex items-center px-3"
+                    className="h-full rounded-xl flex items-center px-3"
                     initial={{ width: 0 }}
                     animate={{ width: `${stage.conversionRate}%` }}
                     transition={{ delay: idx * 0.05, duration: 0.5 }}

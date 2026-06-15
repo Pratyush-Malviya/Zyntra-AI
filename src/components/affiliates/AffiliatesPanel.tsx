@@ -113,7 +113,7 @@ export default function AffiliatesPanel({ orgId, profile }: AffiliatesPanelProps
     return (
       <div className="p-6 max-w-lg mx-auto space-y-6">
         <div className="flex items-center gap-3">
-          <button onClick={() => setView('list')} className="p-2 rounded-lg hover:bg-surface-elevated text-text-secondary">
+          <button onClick={() => setView('list')} className="p-2 rounded-xl hover:bg-surface-elevated text-text-secondary">
             <ChevronRight className="w-4 h-4 rotate-180" />
           </button>
           <div>
@@ -170,7 +170,7 @@ export default function AffiliatesPanel({ orgId, profile }: AffiliatesPanelProps
           <button
             onClick={handleCreate}
             disabled={!form.fullName || !form.email || saving}
-            className="w-full py-3 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-semibold text-sm hover:opacity-90 disabled:opacity-40 flex items-center justify-center gap-2"
+            className="w-full py-3 rounded-xl text-text font-semibold text-sm hover:opacity-90 disabled:opacity-40 flex items-center justify-center gap-2"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Users className="w-4 h-4" />}
             Create Affiliate Partner
@@ -190,7 +190,7 @@ export default function AffiliatesPanel({ orgId, profile }: AffiliatesPanelProps
         </div>
         <button
           onClick={() => setView('create')}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-sm font-semibold hover:opacity-90 transition-all"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-text text-sm font-semibold hover:opacity-90 transition-all"
         >
           <Plus className="w-4 h-4" />
           Add Partner
@@ -207,7 +207,7 @@ export default function AffiliatesPanel({ orgId, profile }: AffiliatesPanelProps
         ].map(({ label, value, icon: Icon, color }) => (
           <div key={label} className="card p-4">
             <div className="flex items-center justify-between mb-2">
-              <div className="p-1.5 rounded-lg" style={{ background: color + '15' }}>
+              <div className="p-1.5 rounded-xl" style={{ background: color + '15' }}>
                 <Icon className="w-4 h-4" style={{ color }} />
               </div>
               <span className="text-2xl font-bold text-text">{value}</span>
@@ -240,7 +240,7 @@ export default function AffiliatesPanel({ orgId, profile }: AffiliatesPanelProps
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center text-text font-bold text-sm flex-shrink-0">
                       {affiliate.fullName.charAt(0).toUpperCase()}
                     </div>
                     <div>
@@ -279,14 +279,14 @@ export default function AffiliatesPanel({ orgId, profile }: AffiliatesPanelProps
                   <div className="flex gap-1.5 shrink-0">
                     <button
                       onClick={() => handleCopy(affiliate.referralCode, `code-${affiliate.id}`)}
-                      className="p-2 rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all"
+                      className="p-2 rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all"
                       title="Copy code"
                     >
                       {copied === `code-${affiliate.id}` ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                     </button>
                     <button
                       onClick={() => handleCopy(refLink, `link-${affiliate.id}`)}
-                      className="p-2 rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all"
+                      className="p-2 rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all"
                       title="Copy referral link"
                     >
                       {copied === `link-${affiliate.id}` ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Link2 className="w-3.5 h-3.5" />}
@@ -301,7 +301,7 @@ export default function AffiliatesPanel({ orgId, profile }: AffiliatesPanelProps
                     { label: 'Earned',    value: `$${affiliate.totalEarned.toLocaleString()}` },
                     { label: 'Rate',      value: `${affiliate.commissionRate}%` },
                   ].map(({ label, value }) => (
-                    <div key={label} className="text-center p-2 rounded-lg bg-surface-elevated">
+                    <div key={label} className="text-center p-2 rounded-xl bg-surface-elevated">
                       <div className="text-xs font-bold text-text">{value}</div>
                       <div className="text-[10px] text-text-secondary">{label}</div>
                     </div>
@@ -316,7 +316,7 @@ export default function AffiliatesPanel({ orgId, profile }: AffiliatesPanelProps
       {/* Onboarding sequence info */}
       <div className="card p-4 border border-primary/20 bg-primary/5">
         <div className="flex items-start gap-3">
-          <div className="p-2 rounded-lg bg-primary/10">
+          <div className="p-2 rounded-xl bg-primary/10">
             <Mail className="w-4 h-4 text-primary" />
           </div>
           <div>

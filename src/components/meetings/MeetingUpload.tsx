@@ -89,7 +89,7 @@ export default function MeetingUpload({ meeting, onComplete, onBack }: MeetingUp
     <div className="p-6 max-w-2xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <button onClick={onBack} className="p-2 rounded-lg hover:bg-surface-elevated text-text-secondary transition-colors">
+        <button onClick={onBack} className="p-2 rounded-xl hover:bg-surface-elevated text-text-secondary transition-colors">
           <ChevronRight className="w-4 h-4 rotate-180" />
         </button>
         <div>
@@ -129,7 +129,7 @@ export default function MeetingUpload({ meeting, onComplete, onBack }: MeetingUp
                 onChange={e => { const f = e.target.files?.[0]; if (f) handleFileSelect(f); }}
               />
               <div className="flex flex-col items-center gap-4">
-                <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
+                <div className="w-16 h-16 rounded-xl bg-primary/10 flex items-center justify-center">
                   <FileAudio className="w-8 h-8 text-primary" />
                 </div>
                 <div>
@@ -205,7 +205,7 @@ export default function MeetingUpload({ meeting, onComplete, onBack }: MeetingUp
               <button
                 onClick={() => { onComplete(manualTranscript); }}
                 disabled={manualTranscript.trim().length < 50}
-                className="flex-1 py-3 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-semibold text-sm hover:opacity-90 transition-all disabled:opacity-40"
+                className="flex-1 py-3 rounded-xl text-text font-semibold text-sm hover:opacity-90 transition-all disabled:opacity-40"
               >
                 Analyse Transcript
               </button>
@@ -250,7 +250,7 @@ export default function MeetingUpload({ meeting, onComplete, onBack }: MeetingUp
               </div>
               <div className="h-2 bg-surface-elevated rounded-full overflow-hidden">
                 <motion.div
-                  className="h-full rounded-full bg-gradient-to-r from-violet-600 to-indigo-600"
+                  className="h-full rounded-full"
                   style={{ width: `${progress}%` }}
                   transition={{ duration: 0.3 }}
                 />
@@ -259,7 +259,7 @@ export default function MeetingUpload({ meeting, onComplete, onBack }: MeetingUp
 
             <div className="space-y-2 text-xs text-text-secondary">
               {['Uploading audio file', 'Initialising Whisper model', 'Transcribing speech', 'Formatting output'].map((step, i) => (
-                <div key={step} className={`flex items-center gap-2 ${progress >= (i + 1) * 25 ? 'text-emerald-400' : ''}`}>
+                <div key={step} className={`flex items-center gap-2${progress >= (i + 1) * 25 ? 'text-emerald-400' : ''}`}>
                   {progress >= (i + 1) * 25
                     ? <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" />
                     : progress >= i * 25
@@ -303,7 +303,7 @@ export default function MeetingUpload({ meeting, onComplete, onBack }: MeetingUp
               </button>
               <button
                 onClick={() => onComplete(transcript)}
-                className="flex-1 py-3 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-semibold text-sm hover:opacity-90 transition-all flex items-center justify-center gap-2"
+                className="flex-1 py-3 rounded-xl text-text font-semibold text-sm hover:opacity-90 transition-all flex items-center justify-center gap-2"
               >
                 Analyse with AI
                 <ChevronRight className="w-4 h-4" />

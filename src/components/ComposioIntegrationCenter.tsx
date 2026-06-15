@@ -354,8 +354,8 @@ export const ComposioIntegrationCenter: React.FC<ComposioIntegrationCenterProps>
     <div className="space-y-8 text-xs font-sans text-text">
       
       {/* 1. Header Board Grid */}
-      <div className="relative bg-[#101321]/80 border border-border rounded-3xl p-6 md:p-8 space-y-6 overflow-hidden shadow-2xl">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-[80px] pointer-events-none" />
+      <div className="relative border border-border rounded-xl p-6 md:p-8 space-y-6 overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full pointer-events-none" />
         
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative">
           <div className="space-y-2">
@@ -366,8 +366,8 @@ export const ComposioIntegrationCenter: React.FC<ComposioIntegrationCenterProps>
               </span>
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
             </div>
-            <h2 className="text-lg md:text-xl font-black text-white tracking-tight flex items-center gap-2">
-              <Cpu className="w-6 h-6 text-[#00d4aa]" />
+            <h2 className="text-lg md:text-xl font-black text-text tracking-tight flex items-center gap-2">
+              <Cpu className="w-6 h-6" />
               Composio.dev Agent Integrations Center
             </h2>
             <p className="text-text-muted text-[11px] leading-relaxed max-w-2xl">
@@ -380,13 +380,13 @@ export const ComposioIntegrationCenter: React.FC<ComposioIntegrationCenterProps>
             disabled={isLoadingConnections}
             className="md:self-start flex items-center gap-1.5 px-4.5 py-3.5 bg-surface hover:bg-surface-alt border border-border rounded-xl font-bold hover:text-brand transition-all cursor-pointer select-none text-xs disabled:opacity-40"
           >
-            <RefreshCw className={`w-4 h-4 ${isLoadingConnections ? "animate-spin" : ""}`} />
+            <RefreshCw className={`w-4 h-4${isLoadingConnections ? "animate-spin" : ""}`} />
             Sync Connections Status
           </button>
         </div>
 
         {/* API Key settings card inside composio dashboard */}
-        <div className="p-5 bg-black/40 border border-border/80 rounded-2xl space-y-4">
+        <div className="p-5 bg-black/40 border border-border/80 rounded-xl space-y-4">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-orange-400/10 flex items-center justify-center border border-orange-400/20">
@@ -420,7 +420,7 @@ export const ComposioIntegrationCenter: React.FC<ComposioIntegrationCenterProps>
                     placeholder="ak_p4..."
                     value={tempKey}
                     onChange={(e) => setTempKey(e.target.value)}
-                    className="flex-1 px-4 py-2.5 bg-black/80 border border-border hover:border-brand rounded-xl font-mono text-white text-xs tracking-wider font-extrabold focus:outline-none"
+                    className="flex-1 px-4 py-2.5 bg-black/80 border border-border hover:border-brand rounded-xl font-mono text-text text-xs tracking-wider font-extrabold focus:outline-none"
                   />
                   <div className="flex gap-2.5 shrink-0">
                     <button 
@@ -433,7 +433,7 @@ export const ComposioIntegrationCenter: React.FC<ComposioIntegrationCenterProps>
                     <button 
                       type="button"
                       onClick={() => setIsEditingKey(false)}
-                      className="px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl cursor-pointer text-xs"
+                      className="px-4 py-2.5 bg-surface hover:bg-zinc-700 text-text rounded-xl cursor-pointer text-xs"
                     >
                       Cancel
                     </button>
@@ -452,7 +452,7 @@ export const ComposioIntegrationCenter: React.FC<ComposioIntegrationCenterProps>
       <div className="space-y-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-0.5">
-            <h3 className="text-sm font-extrabold text-white flex items-center gap-1.5">
+            <h3 className="text-sm font-extrabold text-text flex items-center gap-1.5">
               <Zap className="w-4.5 h-4.5 text-brand" />
               Available App Integrations
             </h3>
@@ -504,7 +504,7 @@ export const ComposioIntegrationCenter: React.FC<ComposioIntegrationCenterProps>
                       <AppIcon className="w-5.5 h-5.5" />
                     </div>
                     <div className="space-y-0.5">
-                      <span className="font-extrabold text-white text-xs block">{app.label}</span>
+                      <span className="font-extrabold text-text text-xs block">{app.label}</span>
                       <span className="text-[9px] font-mono text-text-muted uppercase tracking-wider">{getCategoryLabel(app.category)}</span>
                     </div>
                   </div>
@@ -515,7 +515,7 @@ export const ComposioIntegrationCenter: React.FC<ComposioIntegrationCenterProps>
                       Connected
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-500 text-[8px] font-bold uppercase tracking-wider border border-border">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface text-zinc-500 text-[8px] font-bold uppercase tracking-wider border border-border">
                       Disconnected
                     </span>
                   )}
@@ -530,7 +530,7 @@ export const ComposioIntegrationCenter: React.FC<ComposioIntegrationCenterProps>
                   {connected ? (
                     <>
                       <div className="text-[9px] text-text-muted truncate flex-1 font-mono uppercase">
-                        ID: <span className="text-zinc-300 font-bold " title={connId}>{connId.substring(0, 10)}...</span>
+                        ID: <span className="text-zinc-300 font-bold" title={connId}>{connId.substring(0, 10)}...</span>
                       </div>
                       <button 
                         onClick={() => handleRevokeConnection(connId, app.label)}
@@ -564,14 +564,14 @@ export const ComposioIntegrationCenter: React.FC<ComposioIntegrationCenterProps>
 
                 {/* Redirect Link Overlay Option */}
                 {!connected && authRedirectUrl && connectingAppId === app.name && (
-                  <div className="p-3 bg-brand/5 border border-brand/20 rounded-xl space-y-2 mt-2 leading-relaxed">
+                  <div className="p-3 bg-brand/5 border border-border rounded-xl space-y-2 mt-2 leading-relaxed">
                     <span className="text-[9px] font-bold text-brand uppercase block animate-pulse">🔒 Authorization Window Ready</span>
                     <p className="text-[9px] text-text-muted">Click the link below to verify credentials on the official secure portal:</p>
                     <a 
                       href={authRedirectUrl} 
                       target="_blank" 
                       rel="noopener noreferrer"
-                      className="px-3 py-2 bg-brand text-black font-extrabold text-[10px] rounded-lg flex items-center justify-center gap-1 cursor-pointer hover:bg-brand/90 transition-all select-none leading-none"
+                      className="px-3 py-2 bg-brand text-black font-extrabold text-[10px] rounded-xl flex items-center justify-center gap-1 cursor-pointer hover:bg-brand/90 transition-all select-none leading-none"
                     >
                       <ExternalLink className="w-3 h-3 stroke-[2.5]" />
                       Authenticate {app.label} Connection
@@ -588,12 +588,12 @@ export const ComposioIntegrationCenter: React.FC<ComposioIntegrationCenterProps>
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         
         {/* Action Form Card */}
-        <div className="lg:col-span-7 bg-surface border border-border rounded-3xl p-6 md:p-8 space-y-6">
+        <div className="lg:col-span-7 bg-surface border border-border rounded-xl p-6 md:p-8 space-y-6">
           <div className="space-y-1">
             <span className="px-2 py-0.5 rounded-full bg-brand-alt/10 text-brand-alt font-extrabold uppercase text-[8px] tracking-widest border border-brand-alt/25">
               Outbound Sandbox
             </span>
-            <h3 className="text-sm font-extrabold text-white flex items-center gap-2 mt-1">
+            <h3 className="text-sm font-extrabold text-text flex items-center gap-2 mt-1">
               <Play className="w-4 h-4 text-brand-alt" />
               Composio Action Execution Playground
             </h3>
@@ -637,10 +637,10 @@ export const ComposioIntegrationCenter: React.FC<ComposioIntegrationCenterProps>
           </div>
 
           {/* Action form payload fields */}
-          <form onSubmit={handleExecuteAction} className="p-5 bg-black/30 border border-border rounded-2xl space-y-4">
+          <form onSubmit={handleExecuteAction} className="p-5 bg-black/30 border border-border rounded-xl space-y-4">
             <div className="border-b border-border pb-2.5 mb-2">
               <span className="text-[9px] font-mono text-brand font-bold uppercase tracking-wider block">REST Target Action ID</span>
-              <span className="text-[11px] text-white font-extrabold select-all">{selectedAppForAction.popularAction.id}</span>
+              <span className="text-[11px] text-text font-extrabold select-all">{selectedAppForAction.popularAction.id}</span>
               <p className="text-[10px] text-text-muted mt-1 leading-relaxed">{selectedAppForAction.popularAction.desc}</p>
             </div>
 
@@ -656,7 +656,7 @@ export const ComposioIntegrationCenter: React.FC<ComposioIntegrationCenterProps>
                       value={value}
                       rows={4}
                       onChange={(e) => setActionPayload({ ...actionPayload, [field.name]: e.target.value })}
-                      className="w-full px-3.5 py-2 px-3.5 bg-black/80 border border-border hover:border-brand focus:border-brand/80 rounded-xl focus:outline-none placeholder:text-zinc-600 focus:ring-0 leading-relaxed font-sans text-xs"
+                      className="w-full px-3.5 py-2 bg-black/80 border border-border hover:border-brand rounded-xl focus:outline-none placeholder:text-zinc-600 focus:ring-0 leading-relaxed font-sans text-xs"
                     />
                   ) : (
                     <input 
@@ -665,7 +665,7 @@ export const ComposioIntegrationCenter: React.FC<ComposioIntegrationCenterProps>
                       placeholder={field.placeholder}
                       value={value}
                       onChange={(e) => setActionPayload({ ...actionPayload, [field.name]: e.target.value })}
-                      className="w-full px-3.5 py-2.5 bg-black/80 border border-border hover:border-brand focus:border-brand/80 rounded-xl focus:outline-none placeholder:text-zinc-600 focus:ring-0 font-sans text-xs"
+                      className="w-full px-3.5 py-2.5 bg-black/80 border border-border hover:border-brand rounded-xl focus:outline-none placeholder:text-zinc-600 focus:ring-0 font-sans text-xs"
                     />
                   )}
                 </div>
@@ -699,9 +699,9 @@ export const ComposioIntegrationCenter: React.FC<ComposioIntegrationCenterProps>
 
           {/* Action response results */}
           {executionResult && (
-            <div className="p-5 bg-[#090a14] border border-[#3b82f6]/20 rounded-2xl space-y-2">
-              <span className="text-[10px] font-mono text-[#3b82f6] font-bold uppercase block tracking-wider">RESPONSE PAYLOAD RECEIVED</span>
-              <pre className="text-[10px] font-mono leading-relaxed bg-black/40 p-3 rounded-lg overflow-x-auto text-zinc-300 max-h-40">
+            <div className="p-5 border rounded-xl space-y-2">
+              <span className="text-[10px] font-mono font-bold uppercase block tracking-wider">RESPONSE PAYLOAD RECEIVED</span>
+              <pre className="text-[10px] font-mono leading-relaxed bg-black/40 p-3 rounded-xl overflow-x-auto text-zinc-300 max-h-40">
                 {JSON.stringify(executionResult, null, 2)}
               </pre>
             </div>
@@ -709,11 +709,11 @@ export const ComposioIntegrationCenter: React.FC<ComposioIntegrationCenterProps>
         </div>
 
         {/* Live Terminal Logger Console */}
-        <div className="lg:col-span-5 bg-black border border-border rounded-3xl p-6 flex flex-col h-[520px] shadow-2xl relative">
+        <div className="lg:col-span-5 bg-black border border-border rounded-xl p-6 flex flex-col h-[520px] relative">
           <div className="flex items-center justify-between border-b border-zinc-800 pb-3 mb-3 shrink-0">
             <div className="flex items-center gap-2">
               <Terminal className="w-4.5 h-4.5 text-orange-400" />
-              <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-[#a78bfa]">Integration Terminal Logs</span>
+              <span className="font-mono text-[10px] font-bold uppercase tracking-widest">Integration Terminal Logs</span>
             </div>
             <button 
               onClick={() => setTerminalLogs([])}

@@ -228,7 +228,7 @@ services:
               {getStatusIcon(service.status)}
               <button
                 onClick={() => checkService(service.id)}
-                className="px-2.5 py-1.5 rounded-lg bg-surface-elevated border border-border text-[11px] font-semibold text-text-secondary hover:text-text transition-all"
+                className="px-2.5 py-1.5 rounded-xl bg-surface-elevated border border-border text-[11px] font-semibold text-text-secondary hover:text-text transition-all"
               >
                 Test
               </button>
@@ -246,14 +246,14 @@ services:
           </div>
           <button
             onClick={copyCompose}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-elevated border border-border text-xs font-semibold text-text-secondary hover:text-text transition-all"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-elevated border border-border text-xs font-semibold text-text-secondary hover:text-text transition-all"
           >
             {copied ? <CheckCircle2 className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
             {copied ? 'Copied!' : 'Copy'}
           </button>
         </div>
         <p className="text-xs text-text-secondary">Run all integration services locally with one command.</p>
-        <div className="bg-[#0a0a12] rounded-xl p-4 overflow-x-auto">
+        <div className="rounded-xl p-4 overflow-x-auto">
           <pre className="text-[11px] font-mono text-emerald-400 leading-relaxed whitespace-pre">
             {DOCKER_COMPOSE}
           </pre>

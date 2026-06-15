@@ -58,7 +58,7 @@ export default function AffiliateDetail({ affiliate, onBack }: AffiliateDetailPr
       <div className="flex items-center gap-3">
         <button
           onClick={onBack}
-          className="p-2 rounded-lg hover:bg-surface-elevated text-text-secondary transition-colors"
+          className="p-2 rounded-xl hover:bg-surface-elevated text-text-secondary transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
         </button>
@@ -78,7 +78,7 @@ export default function AffiliateDetail({ affiliate, onBack }: AffiliateDetailPr
         ].map(({ label, value, icon: Icon, color }) => (
           <div key={label} className="card p-4">
             <div className="flex items-center justify-between mb-2">
-              <div className="p-1.5 rounded-lg" style={{ background: color + '15' }}>
+              <div className="p-1.5 rounded-xl" style={{ background: color + '15' }}>
                 <Icon className="w-4 h-4" style={{ color }} />
               </div>
               <span className="text-xl font-bold text-text">{value}</span>
@@ -111,7 +111,7 @@ export default function AffiliateDetail({ affiliate, onBack }: AffiliateDetailPr
                 </div>
                 <div className="h-2 bg-surface-elevated rounded-full overflow-hidden">
                   <motion.div
-                    className={`h-full rounded-full ${step.color}`}
+                    className={`h-full rounded-full${step.color}`}
                     initial={{ width: 0 }}
                     animate={{ width: `${step.pct}%` }}
                     transition={{ duration: 0.5, delay: idx * 0.1 }}

@@ -304,8 +304,8 @@ export const LeadJourneyAnalytics: React.FC<AnalyticsProps> = ({ showToast, prof
   // Handle fully empty state
   if (allLeads.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center p-16 max-w-xl mx-auto text-center space-y-5 bg-surface border border-border rounded-3xl shadow-sm my-8">
-        <div className="w-12 h-12 rounded-2xl bg-brand/10 border border-brand/20 flex items-center justify-center text-brand">
+      <div className="flex flex-col items-center justify-center p-16 max-w-xl mx-auto text-center space-y-5 bg-surface border border-border rounded-xl my-8">
+        <div className="w-12 h-12 rounded-xl bg-brand/10 border border-border flex items-center justify-center text-brand">
           <Activity className="w-6 h-6" />
         </div>
         <div className="space-y-1.5">
@@ -323,29 +323,29 @@ export const LeadJourneyAnalytics: React.FC<AnalyticsProps> = ({ showToast, prof
       
       {/* SECTION 1: SNAPSHOT BAR */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-surface border border-border p-6 rounded-2xl flex flex-col justify-between text-left shadow-xs transition-all hover:bg-surface-alt/40">
+        <div className="bg-surface border border-border p-6 rounded-xl flex flex-col justify-between text-left transition-all hover:bg-surface-alt/40">
           <span className="text-[11px] md:text-xs font-medium text-text-muted font-sans antialiased">Total Active Leads</span>
           <div className="text-xl md:text-2xl font-semibold text-text leading-tight mt-1">{metrics.totalLeads}</div>
         </div>
 
-        <div className="bg-surface border border-border p-6 rounded-2xl flex flex-col justify-between text-left shadow-xs transition-all hover:bg-surface-alt/40">
+        <div className="bg-surface border border-border p-6 rounded-xl flex flex-col justify-between text-left transition-all hover:bg-surface-alt/40">
           <span className="text-[11px] md:text-xs font-medium text-text-muted font-sans antialiased">Avg Lead Score</span>
           <div className="text-xl md:text-2xl font-semibold text-text leading-tight mt-1">{metrics.avgScore} <span className="text-xs text-text-muted font-normal">/ 90</span></div>
         </div>
 
-        <div className="bg-surface border border-border p-6 rounded-2xl flex flex-col justify-between text-left shadow-xs transition-all hover:bg-surface-alt/40">
+        <div className="bg-surface border border-border p-6 rounded-xl flex flex-col justify-between text-left transition-all hover:bg-surface-alt/40">
           <span className="text-[11px] md:text-xs font-medium text-text-muted font-sans antialiased">Sent This Week</span>
           <div className="text-xl md:text-2xl font-semibold text-text leading-tight mt-1">{metrics.sentThisWeek}</div>
         </div>
 
-        <div className="bg-surface border border-border p-6 rounded-2xl flex flex-col justify-between text-left shadow-xs transition-all hover:bg-surface-alt/40">
+        <div className="bg-surface border border-border p-6 rounded-xl flex flex-col justify-between text-left transition-all hover:bg-surface-alt/40">
           <span className="text-[11px] md:text-xs font-medium text-text-muted font-sans antialiased">Conversion Rate</span>
           <div className="text-xl md:text-2xl font-semibold text-text leading-tight mt-1">{metrics.conversionRate}%</div>
         </div>
       </div>
 
       {/* SECTION 2: FUNNEL DROP-OFF */}
-      <div className="bg-surface border border-border p-6 rounded-2xl space-y-6 shadow-xs text-left">
+      <div className="bg-surface border border-border p-6 rounded-xl space-y-6 text-left">
         <div>
           <h3 className="text-sm md:text-base font-bold font-syne text-text tracking-tight uppercase">Funnel Drop-off</h3>
           <p className="text-xs text-text-muted mt-0.5">Progression rate and drop values between sequential customer stages.</p>
@@ -353,7 +353,7 @@ export const LeadJourneyAnalytics: React.FC<AnalyticsProps> = ({ showToast, prof
 
         <div className="grid grid-cols-1 md:grid-cols-9 items-center gap-2 pt-2">
           {/* Step 1: New */}
-          <div className="md:col-span-1 p-4 border border-border rounded-xl text-center bg-surface-alt hover:bg-surface-alt/80 transition-all shadow-xs">
+          <div className="md:col-span-1 p-4 border border-border rounded-xl text-center hover:bg-surface-alt/80 transition-all">
             <span className="text-[8px] font-mono text-text-muted font-bold uppercase tracking-widest block">Stage 1</span>
             <div className="text-[11px] font-bold text-text truncate mt-1">New</div>
             <div className="text-lg font-bold font-mono text-text mt-1 leading-none">{metrics.stagingCounts.new}</div>
@@ -362,7 +362,7 @@ export const LeadJourneyAnalytics: React.FC<AnalyticsProps> = ({ showToast, prof
           {/* Arrow 1 */}
           <div className="md:col-span-1 flex flex-col items-center justify-center text-center">
             <div className="flex items-center gap-1.5 md:flex-col py-1 md:py-0">
-              <span className="text-[9px] font-bold text-brand bg-brand/10 border border-brand/20 px-1.5 py-0.5 rounded-full font-mono md:mb-1">
+              <span className="text-[9px] font-bold text-brand bg-brand/10 border border-border px-1.5 py-0.5 rounded-full font-mono md:mb-1">
                 {getRate(metrics.stagingCounts.new, metrics.stagingCounts.todo)}%
               </span>
               <span className="text-[9px] font-medium text-text-muted md:mb-1 leading-none">moved</span>
@@ -371,7 +371,7 @@ export const LeadJourneyAnalytics: React.FC<AnalyticsProps> = ({ showToast, prof
           </div>
 
           {/* Step 2: To Do */}
-          <div className="md:col-span-1 p-4 border border-border rounded-xl text-center bg-surface-alt hover:bg-surface-alt/80 transition-all shadow-xs">
+          <div className="md:col-span-1 p-4 border border-border rounded-xl text-center hover:bg-surface-alt/80 transition-all">
             <span className="text-[8px] font-mono text-text-muted font-bold uppercase tracking-widest block">Stage 2</span>
             <div className="text-[11px] font-bold text-text truncate mt-1">To Do</div>
             <div className="text-lg font-bold font-mono text-text mt-1 leading-none">{metrics.stagingCounts.todo}</div>
@@ -380,7 +380,7 @@ export const LeadJourneyAnalytics: React.FC<AnalyticsProps> = ({ showToast, prof
           {/* Arrow 2 */}
           <div className="md:col-span-1 flex flex-col items-center justify-center text-center">
             <div className="flex items-center gap-1.5 md:flex-col py-1 md:py-0">
-              <span className="text-[9px] font-bold text-brand bg-brand/10 border border-brand/20 px-1.5 py-0.5 rounded-full font-mono md:mb-1">
+              <span className="text-[9px] font-bold text-brand bg-brand/10 border border-border px-1.5 py-0.5 rounded-full font-mono md:mb-1">
                 {getRate(metrics.stagingCounts.todo, metrics.stagingCounts.ready)}%
               </span>
               <span className="text-[9px] font-medium text-text-muted md:mb-1 leading-none">moved</span>
@@ -389,7 +389,7 @@ export const LeadJourneyAnalytics: React.FC<AnalyticsProps> = ({ showToast, prof
           </div>
 
           {/* Step 3: Message Ready */}
-          <div className="md:col-span-1 p-4 border border-border rounded-xl text-center bg-surface-alt hover:bg-surface-alt/80 transition-all shadow-xs">
+          <div className="md:col-span-1 p-4 border border-border rounded-xl text-center hover:bg-surface-alt/80 transition-all">
             <span className="text-[8px] font-mono text-text-muted font-bold uppercase tracking-widest block">Stage 3</span>
             <div className="text-[11px] font-bold text-text truncate mt-1">Message Ready</div>
             <div className="text-lg font-bold font-mono text-text mt-1 leading-none">{metrics.stagingCounts.ready}</div>
@@ -398,7 +398,7 @@ export const LeadJourneyAnalytics: React.FC<AnalyticsProps> = ({ showToast, prof
           {/* Arrow 3 */}
           <div className="md:col-span-1 flex flex-col items-center justify-center text-center">
             <div className="flex items-center gap-1.5 md:flex-col py-1 md:py-0">
-              <span className="text-[9px] font-bold text-brand bg-brand/10 border border-brand/20 px-1.5 py-0.5 rounded-full font-mono md:mb-1">
+              <span className="text-[9px] font-bold text-brand bg-brand/10 border border-border px-1.5 py-0.5 rounded-full font-mono md:mb-1">
                 {getRate(metrics.stagingCounts.ready, metrics.stagingCounts.sent)}%
               </span>
               <span className="text-[9px] font-medium text-text-muted md:mb-1 leading-none">moved</span>
@@ -407,7 +407,7 @@ export const LeadJourneyAnalytics: React.FC<AnalyticsProps> = ({ showToast, prof
           </div>
 
           {/* Step 4: Sent */}
-          <div className="md:col-span-1 p-4 border border-border rounded-xl text-center bg-surface-alt hover:bg-surface-alt/80 transition-all shadow-xs">
+          <div className="md:col-span-1 p-4 border border-border rounded-xl text-center hover:bg-surface-alt/80 transition-all">
             <span className="text-[8px] font-mono text-text-muted font-bold uppercase tracking-widest block">Stage 4</span>
             <div className="text-[11px] font-bold text-text truncate mt-1">Sent</div>
             <div className="text-lg font-bold font-mono text-text mt-1 leading-none">{metrics.stagingCounts.sent}</div>
@@ -416,7 +416,7 @@ export const LeadJourneyAnalytics: React.FC<AnalyticsProps> = ({ showToast, prof
           {/* Arrow 4 */}
           <div className="md:col-span-1 flex flex-col items-center justify-center text-center">
             <div className="flex items-center gap-1.5 md:flex-col py-1 md:py-0">
-              <span className="text-[9px] font-bold text-brand bg-brand/10 border border-brand/20 px-1.5 py-0.5 rounded-full font-mono md:mb-1">
+              <span className="text-[9px] font-bold text-brand bg-brand/10 border border-border px-1.5 py-0.5 rounded-full font-mono md:mb-1">
                 {getRate(metrics.stagingCounts.sent, metrics.stagingCounts.bounced)}%
               </span>
               <span className="text-[9px] font-medium text-text-muted md:mb-1 leading-none">bounced</span>
@@ -425,7 +425,7 @@ export const LeadJourneyAnalytics: React.FC<AnalyticsProps> = ({ showToast, prof
           </div>
 
           {/* Step 5: Bounced */}
-          <div className="md:col-span-1 p-4 border border-border rounded-xl text-center bg-surface-alt hover:bg-surface-alt/80 transition-all shadow-xs">
+          <div className="md:col-span-1 p-4 border border-border rounded-xl text-center hover:bg-surface-alt/80 transition-all">
             <span className="text-[8px] font-mono text-text-muted font-bold uppercase tracking-widest block">Stage 5</span>
             <div className="text-[11px] font-bold text-text truncate mt-1">Bounced</div>
             <div className="text-lg font-bold font-mono text-text mt-1 leading-none">{metrics.stagingCounts.bounced}</div>
@@ -434,7 +434,7 @@ export const LeadJourneyAnalytics: React.FC<AnalyticsProps> = ({ showToast, prof
       </div>
 
       {/* SECTION 3: SCORE DISTRIBUTION */}
-      <div className="bg-surface border border-border p-6 rounded-2xl shadow-xs text-left">
+      <div className="bg-surface border border-border p-6 rounded-xl text-left">
         <div className="mb-4">
           <h3 className="text-sm md:text-base font-bold font-syne text-text uppercase tracking-tight">Score Distribution</h3>
           <p className="text-xs text-text-muted mt-0.5">Distribution of lead scores across active campaigns</p>
@@ -466,7 +466,7 @@ export const LeadJourneyAnalytics: React.FC<AnalyticsProps> = ({ showToast, prof
       {/* SECTION 4: BANT SCORE & PIPELINE VELOCITY */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* BANT distribution */}
-        <div className="bg-surface border border-border p-6 rounded-2xl shadow-xs text-left">
+        <div className="bg-surface border border-border p-6 rounded-xl text-left">
           <div className="mb-4">
             <h3 className="text-sm md:text-base font-bold font-syne text-text uppercase tracking-tight">BANT Score Distribution</h3>
             <p className="text-xs text-text-muted mt-0.5">Distribution of leads across qualification status levels</p>
@@ -485,7 +485,7 @@ export const LeadJourneyAnalytics: React.FC<AnalyticsProps> = ({ showToast, prof
         </div>
 
         {/* Stage velocity */}
-        <div className="bg-surface border border-border p-6 rounded-2xl shadow-xs text-left">
+        <div className="bg-surface border border-border p-6 rounded-xl text-left">
           <div className="mb-4">
             <h3 className="text-sm md:text-base font-bold font-syne text-text uppercase tracking-tight">Stage Velocity</h3>
             <p className="text-xs text-text-muted mt-0.5">Average days spent in each pipeline stage</p>
@@ -505,7 +505,7 @@ export const LeadJourneyAnalytics: React.FC<AnalyticsProps> = ({ showToast, prof
       </div>
 
       {/* SECTION 5: AFFILIATE PERFORMANCE */}
-      <div className="bg-surface border border-border p-6 rounded-2xl shadow-xs text-left">
+      <div className="bg-surface border border-border p-6 rounded-xl text-left">
         <div className="mb-4">
           <h3 className="text-sm md:text-base font-bold font-syne text-text uppercase tracking-tight">Affiliate Performance</h3>
           <p className="text-xs text-text-muted mt-0.5">Partner contributions to pipeline generation</p>
@@ -539,7 +539,7 @@ export const LeadJourneyAnalytics: React.FC<AnalyticsProps> = ({ showToast, prof
       </div>
 
       {/* SECTION 6: ACTIVITY FEED */}
-      <div className="bg-surface border border-border p-6 rounded-2xl shadow-xs text-left">
+      <div className="bg-surface border border-border p-6 rounded-xl text-left">
         <div className="flex items-center justify-between border-b border-border/80 pb-4 mb-4">
           <div>
             <h3 className="text-sm md:text-base font-bold font-syne text-text uppercase tracking-tight">Team Activity</h3>
@@ -557,7 +557,7 @@ export const LeadJourneyAnalytics: React.FC<AnalyticsProps> = ({ showToast, prof
           {activities.map((act) => (
             <div key={act.id} className="py-3 flex items-center justify-between gap-4">
               <div className="flex items-center gap-3">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black uppercase ${act.avatarBg}`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black uppercase${act.avatarBg}`}>
                   {act.user.substring(0, 2)}
                 </div>
                 <div className="text-xs">

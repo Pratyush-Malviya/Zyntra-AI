@@ -145,10 +145,10 @@ export default function TranscriptViewer({ meeting, onToggleActionItem }: Transc
                 <div className={`mt-0.5 w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors ${
                   item.completed ? 'border-emerald-500 bg-emerald-500' : 'border-border'
                 }`}>
-                  {item.completed && <CheckCircle2 className="w-3 h-3 text-white" />}
+                  {item.completed && <CheckCircle2 className="w-3 h-3 text-text" />}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className={`text-sm ${item.completed ? 'line-through text-text-secondary' : 'text-text'}`}>
+                  <div className={`text-sm${item.completed ? 'line-through text-text-secondary' : 'text-text'}`}>
                     {item.task}
                   </div>
                   <div className="flex items-center gap-2 mt-1">

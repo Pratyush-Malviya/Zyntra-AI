@@ -145,7 +145,7 @@ export default function MeetingsPanel({ orgId, profile }: MeetingsPanelProps) {
         <div className="flex items-center gap-3">
           <button
             onClick={() => setView('list')}
-            className="p-2 rounded-lg hover:bg-surface-elevated transition-colors text-text-secondary"
+            className="p-2 rounded-xl hover:bg-surface-elevated transition-colors text-text-secondary"
           >
             <ChevronRight className="w-4 h-4 rotate-180" />
           </button>
@@ -171,7 +171,7 @@ export default function MeetingsPanel({ orgId, profile }: MeetingsPanelProps) {
             {!live.transcript && (
               <button
                 onClick={() => { setSelectedMeeting(live); setView('upload'); }}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary-dark transition-colors"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-text text-sm font-semibold hover:bg-primary-dark transition-colors"
               >
                 <Upload className="w-4 h-4" />
                 Upload Recording
@@ -181,7 +181,7 @@ export default function MeetingsPanel({ orgId, profile }: MeetingsPanelProps) {
               <button
                 onClick={() => handleAnalyseMeeting(live)}
                 disabled={processing[live.id!]}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-sm font-semibold hover:opacity-90 transition-all disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-text text-sm font-semibold hover:opacity-90 transition-all disabled:opacity-50"
               >
                 {processing[live.id!] ? <Loader2 className="w-4 h-4 animate-spin" /> : <Brain className="w-4 h-4" />}
                 Analyse with AI
@@ -202,7 +202,7 @@ export default function MeetingsPanel({ orgId, profile }: MeetingsPanelProps) {
     return (
       <div className="p-6 max-w-xl mx-auto space-y-6">
         <div className="flex items-center gap-3">
-          <button onClick={() => setView('list')} className="p-2 rounded-lg hover:bg-surface-elevated text-text-secondary">
+          <button onClick={() => setView('list')} className="p-2 rounded-xl hover:bg-surface-elevated text-text-secondary">
             <ChevronRight className="w-4 h-4 rotate-180" />
           </button>
           <h2 className="text-lg font-bold">Schedule Meeting</h2>
@@ -264,7 +264,7 @@ export default function MeetingsPanel({ orgId, profile }: MeetingsPanelProps) {
           <button
             onClick={handleCreateMeeting}
             disabled={!newMeeting.title}
-            className="w-full py-3 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-semibold text-sm hover:opacity-90 transition-all disabled:opacity-40"
+            className="w-full py-3 rounded-xl text-text font-semibold text-sm hover:opacity-90 transition-all disabled:opacity-40"
           >
             Schedule Meeting
           </button>
@@ -291,7 +291,7 @@ export default function MeetingsPanel({ orgId, profile }: MeetingsPanelProps) {
         </div>
         <button
           onClick={() => setView('create')}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-sm font-semibold hover:opacity-90 transition-all"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-text text-sm font-semibold hover:opacity-90 transition-all"
         >
           <Plus className="w-4 h-4" />
           Schedule Meeting
@@ -308,7 +308,7 @@ export default function MeetingsPanel({ orgId, profile }: MeetingsPanelProps) {
         ].map(({ label, value, icon: Icon, color }) => (
           <div key={label} className="card p-4">
             <div className="flex items-center justify-between mb-2">
-              <div className="p-1.5 rounded-lg" style={{ background: color + '15' }}>
+              <div className="p-1.5 rounded-xl" style={{ background: color + '15' }}>
                 <Icon className="w-4 h-4" style={{ color }} />
               </div>
               <span className="text-2xl font-bold text-text">{value}</span>
@@ -324,7 +324,7 @@ export default function MeetingsPanel({ orgId, profile }: MeetingsPanelProps) {
           <button
             key={f}
             onClick={() => setFilter(f)}
-            className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+            className="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
             style={{
               background: filter === f ? 'var(--color-primary)' : 'transparent',
               color: filter === f ? 'white' : 'var(--text-secondary)',
@@ -408,7 +408,7 @@ export default function MeetingsPanel({ orgId, profile }: MeetingsPanelProps) {
                     {!meeting.transcript && (
                       <button
                         onClick={(e) => { e.stopPropagation(); setSelectedMeeting(meeting); setView('upload'); }}
-                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-primary/10 text-primary text-[11px] font-semibold hover:bg-primary hover:text-white transition-all"
+                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-primary/10 text-primary text-[11px] font-semibold hover:bg-primary hover:text-white transition-all"
                       >
                         <Upload className="w-3 h-3" />
                         Upload
@@ -418,7 +418,7 @@ export default function MeetingsPanel({ orgId, profile }: MeetingsPanelProps) {
                       <button
                         onClick={(e) => { e.stopPropagation(); handleAnalyseMeeting(meeting); }}
                         disabled={processing[meeting.id!]}
-                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-violet-500/10 text-violet-400 text-[11px] font-semibold hover:bg-violet-500 hover:text-white transition-all disabled:opacity-50"
+                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-violet-500/10 text-violet-400 text-[11px] font-semibold hover:bg-violet-500 hover:text-white transition-all disabled:opacity-50"
                       >
                         {processing[meeting.id!] ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
                         Analyse
@@ -432,7 +432,7 @@ export default function MeetingsPanel({ orgId, profile }: MeetingsPanelProps) {
                 {meeting.actionItems && meeting.actionItems.length > 0 && (
                   <div className="mt-3 pt-3 border-t border-border flex gap-2 flex-wrap">
                     {meeting.actionItems.slice(0, 2).map((item, i) => (
-                      <span key={i} className={`text-[10px] px-2 py-1 rounded-full border ${item.completed ? 'opacity-50 line-through' : ''}`}
+                      <span key={i} className={`text-[10px] px-2 py-1 rounded-full border${item.completed ? 'opacity-50 line-through' : ''}`}
                         style={{ borderColor: 'var(--border)' }}>
                         {item.task}
                       </span>

@@ -77,7 +77,7 @@ export default function BantScoringDrawer({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
+            className="fixed inset-0 bg-black/50 z-50"
             onClick={onClose}
           />
 
@@ -104,7 +104,7 @@ export default function BantScoringDrawer({
                 >
                   {scoreCfg.label}
                 </div>
-                <button onClick={onClose} className="p-2 rounded-lg hover:bg-surface-elevated text-text-secondary">
+                <button onClick={onClose} className="p-2 rounded-xl hover:bg-surface-elevated text-text-secondary">
                   <X className="w-4 h-4" />
                 </button>
               </div>
@@ -116,7 +116,7 @@ export default function BantScoringDrawer({
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
-                  className="flex-1 py-2 rounded-lg text-sm font-semibold transition-all"
+                  className="flex-1 py-2 rounded-xl text-sm font-semibold transition-all"
                   style={{
                     background: activeTab === tab.id ? 'var(--color-primary)' : 'transparent',
                     color: activeTab === tab.id ? 'white' : 'var(--text-secondary)',
@@ -169,7 +169,7 @@ export default function BantScoringDrawer({
                           <button
                             key={opt}
                             onClick={() => setSignals(s => ({ ...s, budget: { ...s.budget, signal: opt } }))}
-                            className="flex-1 py-1.5 rounded-lg text-[11px] font-semibold capitalize transition-all border"
+                            className="flex-1 py-1.5 rounded-xl text-[11px] font-semibold capitalize transition-all border"
                             style={{
                               background: signals.budget.signal === opt ? 'var(--color-primary)15' : 'var(--surface-elevated)',
                               borderColor: signals.budget.signal === opt ? 'var(--color-primary)' : 'var(--border)',
@@ -246,7 +246,7 @@ export default function BantScoringDrawer({
                           <button
                             key={opt}
                             onClick={() => setSignals(s => ({ ...s, need: { ...s.need, urgency: opt } }))}
-                            className="px-2.5 py-1 rounded-lg text-[11px] font-semibold capitalize transition-all border"
+                            className="px-2.5 py-1 rounded-xl text-[11px] font-semibold capitalize transition-all border"
                             style={{
                               background: signals.need.urgency === opt ? 'var(--color-primary)15' : 'var(--surface-elevated)',
                               borderColor: signals.need.urgency === opt ? 'var(--color-primary)' : 'var(--border)',
@@ -323,7 +323,7 @@ export default function BantScoringDrawer({
                   <button
                     onClick={handleAiScore}
                     disabled={transcript.trim().length < 50 || scoring}
-                    className="w-full py-3 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-semibold text-sm hover:opacity-90 disabled:opacity-40 flex items-center justify-center gap-2"
+                    className="w-full py-3 rounded-xl text-text font-semibold text-sm hover:opacity-90 disabled:opacity-40 flex items-center justify-center gap-2"
                   >
                     {scoring ? <Loader2 className="w-4 h-4 animate-spin" /> : <Brain className="w-4 h-4" />}
                     {scoring ? 'Scoring with AI...' : 'Score with AI Agent'}
@@ -363,7 +363,7 @@ export default function BantScoringDrawer({
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="flex-1 py-3 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-semibold text-sm hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
+                className="flex-1 py-3 rounded-xl text-text font-semibold text-sm hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 Save BANT Score

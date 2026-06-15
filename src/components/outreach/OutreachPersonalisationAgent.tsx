@@ -191,7 +191,7 @@ export default function OutreachPersonalisationAgent({
           <button
             onClick={handleGenerate}
             disabled={!prospectName || !companyName || loading}
-            className="w-full py-3 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-semibold text-sm hover:opacity-90 disabled:opacity-40 flex items-center justify-center gap-2"
+            className="w-full py-3 rounded-xl text-text font-semibold text-sm hover:opacity-90 disabled:opacity-40 flex items-center justify-center gap-2"
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
             {loading ? 'Running AI Copywriter...' : 'Generate Personalized Emails'}
@@ -256,9 +256,9 @@ export default function OutreachPersonalisationAgent({
                 </button>
                 <button
                   onClick={handleQueue}
-                  className="flex-1 py-2.5 rounded-xl bg-primary hover:bg-primary-dark text-white text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
+                  className="flex-1 py-2.5 rounded-xl bg-primary hover:bg-primary-dark text-text text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
                 >
-                  {queued ? <CheckCircle2 className="w-4 h-4 text-white" /> : <Mail className="w-4 h-4" />}
+                  {queued ? <CheckCircle2 className="w-4 h-4 text-text" /> : <Mail className="w-4 h-4" />}
                   {queued ? 'Queued' : 'Queue for Outbox'}
                 </button>
               </div>

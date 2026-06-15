@@ -304,9 +304,9 @@ const ReviewCard: React.FC<{
       </div>
       
       <div className="flex border-b border-border">
-        <button onClick={() => setActiveTab('wa')} className={`flex-1 py-2.5 text-center text-[12px] font-semibold transition-all border-b-2 ${activeTab === 'wa' ? 'text-whatsapp border-whatsapp' : 'text-text-muted border-transparent'}`}>📱 WA</button>
-        <button onClick={() => setActiveTab('li')} className={`flex-1 py-2.5 text-center text-[12px] font-semibold transition-all border-b-2 ${activeTab === 'li' ? 'text-linkedin border-linkedin' : 'text-text-muted border-transparent'}`}>💼 LI</button>
-        <button onClick={() => setActiveTab('em')} className={`flex-1 py-2.5 text-center text-[12px] font-semibold transition-all border-b-2 ${activeTab === 'em' ? 'text-email border-email' : 'text-text-muted border-transparent'}`}>✉️ EM</button>
+        <button onClick={() => setActiveTab('wa')} className={`flex-1 py-2.5 text-center text-[12px] font-semibold transition-all border-b-2${activeTab === 'wa' ? 'text-whatsapp border-whatsapp' : 'text-text-muted border-transparent'}`}>📱 WA</button>
+        <button onClick={() => setActiveTab('li')} className={`flex-1 py-2.5 text-center text-[12px] font-semibold transition-all border-b-2${activeTab === 'li' ? 'text-linkedin border-linkedin' : 'text-text-muted border-transparent'}`}>💼 LI</button>
+        <button onClick={() => setActiveTab('em')} className={`flex-1 py-2.5 text-center text-[12px] font-semibold transition-all border-b-2${activeTab === 'em' ? 'text-email border-email' : 'text-text-muted border-transparent'}`}>✉️ EM</button>
       </div>
 
       <div className="p-4">
@@ -314,12 +314,12 @@ const ReviewCard: React.FC<{
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="text-[10px] font-bold text-whatsapp uppercase tracking-wider">WhatsApp · Day 6</div>
-              <button onClick={handleSendWhatsApp} className="p-2 rounded-lg bg-whatsapp/10 text-whatsapp hover:bg-whatsapp hover:text-white transition-all"><Send className="w-3.5 h-3.5" /></button>
+              <button onClick={handleSendWhatsApp} className="p-2 rounded-xl bg-whatsapp/10 text-whatsapp hover:bg-whatsapp hover:text-white transition-all"><Send className="w-3.5 h-3.5" /></button>
             </div>
             <div 
               contentEditable 
               onBlur={e => onUpdate('whatsapp', e.currentTarget.innerText)}
-              className="bg-surface-alt border-l-4 border-whatsapp rounded-lg p-3 text-sm leading-relaxed outline-none min-h-[60px]"
+              className="border-l-4 border-whatsapp rounded-xl p-3 text-sm leading-relaxed outline-none min-h-[60px]"
               dangerouslySetInnerHTML={{ __html: msg.whatsapp }}
             />
             <div className="text-[10px] text-text-muted leading-relaxed">Max 100 words · No links · Tap to edit</div>
@@ -331,12 +331,12 @@ const ReviewCard: React.FC<{
             <div>
               <div className="flex items-center justify-between mb-2">
                 <div className="text-[10px] font-bold text-linkedin uppercase tracking-wider">LinkedIn Connect · Day 1</div>
-                <button onClick={handleOpenLinkedIn} className="p-2 rounded-lg bg-linkedin/10 text-linkedin hover:bg-linkedin hover:text-white transition-all"><ExternalLink className="w-3.5 h-3.5" /></button>
+                <button onClick={handleOpenLinkedIn} className="p-2 rounded-xl bg-linkedin/10 text-linkedin hover:bg-linkedin hover:text-white transition-all"><ExternalLink className="w-3.5 h-3.5" /></button>
               </div>
               <div 
                 contentEditable 
                 onBlur={e => onUpdate('linkedin_connect', e.currentTarget.innerText)}
-                className="bg-surface-alt border-l-4 border-linkedin rounded-lg p-3 text-sm leading-relaxed outline-none min-h-[60px]"
+                className="border-l-4 border-linkedin rounded-xl p-3 text-sm leading-relaxed outline-none min-h-[60px]"
                 dangerouslySetInnerHTML={{ __html: msg.linkedin_connect }}
               />
             </div>
@@ -345,7 +345,7 @@ const ReviewCard: React.FC<{
               <div 
                 contentEditable 
                 onBlur={e => onUpdate('linkedin_dm', e.currentTarget.innerText)}
-                className="bg-surface-alt border-l-4 border-linkedin rounded-lg p-3 text-sm leading-relaxed outline-none min-h-[60px]"
+                className="border-l-4 border-linkedin rounded-xl p-3 text-sm leading-relaxed outline-none min-h-[60px]"
                 dangerouslySetInnerHTML={{ __html: msg.linkedin_dm }}
               />
             </div>
@@ -357,12 +357,12 @@ const ReviewCard: React.FC<{
             <div>
               <div className="flex items-center justify-between mb-2">
                 <div className="text-[10px] font-bold text-email uppercase tracking-wider">Subject Line</div>
-                <button onClick={handleSendEmail} className="p-2 rounded-lg bg-email/10 text-email hover:bg-email hover:text-white transition-all"><Mail className="w-3.5 h-3.5" /></button>
+                <button onClick={handleSendEmail} className="p-2 rounded-xl bg-email/10 text-email hover:bg-email hover:text-white transition-all"><Mail className="w-3.5 h-3.5" /></button>
               </div>
               <div 
                 contentEditable 
                 onBlur={e => onUpdate('email_subject', e.currentTarget.innerText)}
-                className="bg-surface-alt border-l-4 border-email rounded-lg p-3 text-sm font-bold outline-none"
+                className="border-l-4 border-email rounded-xl p-3 text-sm font-bold outline-none"
                 dangerouslySetInnerHTML={{ __html: msg.email_subject }}
               />
             </div>
@@ -371,7 +371,7 @@ const ReviewCard: React.FC<{
               <div 
                 contentEditable 
                 onBlur={e => onUpdate('email_body', e.currentTarget.innerText)}
-                className="bg-surface-alt border-l-4 border-email rounded-lg p-3 text-sm leading-relaxed outline-none min-h-[80px]"
+                className="border-l-4 border-email rounded-xl p-3 text-sm leading-relaxed outline-none min-h-[80px]"
                 dangerouslySetInnerHTML={{ __html: (msg.email_body || '').replace(/\n/g, '<br>') }}
               />
             </div>
@@ -380,7 +380,7 @@ const ReviewCard: React.FC<{
               <div 
                 contentEditable 
                 onBlur={e => onUpdate('email_followup', e.currentTarget.innerText)}
-                className="bg-surface-alt border-l-4 border-email rounded-lg p-3 text-sm leading-relaxed outline-none"
+                className="border-l-4 border-email rounded-xl p-3 text-sm leading-relaxed outline-none"
                 dangerouslySetInnerHTML={{ __html: (msg.email_followup || '').replace(/\n/g, '<br>') }}
               />
             </div>
@@ -663,7 +663,7 @@ function LoginView({
       case 'sdr': return <Target className="w-4 h-4 text-blue-400" />;
       case 'manager': return <TrendingUp className="w-4 h-4 text-purple-400" />;
       case 'ae': return <Briefcase className="w-4 h-4 text-rose-400" />;
-      case 'viewer': return <Eye className="w-4 h-4 text-slate-400" />;
+      case 'viewer': return <Eye className="w-4 h-4 text-text" />;
       default: return <UserCheck className="w-4 h-4 text-brand" />;
     }
   };
@@ -681,9 +681,9 @@ function LoginView({
   };
 
   return (
-    <div className={`min-h-screen ${theme === 'dark' ? 'bg-[#090a0f] text-slate-100' : 'bg-slate-50 text-slate-900'} flex items-center justify-center p-6 relative overflow-hidden transition-colors duration-300`}>
-      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-brand rounded-full blur-[120px] opacity-20" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-brand-alt rounded-full blur-[120px] opacity-20" />
+    <div className={`min-h-screen${theme === 'dark' ? 'bg-[#090a0f] text-slate-100' : 'bg-slate-50 text-slate-900'}flex items-center justify-center p-6 relative overflow-hidden transition-colors duration-300`}>
+      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-brand rounded-full opacity-20" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-brand-alt rounded-full opacity-20" />
       <div className="absolute top-6 left-6 flex items-center gap-3">
         <button 
           onClick={onBack}
@@ -721,14 +721,14 @@ function LoginView({
         }`}
       >
         {/* Left Side: Brand and Google Login */}
-        <div className="lg:col-span-5 flex flex-col justify-between py-2 space-y-8 lg:border-r lg:border-white/[0.05] lg:pr-10 text-center lg:text-left">
+        <div className="lg:col-span-5 flex flex-col justify-between py-2 space-y-8 lg:border-r border-border lg:pr-10 text-center lg:text-left">
           <div className="space-y-4">
-            <div className="w-16 h-16 bg-gradient-to-br from-brand to-brand-alt rounded-2xl flex items-center justify-center shadow-xl shadow-brand/25 mx-auto lg:mx-0">
-              <Zap className="w-8 h-8 text-white fill-current" />
+            <div className="w-16 h-16 rounded-xl flex items-center justify-center mx-auto lg:mx-0">
+              <Zap className="w-8 h-8 text-text fill-current" />
             </div>
             <div className="space-y-1">
-              <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight font-syne text-white">Zyntra AI</h1>
-              <p className="text-[#a78bfa] text-xs font-bold uppercase tracking-widest font-mono">Enterprise Outreach & CRM Suite</p>
+              <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight font-syne text-text">Zyntra AI</h1>
+              <p className="text-xs font-bold uppercase tracking-widest font-mono">Enterprise Outreach & CRM Suite</p>
             </div>
             <p className="text-text-muted text-xs leading-relaxed max-w-sm mx-auto lg:mx-0">
               A high-precision, multi-tier outreach sandbox configured for high-performing sales development, organizational settings, and intelligent client pipelines.
@@ -738,7 +738,7 @@ function LoginView({
           <div className="space-y-4">
             <button 
               onClick={handleLogin} 
-              className="w-full py-3.5 rounded-xl bg-white hover:bg-slate-100 text-[#0f172a] font-bold flex items-center justify-center gap-3 transition-all shadow-xl hover:shadow-white/5 cursor-pointer text-xs"
+              className="w-full py-3.5 rounded-xl bg-white hover:bg-slate-100 font-bold flex items-center justify-center gap-3 transition-all hover:shadow-white/5 cursor-pointer text-xs"
             >
               <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-4 h-4" alt="Google" />
               Sign in with Google Account
@@ -752,7 +752,7 @@ function LoginView({
         {/* Right Side: Demo Quick Seats */}
         <div className="lg:col-span-7 space-y-6">
           <div className="space-y-1">
-            <h3 className="text-sm font-extrabold uppercase tracking-widest text-[#00d4aa]">Instant Demo Presets</h3>
+            <h3 className="text-sm font-extrabold uppercase tracking-widest">Instant Demo Presets</h3>
             <p className="text-xs text-text-muted leading-relaxed">
               Skip external OAuth credentials for your live product presentation. Enter any sandbox workspace in one click:
             </p>
@@ -763,11 +763,11 @@ function LoginView({
               <button
                 key={demo.uid}
                 onClick={() => onDemoLogin(demo)}
-                className="group flex flex-col p-4 bg-[#090a0f] hover:bg-brand/10 border border-border/80 hover:border-brand/60 rounded-2xl text-left transition-all duration-300 relative overflow-hidden cursor-pointer"
+                className="group flex flex-col p-4 hover:bg-brand/10 border border-border/80 border-border rounded-xl text-left transition-all duration-300 relative overflow-hidden cursor-pointer"
               >
                 <div className="flex items-center justify-between w-full mb-1.5">
                   <div className="flex items-center gap-2">
-                    <div className="p-1.5 bg-[#12131a] rounded-lg group-hover:bg-brand/20 transition-colors">
+                    <div className="p-1.5 rounded-xl group-hover:bg-brand/20 transition-colors">
                       {getRoleIcon(demo.role)}
                     </div>
                     <span className="text-[10px] font-extrabold uppercase tracking-wider text-text-muted group-hover:text-brand transition-colors">
@@ -777,10 +777,10 @@ function LoginView({
                   <span className="text-[9px] font-mono text-zinc-600 group-hover:text-brand/80">{demo.uid}</span>
                 </div>
                 
-                <div className="font-bold text-xs text-slate-200 group-hover:text-white transition-colors">
+                <div className="font-bold text-xs text-text group-hover:text-white transition-colors">
                   {demo.displayName}
                 </div>
-                <div className="text-[10px] text-[#00d4aa]/90 font-mono mt-0.5 truncate w-full">
+                <div className="text-[10px] font-mono mt-0.5 truncate w-full">
                   {demo.email}
                 </div>
                 
@@ -2006,7 +2006,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
 
               <div className="grid md:grid-cols-2 gap-8">
                 {/* Email SMTP Section */}
-                <div id="settings-smtp-card" className="bg-surface/70 backdrop-blur-md border border-border/50 rounded-3xl p-8 space-y-6 shadow-xl shadow-brand/[0.02] transition-all">
+                <div id="settings-smtp-card" className="bg-surface/70 border border-border/50 rounded-xl p-8 space-y-6 transition-all">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3 text-sm font-bold">
                       <div className="w-8 h-8 rounded-xl bg-email/10 flex items-center justify-center text-email">
@@ -2028,7 +2028,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                         <div className="space-y-1">
                           <label className="text-[9px] text-text-muted font-bold uppercase tracking-widest">SMTP Host</label>
                           <input 
-                            className="w-full bg-surface-alt border border-border rounded-xl p-3 text-xs focus:border-brand outline-none transition-all"
+                            className="w-full border border-border rounded-xl p-3 text-xs focus:border-brand outline-none transition-all"
                             placeholder="smtp.gmail.com"
                             value={smtpConfig.host}
                             onChange={e => setSmtpConfig(prev => ({ ...prev, host: e.target.value }))}
@@ -2037,7 +2037,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                         <div className="space-y-1">
                           <label className="text-[9px] text-text-muted font-bold uppercase tracking-widest">Port</label>
                           <input 
-                            className="w-full bg-surface-alt border border-border rounded-xl p-3 text-xs focus:border-brand outline-none transition-all"
+                            className="w-full border border-border rounded-xl p-3 text-xs focus:border-brand outline-none transition-all"
                             placeholder="587"
                             value={smtpConfig.port}
                             onChange={e => setSmtpConfig(prev => ({ ...prev, port: e.target.value }))}
@@ -2048,7 +2048,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                         <div className="space-y-1">
                           <label className="text-[9px] text-text-muted font-bold uppercase tracking-widest">Username</label>
                           <input 
-                            className="w-full bg-surface-alt border border-border rounded-xl p-3 text-xs focus:border-brand outline-none transition-all"
+                            className="w-full border border-border rounded-xl p-3 text-xs focus:border-brand outline-none transition-all"
                             placeholder="user@example.com"
                             value={smtpConfig.user}
                             onChange={e => setSmtpConfig(prev => ({ ...prev, user: e.target.value }))}
@@ -2058,7 +2058,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                           <label className="text-[9px] text-text-muted font-bold uppercase tracking-widest">Password</label>
                           <input 
                             type="password"
-                            className="w-full bg-surface-alt border border-border rounded-xl p-3 text-xs focus:border-brand outline-none transition-all"
+                            className="w-full border border-border rounded-xl p-3 text-xs focus:border-brand outline-none transition-all"
                             placeholder="••••••••"
                             value={smtpConfig.pass}
                             onChange={e => setSmtpConfig(prev => ({ ...prev, pass: e.target.value }))}
@@ -2068,7 +2068,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                       <div className="space-y-1">
                         <label className="text-[9px] text-text-muted font-bold uppercase tracking-widest">From Email / Name</label>
                         <input 
-                          className="w-full bg-surface-alt border border-border rounded-xl p-3 text-xs focus:border-brand outline-none transition-all"
+                          className="w-full border border-border rounded-xl p-3 text-xs focus:border-brand outline-none transition-all"
                           placeholder='"Zyntra AI" <user@example.com>'
                           value={smtpConfig.from}
                           onChange={e => setSmtpConfig(prev => ({ ...prev, from: e.target.value }))}
@@ -2087,7 +2087,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                       <button 
                         onClick={handleConnectEmail}
                         disabled={isConnectingEm}
-                        className="w-full bg-email hover:bg-email/90 text-white font-bold py-4 rounded-2xl transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50 shadow-lg shadow-email/20"
+                        className="w-full bg-email hover:bg-email/90 text-text font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50"
                       >
                         {isConnectingEm ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
                         Save SMTP Settings
@@ -2095,8 +2095,8 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                     </div>
                   ) : (
                     <div className="space-y-6">
-                      <div className="bg-surface-alt border border-border rounded-2xl p-4 flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-2xl bg-email/10 flex items-center justify-center text-email">
+                      <div className="border border-border rounded-xl p-4 flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-xl bg-email/10 flex items-center justify-center text-email">
                           <Mail className="w-6 h-6" />
                         </div>
                         <div className="flex-1">
@@ -2118,7 +2118,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                 </div>
 
                 {/* LinkedIn Section */}
-                <div id="settings-linkedin-card" className="bg-surface border border-border rounded-3xl p-8 space-y-6 glow-brand/5">
+                <div id="settings-linkedin-card" className="bg-surface border border-border rounded-xl p-8 space-y-6">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3 text-sm font-bold">
                       <div className="w-8 h-8 rounded-xl bg-linkedin/10 flex items-center justify-center text-linkedin">
@@ -2139,7 +2139,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                       <p className="text-xs text-text-muted leading-relaxed">
                         Connect your profile to enable automated background sending through our secure bridge.
                       </p>
-                      <div className="p-3 rounded-xl bg-brand/5 border border-brand/10 flex items-start gap-3">
+                      <div className="p-3 rounded-xl bg-brand/5 border border-border flex items-start gap-3">
                         <AlertCircle className="w-4 h-4 text-brand shrink-0 mt-0.5" />
                         <div className="text-[10px] text-text-muted leading-tight">
                           <strong>Setup Required:</strong> Ensure LinkedIn is enabled in your <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer" className="text-brand hover:underline">Firebase Console</a> under Authentication &gt; Sign-in method.
@@ -2148,15 +2148,15 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                       <button 
                         onClick={handleConnectLinkedIn}
                         disabled={isConnectingLi}
-                        className="w-full bg-brand hover:bg-brand/90 text-white font-bold py-4 rounded-2xl transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50 shadow-lg shadow-brand/20"
+                        className="w-full bg-brand hover:bg-brand/90 text-text font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50"
                       >
                         {isConnectingLi ? <Loader2 className="w-5 h-5 animate-spin" /> : <Link2 className="w-5 h-5" />}
                         Connect LinkedIn
                       </button>
                     </div>
                   ) : (
-                    <div className="bg-surface-alt border border-border rounded-2xl p-4 flex items-center gap-4">
-                      <img src={liAccount.avatar} alt={liAccount.name} className="w-12 h-12 rounded-2xl border border-brand/20" referrerPolicy="no-referrer" />
+                    <div className="border border-border rounded-xl p-4 flex items-center gap-4">
+                      <img src={liAccount.avatar} alt={liAccount.name} className="w-12 h-12 rounded-xl border border-border" referrerPolicy="no-referrer" />
                       <div className="flex-1">
                         <div className="text-sm font-bold flex items-center gap-2">
                           {liAccount.name}
@@ -2173,7 +2173,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
               </div>
 
               {/* System Defaults Info */}
-              <div className="bg-surface-alt/50 border border-border border-dashed rounded-3xl p-8">
+              <div className="bg-surface-alt/50 border border-border border-dashed rounded-xl p-8">
                 <div className="flex items-start gap-4">
                   <div className="w-10 h-10 rounded-xl bg-brand/10 flex items-center justify-center text-brand shrink-0">
                     <AlertCircle className="w-5 h-5" />
@@ -2189,7 +2189,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
               </div>
 
               {/* Project Documentation Export */}
-              <div id="settings-docs-card" className="bg-surface border border-border rounded-3xl p-8 space-y-6 glow-brand/5">
+              <div id="settings-docs-card" className="bg-surface border border-border rounded-xl p-8 space-y-6">
                 <div className="flex items-center gap-3 text-sm font-bold">
                   <div className="w-8 h-8 rounded-xl bg-brand/10 flex items-center justify-center text-brand">
                     <FileText className="w-4 h-4" />
@@ -2201,7 +2201,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                 </p>
                 <button 
                   onClick={generateProjectPDF}
-                  className="w-full bg-surface-alt border border-border hover:border-brand/30 text-text font-bold py-4 rounded-2xl transition-all flex items-center justify-center gap-2 text-sm shadow-sm"
+                  className="w-full border border-border text-text font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2 text-sm"
                 >
                   <Download className="w-5 h-5" />
                   Download Project Report (PDF)
@@ -2241,14 +2241,14 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                     </button>
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-text-muted">Active Campaign:</span>
-                      <span className="text-xs font-mono font-bold bg-brand/10 text-brand px-3 py-1 rounded-full border border-brand/20">
+                      <span className="text-xs font-mono font-bold bg-brand/10 text-brand px-3 py-1 rounded-full border border-border">
                         {currentCampaign?.name.toUpperCase()}
                       </span>
                     </div>
                   </div>
 
                   {/* Sub-navigation Tabs */}
-                  <div className="bg-surface border border-border rounded-2xl p-1.5 flex flex-wrap gap-1">
+                  <div className="bg-surface border border-border rounded-xl p-1.5 flex flex-wrap gap-1">
                     {[
                       { idx: 0, label: "Configure", icon: Settings },
                       { idx: 1, label: "Import Leads", icon: UserPlus },
@@ -2329,7 +2329,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                 <div className="text-[10px] text-text-muted font-bold uppercase tracking-widest mt-1 flex items-center gap-1">
                   {s.label}
                   {s.onClick && (
-                    <span className="text-[9px] text-brand font-medium opacity-0 group-hover:opacity-100 transition-opacity ml-1 bg-brand/5 px-1.5 py-0.5 rounded">
+                    <span className="text-[9px] text-brand font-medium opacity-0 group-hover:opacity-100 transition-opacity ml-1 bg-brand/5 px-1.5 py-0.5 rounded-xl">
                       View
                     </span>
                   )}
@@ -2339,7 +2339,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
           </div>
 
           <div className="grid md:grid-cols-2 gap-6">
-            <div className="bg-surface border border-border rounded-3xl p-8 space-y-6 glow-brand/5">
+            <div className="bg-surface border border-border rounded-xl p-8 space-y-6">
               <div className="flex items-center gap-3 text-sm font-bold">
                 <div className="w-8 h-8 rounded-xl bg-brand/10 flex items-center justify-center text-brand">
                   <Briefcase className="w-4 h-4" />
@@ -2351,13 +2351,13 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                   <label className="text-[10px] text-text-muted font-bold uppercase tracking-widest">Company & Product</label>
                   <div className="grid grid-cols-2 gap-3">
                     <input 
-                      className="w-full bg-surface-alt border border-border rounded-2xl p-4 text-sm focus:border-brand outline-none transition-all"
+                      className="w-full border border-border rounded-xl p-4 text-sm focus:border-brand outline-none transition-all"
                       placeholder="Company"
                       value={config.company}
                       onChange={e => setConfig(prev => ({ ...prev, company: e.target.value }))}
                     />
                     <input 
-                      className="w-full bg-surface-alt border border-border rounded-2xl p-4 text-sm focus:border-brand outline-none transition-all"
+                      className="w-full border border-border rounded-xl p-4 text-sm focus:border-brand outline-none transition-all"
                       placeholder="Product"
                       value={config.product}
                       onChange={e => setConfig(prev => ({ ...prev, product: e.target.value }))}
@@ -2367,7 +2367,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                 <div className="space-y-2">
                   <label className="text-[10px] text-text-muted font-bold uppercase tracking-widest">Value Proposition</label>
                   <textarea 
-                    className="w-full bg-surface-alt border border-border rounded-2xl p-4 text-sm focus:border-brand outline-none transition-all min-h-[120px] resize-none"
+                    className="w-full border border-border rounded-xl p-4 text-sm focus:border-brand outline-none transition-all min-h-[120px] resize-none"
                     placeholder="Describe how you help..."
                     value={config.vp}
                     onChange={e => setConfig(prev => ({ ...prev, vp: e.target.value }))}
@@ -2377,7 +2377,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                   <div className="space-y-2">
                     <label className="text-[10px] text-text-muted font-bold uppercase tracking-widest">Sender Name</label>
                     <input 
-                      className="w-full bg-surface-alt border border-border rounded-2xl p-4 text-sm focus:border-brand outline-none transition-all"
+                      className="w-full border border-border rounded-xl p-4 text-sm focus:border-brand outline-none transition-all"
                       value={config.sender}
                       onChange={e => setConfig(prev => ({ ...prev, sender: e.target.value }))}
                     />
@@ -2385,7 +2385,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                   <div className="space-y-2">
                     <label className="text-[10px] text-text-muted font-bold uppercase tracking-widest">CTA Goal</label>
                     <select 
-                      className="w-full bg-surface-alt border border-border rounded-2xl p-4 text-sm focus:border-brand outline-none transition-all appearance-none cursor-pointer"
+                      className="w-full border border-border rounded-xl p-4 text-sm focus:border-brand outline-none transition-all appearance-none cursor-pointer"
                       value={config.cta}
                       onChange={e => setConfig(prev => ({ ...prev, cta: e.target.value }))}
                     >
@@ -2406,7 +2406,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                       handleFirestoreError(err, OperationType.UPDATE, `campaigns/${currentCampaign.id}`);
                     }
                   }}
-                  className="w-full py-4 rounded-2xl bg-brand/10 border border-brand/20 text-brand font-bold text-sm hover:bg-brand/20 transition-all flex items-center justify-center gap-2"
+                  className="w-full py-4 rounded-xl bg-brand/10 border border-border text-brand font-bold text-sm hover:bg-brand/20 transition-all flex items-center justify-center gap-2"
                 >
                   <Save className="w-4 h-4" />
                   Save Product DNA
@@ -2415,7 +2415,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
             </div>
 
             <div className="space-y-6">
-              <div className="bg-surface border border-border rounded-3xl p-8 space-y-6 glow-brand/5">
+              <div className="bg-surface border border-border rounded-xl p-8 space-y-6">
                 <div className="flex items-center gap-3 text-sm font-bold">
                   <div className="w-8 h-8 rounded-xl bg-brand-alt/10 flex items-center justify-center text-brand-alt">
                     <Settings className="w-4 h-4" />
@@ -2426,18 +2426,18 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                   <p className="text-xs text-text-muted leading-relaxed">
                     Configure your global email and LinkedIn settings in the <button onClick={() => setActiveView('SETTINGS')} className="text-brand font-bold hover:underline">Settings</button> tab to enable direct outreach.
                   </p>
-                  <div className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-surface-alt border border-border">
-                    <div className={`w-2 h-2 rounded-full ${emAccount?.connected ? 'bg-brand-alt animate-pulse' : 'bg-text-muted/30'}`} />
+                  <div className="flex items-center gap-2 px-4 py-3 rounded-xl border border-border">
+                    <div className={`w-2 h-2 rounded-full${emAccount?.connected ? 'bg-brand-alt animate-pulse' : 'bg-text-muted/30'}`} />
                     <span className="text-[10px] font-bold uppercase tracking-wider">Email: {emAccount?.connected ? 'Connected' : 'Not Configured'}</span>
                   </div>
-                  <div className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-surface-alt border border-border">
-                    <div className={`w-2 h-2 rounded-full ${liAccount?.connected ? 'bg-brand-alt animate-pulse' : 'bg-text-muted/30'}`} />
+                  <div className="flex items-center gap-2 px-4 py-3 rounded-xl border border-border">
+                    <div className={`w-2 h-2 rounded-full${liAccount?.connected ? 'bg-brand-alt animate-pulse' : 'bg-text-muted/30'}`} />
                     <span className="text-[10px] font-bold uppercase tracking-wider">LinkedIn: {liAccount?.connected ? 'Connected' : 'Not Configured'}</span>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-surface-alt/50 border border-border border-dashed rounded-3xl p-8">
+              <div className="bg-surface-alt/50 border border-border border-dashed rounded-xl p-8">
                 <div className="flex items-start gap-4">
                   <div className="w-10 h-10 rounded-xl bg-brand/10 flex items-center justify-center text-brand shrink-0">
                     <AlertCircle className="w-5 h-5" />
@@ -2454,7 +2454,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
             </div>
           </div>
 
-          <div className="bg-surface border border-border rounded-3xl p-8 space-y-6 mt-6 glow-brand/5">
+          <div className="bg-surface border border-border rounded-xl p-8 space-y-6 mt-6">
             <div className="flex items-center gap-3 text-sm font-bold">
               <div className="w-8 h-8 rounded-xl bg-brand/10 flex items-center justify-center text-brand">
                 <Globe className="w-4 h-4" />
@@ -2490,7 +2490,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => setActivePanel(1)}
-            className="w-full bg-gradient-to-r from-brand to-brand-alt text-white font-syne font-extrabold py-6 rounded-3xl transition-all flex items-center justify-center gap-3 group mt-10 shadow-xl shadow-brand/20 text-lg"
+            className="w-full text-text font-syne font-extrabold py-6 rounded-xl transition-all flex items-center justify-center gap-3 group mt-10 text-lg"
           >
             Import Target Leads
             <ChevronRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
@@ -2504,8 +2504,8 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
             <p className="text-text-muted text-xs md:text-sm">Paste your target list or import manually.</p>
           </div>
 
-          <div className="bg-brand/10 border border-brand/20 rounded-3xl p-6 text-sm text-brand-muted leading-relaxed flex items-start gap-4 mb-8">
-            <div className="w-10 h-10 rounded-2xl bg-brand/20 flex items-center justify-center text-brand shrink-0">
+          <div className="bg-brand/10 border border-border rounded-xl p-6 text-sm text-brand-muted leading-relaxed flex items-start gap-4 mb-8">
+            <div className="w-10 h-10 rounded-xl bg-brand/20 flex items-center justify-center text-brand shrink-0">
               <AlertCircle className="w-5 h-5" />
             </div>
             <div>
@@ -2516,7 +2516,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
           </div>
 
           <div className="grid md:grid-cols-2 gap-6">
-            <div className="bg-surface border border-border rounded-3xl p-8 space-y-6 glow-brand/5">
+            <div className="bg-surface border border-border rounded-xl p-8 space-y-6">
               <div className="flex items-center gap-3 text-sm font-bold">
                 <div className="w-8 h-8 rounded-xl bg-brand/10 flex items-center justify-center text-brand">
                   <UserPlus className="w-4 h-4" />
@@ -2547,24 +2547,24 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                 className="space-y-3"
               >
                 <div className="grid grid-cols-2 gap-3">
-                  <input name="name" placeholder="Full Name" required className="w-full bg-surface-alt border border-border rounded-xl p-3 text-xs outline-none focus:border-brand" />
-                  <input name="company" placeholder="Company" required className="w-full bg-surface-alt border border-border rounded-xl p-3 text-xs outline-none focus:border-brand" />
+                  <input name="name" placeholder="Full Name" required className="w-full border border-border rounded-xl p-3 text-xs outline-none focus:border-brand" />
+                  <input name="company" placeholder="Company" required className="w-full border border-border rounded-xl p-3 text-xs outline-none focus:border-brand" />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <input name="role" placeholder="Role" className="w-full bg-surface-alt border border-border rounded-xl p-3 text-xs outline-none focus:border-brand" />
-                  <input name="industry" placeholder="Industry" className="w-full bg-surface-alt border border-border rounded-xl p-3 text-xs outline-none focus:border-brand" />
+                  <input name="role" placeholder="Role" className="w-full border border-border rounded-xl p-3 text-xs outline-none focus:border-brand" />
+                  <input name="industry" placeholder="Industry" className="w-full border border-border rounded-xl p-3 text-xs outline-none focus:border-brand" />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <input name="email" placeholder="Email" className="w-full bg-surface-alt border border-border rounded-xl p-3 text-xs outline-none focus:border-brand" />
-                  <input name="linkedin_url" placeholder="LinkedIn URL" className="w-full bg-surface-alt border border-border rounded-xl p-3 text-xs outline-none focus:border-brand" />
+                  <input name="email" placeholder="Email" className="w-full border border-border rounded-xl p-3 text-xs outline-none focus:border-brand" />
+                  <input name="linkedin_url" placeholder="LinkedIn URL" className="w-full border border-border rounded-xl p-3 text-xs outline-none focus:border-brand" />
                 </div>
-                <button type="submit" className="w-full py-3 rounded-xl bg-brand text-white font-bold text-xs hover:bg-brand/90 transition-all">
+                <button type="submit" className="w-full py-3 rounded-xl bg-brand text-text font-bold text-xs hover:bg-brand/90 transition-all">
                   Add Lead
                 </button>
               </form>
             </div>
 
-            <div className="bg-surface border border-border rounded-3xl p-8 space-y-6 glow-brand/5">
+            <div className="bg-surface border border-border rounded-xl p-8 space-y-6">
               <div className="flex items-center gap-3 text-sm font-bold">
                 <div className="w-8 h-8 rounded-xl bg-brand/10 flex items-center justify-center text-brand">
                   <FileSpreadsheet className="w-4 h-4" />
@@ -2573,21 +2573,21 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
               </div>
               <div className="space-y-4">
                 <textarea 
-                  className="w-full bg-surface-alt border border-border rounded-2xl p-6 text-xs font-mono focus:border-brand outline-none transition-all min-h-[200px] resize-none"
+                  className="w-full border border-border rounded-xl p-6 text-xs font-mono focus:border-brand outline-none transition-all min-h-[200px] resize-none"
                   placeholder="name,role,company,industry,country,phone,email,linkedin_url..."
                   value={rawLeads}
                   onChange={e => setRawLeads(e.target.value)}
                 />
                 <button 
                   onClick={() => parseLeads(rawLeads)}
-                  className="w-full bg-brand hover:bg-brand/90 text-white text-sm font-bold py-4 rounded-2xl transition-all shadow-lg shadow-brand/20"
+                  className="w-full bg-brand hover:bg-brand/90 text-text text-sm font-bold py-4 rounded-xl transition-all"
                 >
                   Parse Paste
                 </button>
               </div>
             </div>
 
-            <div className="bg-surface border border-border rounded-3xl p-8 space-y-6 glow-brand/5 flex flex-col justify-between">
+            <div className="bg-surface border border-border rounded-xl p-8 space-y-6 flex flex-col justify-between">
               <div className="space-y-2">
                 <div className="flex items-center gap-3 text-sm font-bold">
                   <div className="w-8 h-8 rounded-xl bg-brand-alt/10 flex items-center justify-center text-brand-alt">
@@ -2608,21 +2608,21 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                   }
                   setShowSmartImportModal(true);
                 }}
-                className="w-full bg-brand-alt/10 hover:bg-brand-alt hover:text-[#090a0f] text-[#00d4aa] font-extrabold py-5 rounded-2xl border border-brand-alt/30 transition-all flex items-center justify-center gap-2 mt-4 cursor-pointer text-xs"
+                className="w-full bg-brand-alt/10 hover:bg-brand-alt hover:text-[#090a0f] font-extrabold py-5 rounded-xl border border-brand-alt/30 transition-all flex items-center justify-center gap-2 mt-4 cursor-pointer text-xs"
               >
                 <Plus className="w-5 h-5" />
                 Launch Smart Importer Wizard
               </button>
               
-              <div className="bg-[#090a0f] rounded-xl p-3 text-[9px] text-brand-alt font-mono leading-relaxed mt-2 border border-border/40">
+              <div className="rounded-xl p-3 text-[9px] text-brand-alt font-mono leading-relaxed mt-2 border border-border/40">
                 <span className="font-bold">FEATURES:</span> Excel sheet columns detection • Preset templates saving • Custom CRM property creation • Format validations checklist.
               </div>
             </div>
 
-            <div className="bg-surface border border-border rounded-3xl p-8 space-y-6 glow-[#00d4aa]/5 flex flex-col justify-between">
+            <div className="bg-surface border border-border rounded-xl p-8 space-y-6 flex flex-col justify-between">
               <div className="space-y-2">
                 <div className="flex items-center gap-3 text-sm font-bold">
-                  <div className="w-8 h-8 rounded-xl bg-[#00d4aa]/10 flex items-center justify-center text-[#00d4aa]">
+                  <div className="w-8 h-8 rounded-xl flex items-center justify-center">
                     <Database className="w-4 h-4" />
                   </div>
                   Sync Provided B2B Target List
@@ -2634,13 +2634,13 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
               
               <button
                 onClick={handleImportProvidedLeads}
-                className="w-full bg-[#00d4aa]/10 hover:bg-[#00d4aa] hover:text-[#090a0f] text-[#00d4aa] font-extrabold py-5 rounded-2xl border border-[#00d4aa]/30 transition-all flex items-center justify-center gap-2 mt-4 cursor-pointer text-xs shadow-md"
+                className="w-full hover:bg-[#00d4aa] hover:text-[#090a0f] font-extrabold py-5 rounded-xl border transition-all flex items-center justify-center gap-2 mt-4 cursor-pointer text-xs"
               >
                 <CheckCircle2 className="w-5 h-5" />
                 Sync {providedLeads.length} Pre-validated Contacts
               </button>
               
-              <div className="bg-[#090a0f] rounded-xl p-3 text-[9px] text-[#00d4aa] font-mono leading-relaxed mt-2 border border-border/40">
+              <div className="rounded-xl p-3 text-[9px] font-mono leading-relaxed mt-2 border border-border/40">
                 <span className="font-bold">SPECS:</span> {providedLeads.filter(l => l.email).length} Work Emails • {providedLeads.filter(l => l.linkedin_url).length} LinkedIn URLs • 100% Validated schema matching.
               </div>
             </div>
@@ -2675,7 +2675,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                       }).length} of ${leads.length}` : leads.length} Target Leads Identified
                     </span>
                     {scoreFilter && (
-                      <div className="flex items-center gap-1.5 bg-brand/15 text-brand border border-brand/30 px-2.5 py-1 rounded-full text-[10px] font-bold animate-pulse">
+                      <div className="flex items-center gap-1.5 bg-brand/15 text-brand border border-border px-2.5 py-1 rounded-full text-[10px] font-bold animate-pulse">
                         <span>Score Space: {scoreFilter.rangeLabel}</span>
                         <button 
                           onClick={() => setScoreFilter(null)} 
@@ -2768,9 +2768,9 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                 return (
                   <>
                     {/* Database Lead Search Engine bar */}
-                    <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-[#090a0f] border border-border/80 rounded-3xl p-5 mb-4">
+                    <div className="flex flex-col md:flex-row items-center justify-between gap-4 border border-border/80 rounded-xl p-5 mb-4">
                       <div className="relative w-full md:max-w-md bg-transparent">
-                        <Search className="w-4 h-4 text-[#00d4aa] absolute left-4 top-1/2 -translate-y-1/2" />
+                        <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2" />
                         <input
                           type="text"
                           value={leadsSearch}
@@ -2779,7 +2779,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                             setLeadsPage(1);
                           }}
                           placeholder="Search database leads (by name, email, company, job role, or industry)..."
-                          className="w-full bg-surface border border-border rounded-2xl pl-11 pr-10 py-3 text-xs outline-none focus:border-brand text-white placeholder-text-muted transition-all"
+                          className="w-full bg-surface border border-border rounded-xl pl-11 pr-10 py-3 text-xs outline-none focus:border-brand text-text placeholder-text-muted transition-all"
                         />
                         {leadsSearch && (
                           <button
@@ -2795,24 +2795,24 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                       </div>
                       <div className="flex flex-wrap items-center gap-4 text-[10px] font-mono text-text-muted">
                         <div className="flex items-center gap-1.5">
-                          <span className="w-2 h-2 bg-[#00d4aa] rounded-full animate-pulse" />
+                          <span className="w-2 h-2 rounded-full animate-pulse" />
                           <span>Elite &ge; 60 pts</span>
                         </div>
                         <div className="flex items-center gap-1.5">
-                          <span className="w-2 h-2 bg-[#6c63ff] rounded-full" />
+                          <span className="w-2 h-2 rounded-full" />
                           <span>Standard &lt; 60 pts</span>
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-5 bg-surface border border-border rounded-3xl shadow-sm glow-brand/5">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-5 bg-surface border border-border rounded-xl">
                       <div className="flex items-center gap-3">
                         <input 
                           type="checkbox"
                           id="bulk-select-all"
                           checked={allDisplayedSelected}
                           onChange={toggleSelectAll}
-                          className="w-4 h-4 rounded border-border text-brand focus:ring-brand cursor-pointer bg-surface"
+                          className="w-4 h-4 rounded-xl border-border text-brand focus:ring-brand cursor-pointer bg-surface"
                         />
                         <label htmlFor="bulk-select-all" className="text-xs font-bold text-text cursor-pointer select-none">
                           {selectedLeadIds.length > 0 ? (
@@ -2829,7 +2829,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                       <div className="flex flex-wrap items-center gap-2">
                         <button
                           onClick={() => setShowBulkAddModal(true)}
-                          className="px-3.5 py-2 bg-brand-alt/10 hover:bg-brand-alt hover:text-[#090a0f] text-brand-alt border border-brand-alt/20 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+                          className="px-3.5 py-2 bg-brand-alt/10 hover:bg-brand-alt hover:text-[#090a0f] text-brand-alt border border-brand-alt/20 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
                           title="Bulk load additional leads manually or from list"
                         >
                           <PlusCircle className="w-3.5 h-3.5" />
@@ -2876,26 +2876,26 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                     </div>
 
                     {leadsViewMode === 'list' ? (
-                      <div className="bg-surface border border-border rounded-3xl overflow-hidden shadow-sm shadow-brand/5">
+                      <div className="bg-surface border border-border rounded-xl overflow-hidden">
                         {/* Table controls */}
                         <div className="flex border-b border-border/80 p-4 justify-between items-center bg-surface-alt/20">
                           <span className="text-[10px] text-text-muted font-bold uppercase tracking-wider">Tabular Workplace View</span>
                           <div className="relative">
                             <button 
                               onClick={() => setShowColumnDropdown(!showColumnDropdown)}
-                              className="px-3 py-1.5 rounded-xl border border-border hover:border-brand/40 text-[10px] font-bold text-text-muted hover:text-text flex items-center gap-1.5 bg-surface-alt transition-all cursor-pointer"
+                              className="px-3 py-1.5 rounded-xl border border-border text-[10px] font-bold text-text-muted hover:text-text flex items-center gap-1.5 transition-all cursor-pointer"
                             >
                               <Filter className="w-3.5 h-3.5" />
                               Columns
                             </button>
                             {showColumnDropdown && (
-                              <div className="absolute right-0 mt-2 w-48 bg-[#0b0c11] border border-border rounded-2xl p-4 shadow-xl z-50 space-y-2.5">
+                              <div className="absolute right-0 mt-2 w-48 border border-border rounded-xl p-4 z-50 space-y-2.5">
                                 <div className="text-[10px] uppercase font-bold text-text-muted tracking-wider mb-2">Toggle Columns</div>
                                 {Object.keys(visibleColumns).map((col) => (
                                   <label key={col} className="flex items-center gap-2.5 text-xs text-text hover:text-white cursor-pointer select-none">
                                     <input 
                                       type="checkbox"
-                                      className="w-3.5 h-3.5 rounded border-border text-brand focus:ring-brand cursor-pointer"
+                                      className="w-3.5 h-3.5 rounded-xl border-border text-brand focus:ring-brand cursor-pointer"
                                       checked={visibleColumns[col]}
                                       onChange={(e) => setVisibleColumns(prev => ({ ...prev, [col]: e.target.checked }))}
                                     />
@@ -2919,7 +2919,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                                     id="bulk-select-list-header"
                                     checked={allDisplayedSelected}
                                     onChange={toggleSelectAll}
-                                    className="w-4 h-4 rounded border border-border text-brand bg-surface cursor-pointer"
+                                    className="w-4 h-4 rounded-xl border border-border text-brand bg-surface cursor-pointer"
                                   />
                                 </th>
                                 {visibleColumns.nameCompany && <th className="py-4 px-5">Lead / Company</th>}
@@ -2982,7 +2982,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                                               setSelectedLeadIds(prev => prev.filter(id => id !== l.id));
                                             }
                                           }}
-                                          className="w-4 h-4 rounded border-border text-brand focus:ring-brand cursor-pointer bg-surface"
+                                          className="w-4 h-4 rounded-xl border-border text-brand focus:ring-brand cursor-pointer bg-surface"
                                         />
                                       </td>
                                       {visibleColumns.nameCompany && (
@@ -2994,10 +2994,10 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                                               {(l.name || '?')[0]}
                                             </div>
                                             <div className="min-w-0">
-                                              <div className="font-bold text-xs text-white truncate max-w-[180px] flex items-center gap-1.5">
+                                              <div className="font-bold text-xs text-text truncate max-w-[180px] flex items-center gap-1.5">
                                                 <span>{l.name}</span>
                                                 {shouldHighlight && (
-                                                  <span className="px-1 py-0.5 rounded-md bg-amber-500/20 text-amber-500 border border-amber-500/30 text-[8px] font-bold">Elite</span>
+                                                  <span className="px-1 py-0.5 rounded-xl bg-amber-500/20 text-amber-500 border border-amber-500/30 text-[8px] font-bold">Elite</span>
                                                 )}
                                               </div>
                                               <div className="text-[10px] text-text-muted truncate max-w-[180px] font-semibold">
@@ -3025,25 +3025,25 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                                         <td className="py-3 px-5">
                                           <div className="flex items-center gap-1.5">
                                             {l.phone ? (
-                                              <a href={`tel:${l.phone}`} className="p-1 rounded-md bg-surface border border-border text-text-muted hover:text-brand transition-colors" title={l.phone}>
+                                              <a href={`tel:${l.phone}`} className="p-1 rounded-xl bg-surface border border-border text-text-muted hover:text-brand transition-colors" title={l.phone}>
                                                 <Smartphone className="w-3.5 h-3.5" />
                                               </a>
                                             ) : (
-                                              <span className="p-1 rounded-md text-text-muted/30"><Smartphone className="w-3.5 h-3.5" /></span>
+                                              <span className="p-1 rounded-xl text-text-muted/30"><Smartphone className="w-3.5 h-3.5" /></span>
                                             )}
                                             {l.email ? (
-                                              <a href={`mailto:${l.email}`} className="p-1 rounded-md bg-surface border border-border text-text-muted hover:text-brand transition-colors" title={l.email}>
+                                              <a href={`mailto:${l.email}`} className="p-1 rounded-xl bg-surface border border-border text-text-muted hover:text-brand transition-colors" title={l.email}>
                                                 <Mail className="w-3.5 h-3.5" />
                                               </a>
                                             ) : (
-                                              <span className="p-1 rounded-md text-text-muted/30"><Mail className="w-3.5 h-3.5" /></span>
+                                              <span className="p-1 rounded-xl text-text-muted/30"><Mail className="w-3.5 h-3.5" /></span>
                                             )}
                                             {l.linkedin_url ? (
-                                              <a href={l.linkedin_url.startsWith('http') ? l.linkedin_url : `https://${l.linkedin_url}`} target="_blank" rel="noreferrer" className="p-1 rounded-md bg-surface border border-border text-text-muted hover:text-brand transition-colors" title="LinkedIn Profile">
+                                              <a href={l.linkedin_url.startsWith('http') ? l.linkedin_url : `https://${l.linkedin_url}`} target="_blank" rel="noreferrer" className="p-1 rounded-xl bg-surface border border-border text-text-muted hover:text-brand transition-colors" title="LinkedIn Profile">
                                                 <Linkedin className="w-3.5 h-3.5" />
                                               </a>
                                             ) : (
-                                              <span className="p-1 rounded-md text-text-muted/30"><Linkedin className="w-3.5 h-3.5" /></span>
+                                              <span className="p-1 rounded-xl text-text-muted/30"><Linkedin className="w-3.5 h-3.5" /></span>
                                             )}
                                           </div>
                                         </td>
@@ -3060,8 +3060,8 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                                       )}
                                       {visibleColumns.status && (
                                         <td className="py-3 px-5">
-                                          <span className={`px-2 py-0.5 rounded-lg border text-[9px] font-bold inline-flex items-center gap-1.5 ${stageColorClass}`}>
-                                            <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
+                                          <span className={`px-2 py-0.5 rounded-xl border text-[9px] font-bold inline-flex items-center gap-1.5${stageColorClass}`}>
+                                            <span className={`w-1.5 h-1.5 rounded-full${dotColor}`} />
                                             {stageName}
                                           </span>
                                         </td>
@@ -3070,10 +3070,10 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                                         <div className="flex items-center justify-end gap-1.5">
                                           <button 
                                             onClick={() => setExpandedLeadId(isExpanded ? null : cid)}
-                                            className="p-1.5 rounded-lg border border-border text-text-muted hover:text-brand hover:border-brand/35 transition-all bg-surface cursor-pointer"
+                                            className="p-1.5 rounded-xl border border-border text-text-muted hover:text-brand transition-all bg-surface cursor-pointer"
                                             title="Expand detail drawer"
                                           >
-                                            <ChevronDown className={`w-3.5 h-3.5 transform transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                                            <ChevronDown className={`w-3.5 h-3.5 transform transition-transform${isExpanded ? 'rotate-180' : ''}`} />
                                           </button>
                                           {l.id && (
                                             <button 
@@ -3082,7 +3082,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                                                   handleDeleteLead(l.id!);
                                                 }
                                               }}
-                                              className="p-1.5 rounded-lg border border-border text-text-muted hover:text-red-500 hover:border-red-500/35 transition-all bg-surface cursor-pointer"
+                                              className="p-1.5 rounded-xl border border-border text-text-muted hover:text-red-500 hover:border-red-500/35 transition-all bg-surface cursor-pointer"
                                               title="Delete Lead"
                                             >
                                               <Trash2 className="w-3.5 h-3.5" />
@@ -3094,7 +3094,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                                     
                                     {isExpanded && (
                                       <tr>
-                                        <td colSpan={10} className="bg-[#0b0c11]/40 px-5 py-4 border-b border-border/30">
+                                        <td colSpan={10} className="px-5 py-4 border-b border-border/30">
                                           {editingLeadId === l.id ? (
                                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs animate-fadeIn text-left">
                                               <div>
@@ -3103,7 +3103,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                                                   type="text" 
                                                   value={editedLeadData?.name || ''} 
                                                   onChange={e => setEditedLeadData(prev => prev ? ({ ...prev, name: e.target.value }) : null)}
-                                                  className="w-full bg-surface-alt border border-border rounded-xl p-2.5 text-xs text-white outline-none focus:border-brand" 
+                                                  className="w-full border border-border rounded-xl p-2.5 text-xs text-text outline-none focus:border-brand" 
                                                 />
                                               </div>
                                               <div>
@@ -3112,7 +3112,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                                                   type="text" 
                                                   value={editedLeadData?.company || ''} 
                                                   onChange={e => setEditedLeadData(prev => prev ? ({ ...prev, company: e.target.value }) : null)}
-                                                  className="w-full bg-surface-alt border border-border rounded-xl p-2.5 text-xs text-white outline-none focus:border-brand" 
+                                                  className="w-full border border-border rounded-xl p-2.5 text-xs text-text outline-none focus:border-brand" 
                                                 />
                                               </div>
                                               <div>
@@ -3121,7 +3121,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                                                   type="text" 
                                                   value={editedLeadData?.role || ''} 
                                                   onChange={e => setEditedLeadData(prev => prev ? ({ ...prev, role: e.target.value }) : null)}
-                                                  className="w-full bg-surface-alt border border-border rounded-xl p-2.5 text-xs text-white outline-none focus:border-brand" 
+                                                  className="w-full border border-border rounded-xl p-2.5 text-xs text-text outline-none focus:border-brand" 
                                                 />
                                               </div>
                                               <div>
@@ -3130,7 +3130,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                                                   type="text" 
                                                   value={editedLeadData?.email || ''} 
                                                   onChange={e => setEditedLeadData(prev => prev ? ({ ...prev, email: e.target.value }) : null)}
-                                                  className="w-full bg-surface-alt border border-border rounded-xl p-2.5 text-xs text-white outline-none focus:border-brand" 
+                                                  className="w-full border border-border rounded-xl p-2.5 text-xs text-text outline-none focus:border-brand" 
                                                 />
                                               </div>
                                               <div>
@@ -3139,7 +3139,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                                                   type="text" 
                                                   value={editedLeadData?.phone || ''} 
                                                   onChange={e => setEditedLeadData(prev => prev ? ({ ...prev, phone: e.target.value }) : null)}
-                                                  className="w-full bg-surface-alt border border-border rounded-xl p-2.5 text-xs text-white outline-none focus:border-brand" 
+                                                  className="w-full border border-border rounded-xl p-2.5 text-xs text-text outline-none focus:border-brand" 
                                                 />
                                               </div>
                                               <div>
@@ -3148,13 +3148,13 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                                                   type="text" 
                                                   value={editedLeadData?.linkedin_url || ''} 
                                                   onChange={e => setEditedLeadData(prev => prev ? ({ ...prev, linkedin_url: e.target.value }) : null)}
-                                                  className="w-full bg-surface-alt border border-border rounded-xl p-2.5 text-xs text-white outline-none focus:border-brand" 
+                                                  className="w-full border border-border rounded-xl p-2.5 text-xs text-text outline-none focus:border-brand" 
                                                 />
                                               </div>
                                               <div className="col-span-full flex justify-end gap-2 pt-2 border-t border-border/20">
                                                 <button 
                                                   onClick={() => { setEditingLeadId(null); setEditedLeadData(null); }}
-                                                  className="px-3 py-1.5 rounded-lg border border-border text-[11px] font-semibold text-text-muted cursor-pointer"
+                                                  className="px-3 py-1.5 rounded-xl border border-border text-[11px] font-semibold text-text-muted cursor-pointer"
                                                 >
                                                   Cancel
                                                 </button>
@@ -3165,7 +3165,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                                                     setEditingLeadId(null);
                                                     setEditedLeadData(null);
                                                   }}
-                                                  className="px-4 py-1.5 bg-brand text-white rounded-lg text-[11px] font-bold cursor-pointer"
+                                                  className="px-4 py-1.5 bg-brand text-text rounded-xl text-[11px] font-bold cursor-pointer"
                                                 >
                                                   Save
                                                 </button>
@@ -3175,19 +3175,19 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs text-left animate-fadeIn">
                                               <div>
                                                 <span className="text-[9px] text-text-muted font-bold uppercase">Role / Title</span>
-                                                <span className="text-white font-medium block truncate mt-0.5">{l.role || 'N/A'}</span>
+                                                <span className="text-text font-medium block truncate mt-0.5">{l.role || 'N/A'}</span>
                                               </div>
                                               <div>
                                                 <span className="text-[9px] text-text-muted font-bold uppercase">Official Email</span>
-                                                <span className="text-white font-medium block truncate mt-0.5">{l.email || 'N/A'}</span>
+                                                <span className="text-text font-medium block truncate mt-0.5">{l.email || 'N/A'}</span>
                                               </div>
                                               <div>
                                                 <span className="text-[9px] text-text-muted font-bold uppercase">Direct Phone</span>
-                                                <span className="text-white font-medium block truncate mt-0.5">{l.phone || 'N/A'}</span>
+                                                <span className="text-text font-medium block truncate mt-0.5">{l.phone || 'N/A'}</span>
                                               </div>
                                               <div>
                                                 <span className="text-[9px] text-text-muted font-bold uppercase">Industry Segment</span>
-                                                <span className="text-white font-medium block truncate mt-0.5">{l.industry || 'N/A'}</span>
+                                                <span className="text-text font-medium block truncate mt-0.5">{l.industry || 'N/A'}</span>
                                               </div>
                                               <div className="col-span-full pt-2 border-t border-border/20 flex justify-end">
                                                 <button 
@@ -3210,11 +3210,11 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                           </table>
                         </div>
                         {/* Pagination Controls */}
-                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-5 border-t border-border bg-[#090a0f] text-xs text-text-muted">
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-5 border-t border-border text-xs text-text-muted">
                           <div className="flex items-center gap-2">
                             <span>Show</span>
                             <select 
-                              className="bg-surface-alt border border-border rounded-lg px-2 py-1 text-white text-xs outline-none focus:border-brand cursor-pointer font-bold"
+                              className="border border-border rounded-xl px-2 py-1 text-text text-xs outline-none focus:border-brand cursor-pointer font-bold"
                               value={leadsPerPage}
                               onChange={(e) => {
                                 setLeadsPerPage(Number(e.target.value));
@@ -3229,8 +3229,8 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                           </div>
                           
                           <div className="text-center font-medium">
-                            Showing <span className="text-white font-bold">{displayedLeads.length === 0 ? 0 : (leadsPage - 1) * leadsPerPage + 1}</span> to{" "}
-                            <span className="text-white font-bold">{Math.min(displayedLeads.length, leadsPage * leadsPerPage)}</span> of{" "}
+                            Showing <span className="text-text font-bold">{displayedLeads.length === 0 ? 0 : (leadsPage - 1) * leadsPerPage + 1}</span> to{" "}
+                            <span className="text-text font-bold">{Math.min(displayedLeads.length, leadsPage * leadsPerPage)}</span> of{" "}
                             <span className="text-brand font-bold">{displayedLeads.length}</span> leads
                           </div>
 
@@ -3335,15 +3335,15 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                       >
                         <div className="flex items-center justify-between mb-4 pb-2.5 border-b border-border/80">
                           <div className="flex items-center gap-2">
-                            <span className={`w-2 h-2 rounded-full ${col.dot}`} />
-                            <span className="font-syne font-bold text-xs tracking-wider text-white uppercase">{col.label}</span>
+                            <span className={`w-2 h-2 rounded-full${col.dot}`} />
+                            <span className="font-syne font-bold text-xs tracking-wider text-text uppercase">{col.label}</span>
                           </div>
-                          <span className="bg-[#090a0f] border border-border rounded-lg px-2 py-0.5 text-[10px] font-bold text-text-muted">{colLeads.length}</span>
+                          <span className="border border-border rounded-xl px-2 py-0.5 text-[10px] font-bold text-text-muted">{colLeads.length}</span>
                         </div>
 
                         <div className="flex-1 flex flex-col gap-3 overflow-y-auto max-h-[420px] scrollbar-thin font-sans">
                           {colLeads.length === 0 ? (
-                            <div className="flex-1 border border-dashed border-border/40 rounded-2xl flex flex-col items-center justify-center p-4 text-center text-[11px] text-text-muted hover:border-brand/20 transition-all min-h-[140px]">
+                            <div className="flex-1 border border-dashed border-border/40 rounded-xl flex flex-col items-center justify-center p-4 text-center text-[11px] text-text-muted border-border transition-all min-h-[140px]">
                               <span className="font-semibold block mb-0.5">Drag leads here</span>
                               <span>to update status</span>
                             </div>
@@ -3381,7 +3381,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                                       {(l.name || '?')[0]}
                                     </div>
                                     <div className="min-w-0 flex-1">
-                                      <div className="font-bold text-xs text-white truncate max-w-[120px] leading-tight flex items-center gap-1.5">
+                                      <div className="font-bold text-xs text-text truncate max-w-[120px] leading-tight flex items-center gap-1.5">
                                         <span>{l.name}</span>
                                       </div>
                                       <div className="text-[10px] text-text-muted truncate mt-0.5 font-semibold">
@@ -3413,7 +3413,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                                         cls = 'bg-amber-500/15 text-amber-400 border-amber-500/30';
                                       }
                                       return (
-                                        <span className={`px-2 py-0.5 rounded border text-center font-bold tracking-tight truncate ${cls}`}>
+                                        <span className={`px-2 py-0.5 rounded-xl border text-center font-bold tracking-tight truncate${cls}`}>
                                           {label}
                                         </span>
                                       );
@@ -3421,15 +3421,15 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                                   </div>
 
                                   <div className="mt-3.5 pt-2.5 border-t border-border/40 flex items-center justify-between">
-                                    <div className="flex items-center gap-1 bg-[#090a0f] border border-border px-1.5 py-0.5 rounded-lg text-[9px] font-mono text-text-muted">
+                                    <div className="flex items-center gap-1 border border-border px-1.5 py-0.5 rounded-xl text-[9px] font-mono text-text-muted">
                                       <Award className="w-3 h-3 text-brand-alt animate-pulse" />
-                                      <span className="font-extrabold text-[#00d4aa]">{lScore}</span>
+                                      <span className="font-extrabold">{lScore}</span>
                                     </div>
 
                                     <div className="flex items-center gap-1">
-                                      {l.phone && <span className="w-2 h-2 rounded-full bg-[#25d366]" title="WhatsApp ready" />}
+                                      {l.phone && <span className="w-2 h-2 rounded-full" title="WhatsApp ready" />}
                                       {l.email && <span className="w-2 h-2 rounded-full bg-blue-400" title="Email channel configured" />}
-                                      {l.linkedin_url && <span className="w-2 h-2 rounded-full bg-[#0077b5]" title="LinkedIn profile mapped" />}
+                                      {l.linkedin_url && <span className="w-2 h-2 rounded-full" title="LinkedIn profile mapped" />}
                                     </div>
                                   </div>
 
@@ -3440,8 +3440,8 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                                       className="mt-3 pt-3 border-t border-border/40 text-[10px] space-y-1.5 text-text-muted"
                                       onClick={e => e.stopPropagation()}
                                     >
-                                      <p className="truncate text-[10px] text-[#8e9aa8]"><strong className="text-white">Email:</strong> {l.email || 'N/A'}</p>
-                                      <p className="truncate text-[10px] text-[#8e9aa8]"><strong className="text-white">Phone:</strong> {l.phone || 'N/A'}</p>
+                                      <p className="truncate text-[10px]"><strong className="text-text">Email:</strong> {l.email || 'N/A'}</p>
+                                      <p className="truncate text-[10px]"><strong className="text-text">Phone:</strong> {l.phone || 'N/A'}</p>
                                       <div className="flex justify-end pt-1.5">
                                         <button
                                           onClick={(e) => {
@@ -3449,7 +3449,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                                             setEditingLeadId(l.id || `lead-${leadIdx}`);
                                             setEditedLeadData(l);
                                           }}
-                                          className="px-2 py-1 bg-brand/10 hover:bg-brand/20 text-brand rounded-lg text-[9px] font-bold cursor-pointer"
+                                          className="px-2 py-1 bg-brand/10 hover:bg-brand/20 text-brand rounded-xl text-[9px] font-bold cursor-pointer"
                                         >
                                           Edit Details
                                         </button>
@@ -3471,7 +3471,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                                 [col.id]: colLimit + 30
                               }));
                             }}
-                            className="w-full mt-2 py-2 bg-[#090a0f] hover:bg-brand hover:text-[#090a0f] border border-border hover:border-brand text-brand tracking-wide text-[10px] font-extrabold rounded-xl transition-all cursor-pointer text-center"
+                            className="w-full mt-2 py-2 hover:bg-brand hover:text-[#090a0f] border border-border hover:border-brand text-brand tracking-wide text-[10px] font-extrabold rounded-xl transition-all cursor-pointer text-center"
                           >
                             + Load {colLeads.length - colLimit} More Leads
                           </button>
@@ -3492,7 +3492,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => setActivePanel(2)}
-                className="w-full bg-gradient-to-r from-brand to-brand-alt text-white font-syne font-extrabold py-6 rounded-3xl transition-all flex items-center justify-center gap-3 group shadow-xl shadow-brand/20 text-lg"
+                className="w-full text-text font-syne font-extrabold py-6 rounded-xl transition-all flex items-center justify-center gap-3 group text-lg"
               >
                 Continue to Generate
                 <ChevronRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
@@ -3508,8 +3508,8 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
             <p className="text-text-muted text-xs md:text-sm">AI writes WhatsApp + LinkedIn + Email per lead.</p>
           </div>
 
-          <div className="bg-email/10 border border-email/20 rounded-3xl p-6 text-sm text-warning-muted leading-relaxed flex items-start gap-4 mb-8">
-            <div className="w-10 h-10 rounded-2xl bg-email/20 flex items-center justify-center text-email shrink-0">
+          <div className="bg-email/10 border border-email/20 rounded-xl p-6 text-sm text-warning-muted leading-relaxed flex items-start gap-4 mb-8">
+            <div className="w-10 h-10 rounded-xl bg-email/20 flex items-center justify-center text-email shrink-0">
               <Zap className="w-5 h-5" />
             </div>
             <div>
@@ -3519,7 +3519,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
           </div>
 
           {!isGenerating && Object.keys(messages).length === 0 && (
-            <div className="bg-surface border border-border rounded-3xl p-8 space-y-6 glow-brand/5">
+            <div className="bg-surface border border-border rounded-xl p-8 space-y-6">
               <div className="flex items-center gap-3 text-sm font-bold">
                 <div className="w-8 h-8 rounded-xl bg-brand/10 flex items-center justify-center text-brand">
                   <Zap className="w-4 h-4" />
@@ -3530,7 +3530,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                 <div className="space-y-2">
                   <label className="text-[10px] text-text-muted font-bold uppercase tracking-widest">Batch Size</label>
                   <select 
-                    className="w-full bg-surface-alt border border-border rounded-2xl p-4 text-sm focus:border-brand outline-none transition-all appearance-none cursor-pointer"
+                    className="w-full border border-border rounded-xl p-4 text-sm focus:border-brand outline-none transition-all appearance-none cursor-pointer"
                     value={batchSize}
                     onChange={e => setBatchSize(parseInt(e.target.value))}
                   >
@@ -3543,7 +3543,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                 <div className="space-y-2">
                   <label className="text-[10px] text-text-muted font-bold uppercase tracking-widest">Tone Style</label>
                   <select 
-                    className="w-full bg-surface-alt border border-border rounded-2xl p-4 text-sm focus:border-brand outline-none transition-all appearance-none cursor-pointer"
+                    className="w-full border border-border rounded-xl p-4 text-sm focus:border-brand outline-none transition-all appearance-none cursor-pointer"
                     value={tone}
                     onChange={e => setTone(e.target.value)}
                   >
@@ -3555,7 +3555,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
               </div>
               <button 
                 onClick={startGeneration}
-                className="w-full bg-brand hover:bg-brand/90 text-white font-syne font-extrabold py-5 rounded-2xl transition-all flex items-center justify-center gap-3 shadow-lg shadow-brand/20"
+                className="w-full bg-brand hover:bg-brand/90 text-text font-syne font-extrabold py-5 rounded-xl transition-all flex items-center justify-center gap-3"
               >
                 <Zap className="w-6 h-6 fill-current" />
                 Generate All Messages
@@ -3564,14 +3564,14 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
           )}
 
           {isGenerating && (
-            <div className="bg-surface border border-border rounded-3xl p-8 space-y-6 glow-brand/5">
+            <div className="bg-surface border border-border rounded-xl p-8 space-y-6">
               <div className="flex items-center gap-3 text-sm font-bold">
                 <Loader2 className="w-5 h-5 text-brand animate-spin" />
                 Generating…
               </div>
-              <div className="h-2 w-full bg-surface-alt rounded-full overflow-hidden border border-border">
+              <div className="h-2 w-full rounded-full overflow-hidden border border-border">
                 <motion.div 
-                  className="h-full bg-gradient-to-r from-brand to-brand-alt"
+                  className="h-full"
                   initial={{ width: 0 }}
                   animate={{ width: `${genProgress}%` }}
                 />
@@ -3579,9 +3579,9 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
               <div className="text-[10px] text-text-muted font-mono uppercase tracking-widest">
                 Progress: {Math.round(genProgress)}%
               </div>
-              <div className="bg-bg-subtle border border-border rounded-2xl p-5 h-48 overflow-y-auto font-mono text-[11px] text-text-muted space-y-2 custom-scrollbar">
+              <div className="bg-bg-subtle border border-border rounded-xl p-5 h-48 overflow-y-auto font-mono text-[11px] text-text-muted space-y-2 custom-scrollbar">
                 {genLog.map((log, i) => (
-                  <div key={i} className={`flex items-start gap-2 ${log.includes('✓') ? 'text-brand-alt' : ''}`}>
+                  <div key={i} className={`flex items-start gap-2${log.includes('✓') ? 'text-brand-alt' : ''}`}>
                     <span className="opacity-30">[{new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'})}]</span>
                     {log}
                   </div>
@@ -3595,9 +3595,9 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
             <motion.div 
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="bg-surface border border-border rounded-3xl p-8 text-center space-y-6 glow-brand/5"
+              className="bg-surface border border-border rounded-xl p-8 text-center space-y-6"
             >
-              <div className="w-20 h-20 bg-brand-alt/10 rounded-full flex items-center justify-center mx-auto shadow-inner">
+              <div className="w-20 h-20 bg-brand-alt/10 rounded-full flex items-center justify-center mx-auto">
                 <CheckCircle2 className="w-10 h-10 text-brand-alt" />
               </div>
               <div className="space-y-2">
@@ -3606,7 +3606,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
               </div>
               <button 
                 onClick={() => setActivePanel(3)}
-                className="w-full bg-brand-alt/10 hover:bg-brand-alt/20 text-brand-alt border border-brand-alt/30 font-syne font-extrabold py-5 rounded-2xl transition-all"
+                className="w-full bg-brand-alt/10 hover:bg-brand-alt/20 text-brand-alt border border-brand-alt/30 font-syne font-extrabold py-5 rounded-xl transition-all"
               >
                 Review Messages →
               </button>
@@ -3640,7 +3640,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => setActivePanel(4)}
-            className="w-full bg-gradient-to-r from-brand to-brand-alt text-white font-syne font-extrabold py-6 rounded-3xl transition-all flex items-center justify-center gap-3 group mt-10 shadow-xl shadow-brand/20 text-lg"
+            className="w-full text-text font-syne font-extrabold py-6 rounded-xl transition-all flex items-center justify-center gap-3 group mt-10 text-lg"
           >
             Export & Send
             <ChevronRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
@@ -3654,8 +3654,8 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
             <p className="text-text-muted text-xs md:text-sm">Download and deploy your outreach.</p>
           </div>
 
-          <div className="bg-brand/10 border border-brand/20 rounded-3xl p-6 text-sm text-brand-muted leading-relaxed flex items-start gap-4 mb-8">
-            <div className="w-10 h-10 rounded-2xl bg-brand/20 flex items-center justify-center text-brand shrink-0">
+          <div className="bg-brand/10 border border-border rounded-xl p-6 text-sm text-brand-muted leading-relaxed flex items-start gap-4 mb-8">
+            <div className="w-10 h-10 rounded-xl bg-brand/20 flex items-center justify-center text-brand shrink-0">
               <Download className="w-5 h-5" />
             </div>
             <div>
@@ -3667,10 +3667,10 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
           <div className="grid gap-6">
             <div className="grid md:grid-cols-2 gap-6">
               {liAccount?.connected && (
-                <div className="md:col-span-2 bg-brand/5 border border-brand/20 rounded-3xl p-8 space-y-6 glow-brand/5">
+                <div className="md:col-span-2 bg-brand/5 border border-border rounded-xl p-8 space-y-6">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-2xl bg-brand/10 flex items-center justify-center text-brand">
+                      <div className="w-12 h-12 rounded-xl bg-brand/10 flex items-center justify-center text-brand">
                         <Linkedin className="w-6 h-6" />
                       </div>
                       <div>
@@ -3688,7 +3688,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                   <button 
                     onClick={handleSyncLinkedIn}
                     disabled={isSyncingLi || Object.keys(messages).length === 0}
-                    className="w-full py-4 rounded-2xl bg-brand text-white font-syne font-extrabold flex items-center justify-center gap-3 hover:bg-brand/90 transition-all disabled:opacity-50 shadow-lg shadow-brand/20"
+                    className="w-full py-4 rounded-xl bg-brand text-text font-syne font-extrabold flex items-center justify-center gap-3 hover:bg-brand/90 transition-all disabled:opacity-50"
                   >
                     {isSyncingLi ? <Loader2 className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5 fill-current" />}
                     Sync {Object.keys(messages).length} Messages to Queue
@@ -3701,9 +3701,9 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                 { id: 'email' as const, icon: <Mail className="w-6 h-6" />, title: 'Email', color: '#f59e0b', desc: 'Subject + body + follow-up. Import to Apollo / Lemlist.' },
                 { id: 'master' as const, icon: <FileSpreadsheet className="w-6 h-6" />, title: 'Master CSV', color: '#00d4aa', desc: 'All leads + all 3 channels in one tracking spreadsheet.' }
               ].map(ex => (
-                <div key={ex.id} className="bg-surface border border-border rounded-3xl p-8 space-y-6 glow-brand/5 group hover:border-brand/30 transition-all">
+                <div key={ex.id} className="bg-surface border border-border rounded-xl p-8 space-y-6 group transition-all">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg" style={{ backgroundColor: ex.color }}>
+                    <div className="w-12 h-12 rounded-xl flex items-center justify-center text-text" style={{ backgroundColor: ex.color }}>
                       {ex.icon}
                     </div>
                     <div>
@@ -3715,7 +3715,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                   <div className="flex gap-3">
                     <button 
                       onClick={() => exportCSV(ex.id as any)}
-                      className="flex-1 py-4 rounded-2xl text-sm font-bold transition-all flex items-center justify-center gap-2 bg-surface border border-border hover:bg-surface-alt hover:border-brand/30 cursor-pointer"
+                      className="flex-1 py-4 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 bg-surface border border-border hover:bg-surface-alt cursor-pointer"
                     >
                       <Download className="w-4 h-4" />
                       Download
@@ -3739,7 +3739,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                         </button>
                         <button 
                           onClick={() => exportCSV('li_script')}
-                          className="flex items-center justify-center gap-2 py-3 rounded-xl bg-surface-alt border border-border text-[10px] font-bold hover:bg-border transition-all"
+                          className="flex items-center justify-center gap-2 py-3 rounded-xl border border-border text-[10px] font-bold hover:bg-border transition-all"
                         >
                           <Code2 className="w-3 h-3" />
                           Get Script
@@ -3753,7 +3753,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
           </div>
 
           {/* CRM Integration Section */}
-          <div className="bg-surface border border-border rounded-3xl p-8 space-y-6 mt-10 glow-brand/5 relative overflow-hidden">
+          <div className="bg-surface border border-border rounded-xl p-8 space-y-6 mt-10 relative overflow-hidden">
             <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none">
               <Database className="w-24 h-24 text-brand" />
             </div>
@@ -3778,7 +3778,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                       setCrmPlatformToConnect('HubSpot');
                       setShowCrmModal(true);
                     }}
-                    className="px-4 py-2 border border-border bg-surface-alt hover:bg-border rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
+                    className="px-4 py-2 border border-border hover:bg-border rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
                   >
                     Connect HubSpot
                   </button>
@@ -3787,7 +3787,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                       setCrmPlatformToConnect('Salesforce');
                       setShowCrmModal(true);
                     }}
-                    className="px-4 py-2 bg-brand hover:bg-brand/90 text-white rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
+                    className="px-4 py-2 bg-brand hover:bg-brand/90 text-text rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
                   >
                     Connect Salesforce
                   </button>
@@ -3800,7 +3800,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                   </span>
                   <button 
                     onClick={handleDisconnectCRM}
-                    className="px-3 py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-lg text-[10px] font-bold transition-all cursor-pointer"
+                    className="px-3 py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-xl text-[10px] font-bold transition-all cursor-pointer"
                   >
                     Disconnect
                   </button>
@@ -3816,7 +3816,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
               >
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted block">Connected Org</label>
-                  <div className="p-3.5 bg-[#090a0f] border border-border rounded-2xl text-xs font-mono font-semibold flex items-center justify-between text-brand">
+                  <div className="p-3.5 border border-border rounded-xl text-xs font-mono font-semibold flex items-center justify-between text-brand">
                     <span>{crmAccount.orgName}</span>
                     <RefreshCw className="w-3.5 h-3.5 opacity-60 animate-spin" />
                   </div>
@@ -3827,7 +3827,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                   <select 
                     value={crmMappingStage}
                     onChange={(e) => setCrmMappingStage(e.target.value)}
-                    className="w-full p-3.5 bg-[#090a0f] border border-border rounded-2xl text-xs font-bold text-text cursor-pointer focus:outline-none focus:border-brand"
+                    className="w-full p-3.5 border border-border rounded-xl text-xs font-bold text-text cursor-pointer focus:outline-none focus:border-brand"
                   >
                     <option value="Prospecting / SDR Out">Prospecting / SDR Out</option>
                     <option value="Lead Qualified / Verified">Lead Qualified / Verified</option>
@@ -3840,7 +3840,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                   <button 
                     onClick={handlePushCRMData}
                     disabled={isCrmPushing}
-                    className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-brand to-brand-alt hover:opacity-90 disabled:opacity-50 text-white text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-brand/20"
+                    className="w-full py-3.5 rounded-xl hover:opacity-90 disabled:opacity-50 text-text text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer"
                   >
                     {isCrmPushing ? (
                       <>
@@ -3862,7 +3862,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
               <motion.div 
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
-                className="bg-[#090a0f]/50 border border-border rounded-2xl p-5 space-y-4 glow-brand/5"
+                className="border border-border rounded-xl p-5 space-y-4"
               >
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-bold text-brand flex items-center gap-1.5">
@@ -3872,16 +3872,16 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                   <span className="font-mono font-bold text-brand">{crmPushProgress}%</span>
                 </div>
                 
-                <div className="h-2 w-full bg-surface-alt rounded-full overflow-hidden border border-border">
+                <div className="h-2 w-full rounded-full overflow-hidden border border-border">
                   <div 
-                    className="h-full bg-gradient-to-r from-brand to-brand-alt transition-all duration-300"
+                    className="h-full transition-all duration-300"
                     style={{ width: `${crmPushProgress}%` }}
                   />
                 </div>
 
-                <div className="bg-[#090a0f] border border-border rounded-xl p-4 h-40 overflow-y-auto font-mono text-[10px] text-text-muted space-y-1.5 custom-scrollbar">
+                <div className="border border-border rounded-xl p-4 h-40 overflow-y-auto font-mono text-[10px] text-text-muted space-y-1.5 custom-scrollbar">
                   {crmPushLog.map((log, i) => (
-                    <div key={i} className={`flex items-start gap-1.5 ${log.includes('HTTP 201') ? 'text-brand-alt' : log.includes('[SUCCESS]') || log.includes('Successfully') ? 'text-brand font-bold' : ''}`}>
+                    <div key={i} className={`flex items-start gap-1.5${log.includes('HTTP 201') ? 'text-brand-alt' : log.includes('[SUCCESS]') || log.includes('Successfully') ? 'text-brand font-bold' : ''}`}>
                       <span className="opacity-30">[{new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'})}]</span>
                       <span>{log}</span>
                     </div>
@@ -3891,7 +3891,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
             )}
           </div>
 
-          <div className="bg-surface border border-border rounded-3xl p-8 space-y-6 mt-10 glow-brand/5">
+          <div className="bg-surface border border-border rounded-xl p-8 space-y-6 mt-10">
             <div className="flex items-center gap-3 text-sm font-bold">
               <ShieldCheck className="w-4 h-4 text-brand" />
               Daily Limits & Safety
@@ -3902,7 +3902,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                 { title: 'LinkedIn', color: '#4da6ff', body: 'Max 20-25 req/day. No links in msg 1.' },
                 { title: 'Email', color: '#f59e0b', body: 'Max 50-100/day. Warm domain first.' }
               ].map((s, i) => (
-                <div key={i} className="bg-surface-alt border border-border rounded-2xl p-4 space-y-2">
+                <div key={i} className="border border-border rounded-xl p-4 space-y-2">
                   <div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: s.color }}>{s.title}</div>
                   <div className="text-[10px] text-text-muted font-medium leading-relaxed">{s.body}</div>
                 </div>
@@ -3954,11 +3954,11 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
 
     {/* Dynamic Reader/Viewer views */}
     {(activeView === 'VIEWER_DASHBOARD' || activeView === 'VIEWER_PIPELINE') && (
-      <div className="bg-surface border border-border rounded-3xl p-8 max-w-4xl mx-auto text-center space-y-4">
+      <div className="bg-surface border border-border rounded-xl p-8 max-w-4xl mx-auto text-center space-y-4">
         <div className="text-3xl font-syne font-bold text-purple-400">Read-Only Viewer Analytics Panel</div>
         <p className="text-sm text-text-muted">You are currently logged in with a read-only seat. Inbound sequence analytics and company pipelines can be viewed but edit actions are restricted by administrative guidelines.</p>
-        <div className="border border-border p-4 bg-[#0c0d12]/60 rounded-xl text-left space-y-2 text-xs">
-          <div className="font-bold text-white uppercase tracking-wider text-[10px]">&bull; Corporate Multi-Tenant Compliance</div>
+        <div className="border border-border p-4 rounded-xl text-left space-y-2 text-xs">
+          <div className="font-bold text-text uppercase tracking-wider text-[10px]">&bull; Corporate Multi-Tenant Compliance</div>
           <p className="text-text-muted">Domain settings and members roster configurations are managed by organizational administrators. To acquire edit-seat clearance, please contact your billing coordinator.</p>
         </div>
       </div>
@@ -3966,20 +3966,20 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
 
     {/* Super Admin Billing view */}
     {activeView === 'SUPER_ADMIN_BILLING' && (
-      <div className="bg-surface border border-border rounded-3xl p-8 max-w-4xl mx-auto space-y-6">
+      <div className="bg-surface border border-border rounded-xl p-8 max-w-4xl mx-auto space-y-6">
         <h3 className="text-xl font-bold tracking-tight font-syne">Platform Multi-Tenant Billing Gateway</h3>
         <p className="text-text-muted text-xs md:text-sm">Manage subscription pricing matrices, super-administrator global MRR graphs, and direct merchant overrides.</p>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-4">
-          <div className="bg-[#0c0d12]/60 border border-border p-6 rounded-2xl">
-            <div className="text-3xl font-syne font-bold font-bold text-emerald-400">$38,240</div>
+          <div className="border border-border p-6 rounded-xl">
+            <div className="text-3xl font-syne font-bold text-emerald-400">$38,240</div>
             <div className="text-[9px] text-text-muted uppercase tracking-widest font-bold mt-1">Platform Run-Rate MRR</div>
           </div>
-          <div className="bg-[#0c0d12]/60 border border-border p-6 rounded-2xl">
+          <div className="border border-border p-6 rounded-xl">
             <div className="text-3xl font-syne font-bold text-blue-400">42</div>
             <div className="text-[9px] text-text-muted uppercase tracking-widest font-bold mt-1">Active Enterprise Orgs</div>
           </div>
-          <div className="bg-[#0c0d12]/60 border border-border p-6 rounded-2xl">
-            <div className="text-3xl font-syne font-bold text-[#a78bfa]">100%</div>
+          <div className="border border-border p-6 rounded-xl">
+            <div className="text-3xl font-syne font-bold">100%</div>
             <div className="text-[9px] text-text-muted uppercase tracking-widest font-bold mt-1">Stripe Server uptime</div>
           </div>
         </div>
@@ -4098,7 +4098,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => { if (!isConnectingCrm) setShowCrmModal(false); }}
-              className="absolute inset-0 bg-[#040508]/80 backdrop-blur-sm"
+              className="absolute inset-0"
             />
 
             {/* Modal Body */}
@@ -4106,7 +4106,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="relative max-w-md w-full bg-[#12131a] border border-white/[0.08] rounded-[32px] p-8 space-y-6 shadow-2xl overflow-hidden text-slate-100"
+              className="relative max-w-md w-full border border-border rounded-xl p-8 space-y-6 overflow-hidden text-text"
             >
               {/* Colored accent header depending on selection */}
               <div 
@@ -4116,18 +4116,18 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
 
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-white/[0.04] flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-xl bg-white/[0.04] flex items-center justify-center">
                     <Database className="w-5 h-5 text-brand" />
                   </div>
                   <div>
                     <h3 className="font-bold text-base">Connect {crmPlatformToConnect}</h3>
-                    <p className="text-[10px] text-slate-400 font-medium font-mono">OAuth 2.0 Secure Handshake</p>
+                    <p className="text-[10px] text-text font-medium font-mono">OAuth 2.0 Secure Handshake</p>
                   </div>
                 </div>
                 <button 
                   onClick={() => setShowCrmModal(false)}
                   disabled={isConnectingCrm}
-                  className="p-1 rounded-lg hover:bg-white/5 cursor-pointer disabled:opacity-40"
+                  className="p-1 rounded-xl hover:bg-white/5 cursor-pointer disabled:opacity-40"
                 >
                   <X className="w-5 h-5 text-slate-500" />
                 </button>
@@ -4135,32 +4135,32 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
 
               <div className="space-y-4">
                 <div className="space-y-1.5 text-left">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-[#00d4aa]">Instance Endpoint URL</label>
+                  <label className="text-[10px] font-bold uppercase tracking-widest">Instance Endpoint URL</label>
                   <input 
                     type="text" 
                     value={crmInstanceUrl}
                     onChange={(e) => setCrmInstanceUrl(e.target.value)}
                     placeholder={crmPlatformToConnect === 'Salesforce' ? 'https://na162.salesforce.com' : 'https://api.hubspot.com/v3'}
                     disabled={isConnectingCrm}
-                    className="w-full px-4 py-3 bg-[#0a0b10] border border-white/[0.08] rounded-xl text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-brand"
+                    className="w-full px-4 py-3 border border-border rounded-xl text-xs text-text placeholder-slate-600 focus:outline-none focus:border-brand"
                   />
                   <p className="text-[9px] text-slate-500 italic">Leave blank to route via public API gateways.</p>
                 </div>
 
                 <div className="space-y-1.5 text-left">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-[#00d4aa]">Authorization Bearer Code</label>
+                  <label className="text-[10px] font-bold uppercase tracking-widest">Authorization Bearer Code</label>
                   <input 
                     type="password" 
                     value={crmAuthCode}
                     onChange={(e) => setCrmAuthCode(e.target.value)}
                     placeholder="Enter permanent private API secret verification token"
                     disabled={isConnectingCrm}
-                    className="w-full px-4 py-3 bg-[#0a0b10] border border-white/[0.08] rounded-xl text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-brand"
+                    className="w-full px-4 py-3 border border-border rounded-xl text-xs text-text placeholder-slate-600 focus:outline-none focus:border-brand"
                   />
                 </div>
 
-                <div className="p-4 bg-white/[0.02] border border-white/[0.03] rounded-2xl text-[10px] text-slate-400 leading-relaxed flex items-start gap-2.5 text-left">
-                  <ShieldCheck className="w-5 h-5 text-[#00d4aa] shrink-0" />
+                <div className="p-4 bg-white/[0.02] border border-border rounded-xl text-[10px] text-text leading-relaxed flex items-start gap-2.5 text-left">
+                  <ShieldCheck className="w-5 h-5 shrink-0" />
                   <span>
                     Your authorization credentials are encrypted and stored inside secure sandbox storage schemas aligned with modern TLS encryption guidelines.
                   </span>
@@ -4171,14 +4171,14 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                 <button 
                   onClick={() => setShowCrmModal(false)}
                   disabled={isConnectingCrm}
-                  className="flex-1 py-3.5 bg-white/[0.04] border border-white/[0.05] hover:bg-white/5 rounded-xl text-xs font-bold transition-all cursor-pointer disabled:opacity-50 text-slate-300"
+                  className="flex-1 py-3.5 bg-white/[0.04] border border-border hover:bg-white/5 rounded-xl text-xs font-bold transition-all cursor-pointer disabled:opacity-50 text-text"
                 >
                   Cancel
                 </button>
                 <button 
                   onClick={() => handleConnectCRM(crmPlatformToConnect)}
                   disabled={isConnectingCrm}
-                  className="flex-1 py-3.5 bg-brand hover:opacity-90 rounded-xl text-xs font-bold text-white transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  className="flex-1 py-3.5 bg-brand hover:opacity-90 rounded-xl text-xs font-bold text-text transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                 >
                   {isConnectingCrm ? (
                     <>
@@ -4207,16 +4207,16 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
         )}
 
         {showBulkEditModal && (
-          <div className="fixed inset-0 bg-[#090a10]/85 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="fixed inset-0 flex items-center justify-center p-4 z-50 animate-fadeIn">
             <motion.div 
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-surface border border-border rounded-3xl p-8 max-w-lg w-full space-y-6 shadow-2xl relative select-text"
+              className="bg-surface border border-border rounded-xl p-8 max-w-lg w-full space-y-6 relative select-text"
             >
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-lg font-syne font-bold text-white flex items-center gap-2">
+                  <h2 className="text-lg font-syne font-bold text-text flex items-center gap-2">
                     <Settings className="w-5 h-5 text-brand" />
                     Bulk Edit {selectedLeadIds.length} Selected Leads
                   </h2>
@@ -4224,7 +4224,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                 </div>
                 <button 
                   onClick={() => setShowBulkEditModal(false)}
-                  className="p-1 px-1.5 rounded-lg hover:bg-surface-alt text-text-muted transition-all cursor-pointer"
+                  className="p-1 px-1.5 rounded-xl hover:bg-surface-alt text-text-muted transition-all cursor-pointer"
                 >
                   ✕
                 </button>
@@ -4236,7 +4236,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                   <input 
                     type="text" 
                     placeholder="e.g. CTO, Director of Eng" 
-                    className="w-full bg-surface-alt border border-border rounded-xl p-3 text-xs text-white outline-none focus:border-brand"
+                    className="w-full border border-border rounded-xl p-3 text-xs text-text outline-none focus:border-brand"
                     value={bulkEditFields.role}
                     onChange={e => setBulkEditFields(prev => ({ ...prev, role: e.target.value }))}
                   />
@@ -4246,7 +4246,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                   <input 
                     type="text" 
                     placeholder="e.g. Acme Corp" 
-                    className="w-full bg-surface-alt border border-border rounded-xl p-3 text-xs text-white outline-none focus:border-brand"
+                    className="w-full border border-border rounded-xl p-3 text-xs text-text outline-none focus:border-brand"
                     value={bulkEditFields.company}
                     onChange={e => setBulkEditFields(prev => ({ ...prev, company: e.target.value }))}
                   />
@@ -4256,7 +4256,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                   <input 
                     type="text" 
                     placeholder="e.g. SaaS, Fintech" 
-                    className="w-full bg-surface-alt border border-border rounded-xl p-3 text-xs text-white outline-none focus:border-brand"
+                    className="w-full border border-border rounded-xl p-3 text-xs text-text outline-none focus:border-brand"
                     value={bulkEditFields.industry}
                     onChange={e => setBulkEditFields(prev => ({ ...prev, industry: e.target.value }))}
                   />
@@ -4266,7 +4266,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                   <input 
                     type="text" 
                     placeholder="e.g. US, GB, IN" 
-                    className="w-full bg-surface-alt border border-border rounded-xl p-3 text-xs text-white outline-none focus:border-brand"
+                    className="w-full border border-border rounded-xl p-3 text-xs text-text outline-none focus:border-brand"
                     value={bulkEditFields.country}
                     onChange={e => setBulkEditFields(prev => ({ ...prev, country: e.target.value }))}
                   />
@@ -4276,7 +4276,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                   <input 
                     type="text" 
                     placeholder="e.g. pending, sent, contact" 
-                    className="w-full bg-surface-alt border border-border rounded-xl p-3 text-xs text-white outline-none focus:border-brand"
+                    className="w-full border border-border rounded-xl p-3 text-xs text-text outline-none focus:border-brand"
                     value={bulkEditFields.status}
                     onChange={e => setBulkEditFields(prev => ({ ...prev, status: e.target.value }))}
                   />
@@ -4295,7 +4295,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                     await handleBulkUpdateLeads(selectedLeadIds, bulkEditFields as any);
                     setShowBulkEditModal(false);
                   }}
-                  className="px-6 py-2 bg-brand text-white hover:opacity-90 rounded-xl text-xs font-bold shadow-lg shadow-brand/20 cursor-pointer transition-all"
+                  className="px-6 py-2 bg-brand text-text hover:opacity-90 rounded-xl text-xs font-bold cursor-pointer transition-all"
                 >
                   Apply Updates
                 </button>
@@ -4305,16 +4305,16 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
         )}
 
         {showBulkAddModal && (
-          <div className="fixed inset-0 bg-[#090a10]/85 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="fixed inset-0 flex items-center justify-center p-4 z-50 animate-fadeIn">
             <motion.div 
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-surface border border-border rounded-3xl p-8 max-w-2xl w-full space-y-6 shadow-2xl relative select-text"
+              className="bg-surface border border-border rounded-xl p-8 max-w-2xl w-full space-y-6 relative select-text"
             >
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-lg font-syne font-bold text-white flex items-center gap-2">
+                  <h2 className="text-lg font-syne font-bold text-text flex items-center gap-2">
                     <PlusCircle className="w-5 h-5 text-brand-alt" />
                     Bulk Add Leads
                   </h2>
@@ -4322,18 +4322,18 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                 </div>
                 <button 
                   onClick={() => setShowBulkAddModal(false)}
-                  className="p-1 px-1.5 rounded-lg hover:bg-surface-alt text-text-muted transition-all cursor-pointer"
+                  className="p-1 px-1.5 rounded-xl hover:bg-surface-alt text-text-muted transition-all cursor-pointer"
                 >
                   ✕
                 </button>
               </div>
 
               <div className="space-y-4">
-                <div className="p-3 bg-brand/5 border border-brand/10 rounded-xl text-[11px] text-brand shrink-0">
-                  <span className="font-bold">Format: </span> <code className="bg-[#090a0f] p-1 rounded">name,role,company,industry,country,phone,email,linkedin_url</code>. Paste one lead per line.
+                <div className="p-3 bg-brand/5 border border-border rounded-xl text-[11px] text-brand shrink-0">
+                  <span className="font-bold">Format: </span> <code className="p-1 rounded-xl">name,role,company,industry,country,phone,email,linkedin_url</code>. Paste one lead per line.
                 </div>
                 <textarea 
-                  className="w-full bg-surface-alt border border-border rounded-2xl p-6 text-xs font-mono focus:border-brand outline-none transition-all min-h-[220px] resize-none"
+                  className="w-full border border-border rounded-xl p-6 text-xs font-mono focus:border-brand outline-none transition-all min-h-[220px] resize-none"
                   placeholder="Alice Smith,CEO,Acme Corp,Software,US,12345,alice@acme.com,linkedin.com/in/alice"
                   value={bulkAddRowsText}
                   onChange={e => setBulkAddRowsText(e.target.value)}
@@ -4357,7 +4357,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                     setBulkAddRowsText('');
                     setShowBulkAddModal(false);
                   }}
-                  className="px-6 py-2 bg-brand text-white hover:opacity-90 rounded-xl text-xs font-bold shadow-lg shadow-brand/20 cursor-pointer transition-all"
+                  className="px-6 py-2 bg-brand text-text hover:opacity-90 rounded-xl text-xs font-bold cursor-pointer transition-all"
                 >
                   Parse & Insert Leads
                 </button>
@@ -4397,7 +4397,7 @@ function NavButton({ active, onClick, icon: Icon, label, subLabel, isCollapsed }
       {!isCollapsed && (
         <div className="text-left overflow-hidden block">
           <div className="text-sm font-bold truncate">{label}</div>
-          <div className={`text-[9px] font-medium uppercase tracking-wider truncate ${active ? 'text-white/80' : 'text-text-muted'}`}>
+          <div className={`text-[9px] font-medium uppercase tracking-wider truncate${active ? 'text-white/80' : 'text-text-muted'}`}>
             {subLabel}
           </div>
         </div>
@@ -4430,17 +4430,17 @@ function TeamAdminPanel({ profile }: { profile: UserProfile }) {
       </div>
 
       <div className="grid md:grid-cols-3 gap-6">
-        <div className="bg-surface border border-border rounded-3xl p-8 space-y-4">
+        <div className="bg-surface border border-border rounded-xl p-8 space-y-4">
           <div className="text-3xl font-syne font-bold text-brand">{users.length}</div>
           <div className="text-[10px] text-text-muted font-bold uppercase tracking-widest">Total Members</div>
         </div>
-        <div className="bg-surface border border-border rounded-3xl p-8 space-y-4">
+        <div className="bg-surface border border-border rounded-xl p-8 space-y-4">
           <div className="text-3xl font-syne font-bold text-brand-alt">Active</div>
           <div className="text-[10px] text-text-muted font-bold uppercase tracking-widest">Subscription Status</div>
         </div>
       </div>
 
-      <div className="bg-surface border border-border rounded-[40px] overflow-hidden">
+      <div className="bg-surface border border-border rounded-xl overflow-hidden">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-surface-alt/50 border-b border-border">
@@ -4463,7 +4463,7 @@ function TeamAdminPanel({ profile }: { profile: UserProfile }) {
                   </div>
                 </td>
                 <td className="px-8 py-6">
-                  <span className="px-3 py-1 rounded-full bg-surface-alt border border-border text-[10px] font-bold uppercase tracking-wider">
+                  <span className="px-3 py-1 rounded-full border border-border text-[10px] font-bold uppercase tracking-wider">
                     {(u.role || '').replace('_', ' ')}
                   </span>
                 </td>
@@ -4509,7 +4509,7 @@ function CampaignDashboard({ campaigns, onCreate, onSelect, onDelete, onDownload
           />
           <button 
             onClick={() => { if(newCampName) { onCreate(newCampName); setNewCampName(''); } }}
-            className="bg-brand text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-brand/90 transition-all shadow-md shadow-brand/10 w-full sm:w-auto cursor-pointer shrink-0"
+            className="bg-brand text-text px-4 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-brand/90 transition-all w-full sm:w-auto cursor-pointer shrink-0"
           >
             <Plus className="w-4 h-4" />
             Create
@@ -4518,18 +4518,18 @@ function CampaignDashboard({ campaigns, onCreate, onSelect, onDelete, onDownload
       </div>
 
       {/* Visual Showcase Banner */}
-      <div className="grid md:grid-cols-12 gap-6 bg-surface border border-border rounded-3xl p-6 relative overflow-hidden glow-brand/5 items-center">
+      <div className="grid md:grid-cols-12 gap-6 bg-surface border border-border rounded-xl p-6 relative overflow-hidden items-center">
         {/* Background gradient blur */}
-        <div className="absolute top-[-20%] right-[-10%] w-[35%] h-[60%] bg-brand/10 rounded-full blur-[80px] pointer-events-none" />
+        <div className="absolute top-[-20%] right-[-10%] w-[35%] h-[60%] bg-brand/10 rounded-full pointer-events-none" />
         
         {/* Left column - Promo text */}
         <div className="md:col-span-8 space-y-4 relative z-10">
-          <div className="inline-flex items-center gap-1.5 bg-brand/10 text-brand border border-brand/20 px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider">
+          <div className="inline-flex items-center gap-1.5 bg-brand/10 text-brand border border-border px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider">
             <Sparkles className="w-3.5 h-3.5 animate-pulse text-brand" />
             <span>Active Enterprise Workspace</span>
           </div>
           <div className="space-y-2">
-            <h2 className="text-xl md:text-2xl font-bold tracking-tight text-white leading-tight">
+            <h2 className="text-xl md:text-2xl font-bold tracking-tight text-text leading-tight">
               Scale Your Outreach with Precision GTM Analytics
             </h2>
             <p className="text-xs text-text-muted leading-relaxed max-w-xl">
@@ -4538,11 +4538,11 @@ function CampaignDashboard({ campaigns, onCreate, onSelect, onDelete, onDownload
           </div>
           <div className="flex items-center gap-6 flex-wrap">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-white font-mono">100%</span>
+              <span className="text-xs font-bold text-text font-mono">100%</span>
               <span className="text-[10px] text-text-muted font-bold uppercase tracking-wide">AI Personalization</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-white font-mono">65+ Benchmark</span>
+              <span className="text-xs font-bold text-text font-mono">65+ Benchmark</span>
               <span className="text-[10px] text-text-muted font-bold uppercase tracking-wide">Lead Quality Standard</span>
             </div>
           </div>
@@ -4550,7 +4550,7 @@ function CampaignDashboard({ campaigns, onCreate, onSelect, onDelete, onDownload
 
         {/* Right column - Visual branding graphic */}
         <div className="md:col-span-4 relative flex justify-center w-full z-10">
-          <div className="w-full h-32 relative rounded-2xl overflow-hidden border border-border/80 group">
+          <div className="w-full h-32 relative rounded-xl overflow-hidden border border-border/80 group">
             <img 
               src="https://picsum.photos/seed/cyber-enterprise/400/200" 
               alt="Zyntra Enterprise Hub" 
@@ -4558,8 +4558,8 @@ function CampaignDashboard({ campaigns, onCreate, onSelect, onDelete, onDownload
               referrerPolicy="no-referrer"
             />
             {/* Overlay Glass Panel */}
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 to-transparent p-4 flex flex-col justify-end">
-              <h4 className="text-xs font-bold text-white uppercase font-sans">Multi-Agent Lead Scorer</h4>
+            <div className="absolute inset-0 p-4 flex flex-col justify-end">
+              <h4 className="text-xs font-bold text-text uppercase font-sans">Multi-Agent Lead Scorer</h4>
               <p className="text-[10px] text-brand font-medium">Model: Gemini 3.5 Flash</p>
             </div>
           </div>
@@ -4577,20 +4577,20 @@ function CampaignDashboard({ campaigns, onCreate, onSelect, onDelete, onDownload
           <motion.div 
             key={c.id}
             whileHover={{ y: -3 }}
-            className="bg-surface border border-border rounded-2xl p-6 space-y-4 glow-brand/5 group cursor-pointer relative overflow-hidden"
+            className="bg-surface border border-border rounded-xl p-6 space-y-4 group cursor-pointer relative overflow-hidden"
             onClick={() => onSelect(c)}
           >
             <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1.5 z-20">
               <button 
                 onClick={(e) => { e.stopPropagation(); onDownloadPDF(c); }}
-                className="p-1.5 hover:bg-brand/10 text-text-muted hover:text-brand rounded-lg transition-colors cursor-pointer"
+                className="p-1.5 hover:bg-brand/10 text-text-muted hover:text-brand rounded-xl transition-colors cursor-pointer"
                 title="Download Campaign PDF Report"
               >
                 <Download className="w-4 h-4" />
               </button>
               <button 
                 onClick={(e) => { e.stopPropagation(); onDelete(c.id); }}
-                className="p-1.5 hover:bg-red-500/10 text-text-muted hover:text-red-500 rounded-lg transition-colors cursor-pointer"
+                className="p-1.5 hover:bg-red-500/10 text-text-muted hover:text-red-500 rounded-xl transition-colors cursor-pointer"
                 title="Delete Campaign"
               >
                 <Trash2 className="w-4 h-4" />

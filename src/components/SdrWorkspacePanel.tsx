@@ -270,7 +270,7 @@ export function SdrWorkspacePanel({
           <p className="text-text-muted text-xs md:text-sm">Manage daily outbound interactions, review high-priority activities, and track personal metrics.</p>
         </div>
 
-        <div className="flex items-center gap-1.5 p-1 bg-[#0c0d12]/80 border border-border rounded-xl">
+        <div className="flex items-center gap-1.5 p-1 border border-border rounded-xl">
           <button
             onClick={() => setActiveTab('queue')}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
@@ -327,13 +327,13 @@ export function SdrWorkspacePanel({
       {activeTab === 'queue' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* Left Side: Tasks queue checklist */}
-          <div className="lg:col-span-7 bg-surface border border-border rounded-3xl p-5 md:p-8 space-y-6">
+          <div className="lg:col-span-7 bg-surface border border-border rounded-xl p-5 md:p-8 space-y-6">
             <div className="space-y-1 pb-4 border-b border-border/40">
-              <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#f59e0b] bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-md">Queue List</span>
+              <span className="text-[10px] font-extrabold uppercase tracking-widest bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-xl">Queue List</span>
               <p className="text-xs text-text-muted mt-2">Check done status of target outbound prospects to auto-increment volume statistics.</p>
             </div>
             
-            <div className="border border-border rounded-2xl overflow-hidden divide-y divide-border/60">
+            <div className="border border-border rounded-xl overflow-hidden divide-y divide-border/60">
               {tasks.map(task => (
                 <div 
                   key={task.id} 
@@ -354,7 +354,7 @@ export function SdrWorkspacePanel({
                     </button>
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <span className={`text-xs font-bold text-white ${task.done ? 'line-through text-text-muted' : ''}`}>
+                        <span className={`text-xs font-bold text-text${task.done ? 'line-through text-text-muted' : ''}`}>
                           {task.name}
                         </span>
                         <span className="text-[10px] text-text-muted font-medium">{task.title}</span>
@@ -379,7 +379,7 @@ export function SdrWorkspacePanel({
           </div>
 
           {/* Right Side: Daily Goal Tracker bento card */}
-          <div className="lg:col-span-5 bg-surface border border-border rounded-3xl p-5 md:p-8 space-y-6 flex flex-col justify-between">
+          <div className="lg:col-span-5 bg-surface border border-border rounded-xl p-5 md:p-8 space-y-6 flex flex-col justify-between">
             <div className="space-y-6">
               <div className="flex items-center justify-between pb-3 border-b border-border/40">
                 <div className="flex items-center gap-2.5">
@@ -387,7 +387,7 @@ export function SdrWorkspacePanel({
                     <Target className="w-4 h-4" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-white font-syne uppercase tracking-wider leading-tight">Daily Goal Tracker</h3>
+                    <h3 className="text-sm font-bold text-text font-syne uppercase tracking-wider leading-tight">Daily Goal Tracker</h3>
                     <p className="text-[10px] text-text-muted mt-0.5">Configure targets and record outbound volume</p>
                   </div>
                 </div>
@@ -399,7 +399,7 @@ export function SdrWorkspacePanel({
                     setTempAiTarget(String(aiTarget));
                     setIsEditingTargets(!isEditingTargets);
                   }}
-                  className="p-1.5 hover:bg-[#0c0d12] border border-transparent hover:border-border rounded-lg text-text-muted hover:text-white transition-colors cursor-pointer"
+                  className="p-1.5 hover:bg-[#0c0d12] border border-transparent hover:border-border rounded-xl text-text-muted hover:text-white transition-colors cursor-pointer"
                   title="Recalibrate Targets"
                 >
                   <Settings2 className="w-3.5 h-3.5" />
@@ -408,7 +408,7 @@ export function SdrWorkspacePanel({
 
               {/* Status Header Block */}
               {isAllGoalsMet ? (
-                <div className="bg-emerald-500/10 border border-emerald-500/25 rounded-2xl p-4 flex items-center gap-3.5">
+                <div className="bg-emerald-500/10 border border-emerald-500/25 rounded-xl p-4 flex items-center gap-3.5">
                   <div className="p-2 bg-emerald-500/20 rounded-xl text-emerald-400">
                     <Award className="w-5 h-5 animate-bounce" />
                   </div>
@@ -418,18 +418,18 @@ export function SdrWorkspacePanel({
                   </div>
                 </div>
               ) : (
-                <div className="bg-[#0c0d12]/70 border border-border/60 rounded-2xl p-4 flex items-center justify-between">
+                <div className="border border-border/60 rounded-xl p-4 flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-amber-500/10 rounded-xl text-amber-400">
                       <Flame className="w-5 h-5 animate-pulse" />
                     </div>
                     <div>
-                      <div className="text-xs font-bold text-white">Daily Focus Active</div>
+                      <div className="text-xs font-bold text-text">Daily Focus Active</div>
                       <p className="text-[10px] text-text-muted leading-relaxed">Increment calls and dispatches to maintain streak.</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <span className="text-xs font-mono font-bold text-[#f59e0b]">{(isCallGoalMet ? 1 : 0) + (isEmailGoalMet ? 1 : 0) + (isAiGoalMet ? 1 : 0)} / 3</span>
+                    <span className="text-xs font-mono font-bold">{(isCallGoalMet ? 1 : 0) + (isEmailGoalMet ? 1 : 0) + (isAiGoalMet ? 1 : 0)} / 3</span>
                     <p className="text-[8px] text-zinc-600 font-extrabold uppercase tracking-widest mt-0.5">Goals Met</p>
                   </div>
                 </div>
@@ -437,8 +437,8 @@ export function SdrWorkspacePanel({
 
               {/* Adjust Target Forms */}
               {isEditingTargets && (
-                <div className="bg-black/40 border border-[#f59e0b]/20 p-4 rounded-2xl space-y-4">
-                  <div className="text-[10px] font-extrabold uppercase text-[#f59e0b] tracking-wider">Configure Daily Benchmarks</div>
+                <div className="bg-black/40 border p-4 rounded-xl space-y-4">
+                  <div className="text-[10px] font-extrabold uppercase tracking-wider">Configure Daily Benchmarks</div>
                   <div className="grid grid-cols-3 gap-3">
                     <div className="space-y-1">
                       <label className="text-[9px] font-bold text-text-muted uppercase tracking-widest">Call Target</label>
@@ -447,7 +447,7 @@ export function SdrWorkspacePanel({
                         min="1"
                         value={tempCallTarget}
                         onChange={(e) => setTempCallTarget(e.target.value)}
-                        className="w-full px-3 py-2 bg-[#0a0b10] border border-border/80 rounded-xl text-xs font-mono text-white focus:outline-none focus:border-amber-400"
+                        className="w-full px-3 py-2 border border-border/80 rounded-xl text-xs font-mono text-text focus:outline-none focus:border-amber-400"
                       />
                     </div>
                     <div className="space-y-1">
@@ -457,7 +457,7 @@ export function SdrWorkspacePanel({
                         min="1"
                         value={tempEmailTarget}
                         onChange={(e) => setTempEmailTarget(e.target.value)}
-                        className="w-full px-3 py-2 bg-[#0a0b10] border border-border/80 rounded-xl text-xs font-mono text-white focus:outline-none focus:border-amber-400"
+                        className="w-full px-3 py-2 border border-border/80 rounded-xl text-xs font-mono text-text focus:outline-none focus:border-amber-400"
                       />
                     </div>
                     <div className="space-y-1">
@@ -467,20 +467,20 @@ export function SdrWorkspacePanel({
                         min="1"
                         value={tempAiTarget}
                         onChange={(e) => setTempAiTarget(e.target.value)}
-                        className="w-full px-3 py-2 bg-[#0a0b10] border border-border/80 rounded-xl text-xs font-mono text-white focus:outline-none focus:border-amber-400"
+                        className="w-full px-3 py-2 border border-border/80 rounded-xl text-xs font-mono text-text focus:outline-none focus:border-amber-400"
                       />
                     </div>
                   </div>
                   <div className="flex gap-2">
                     <button 
                       onClick={handleSaveTargets}
-                      className="flex-1 py-1.5 bg-[#f59e0b] hover:bg-amber-600 text-[#07080c] text-[10px] font-bold rounded-lg transition-colors cursor-pointer"
+                      className="flex-1 py-1.5 hover:bg-amber-600 text-[10px] font-bold rounded-xl transition-colors cursor-pointer"
                     >
                       Save Settings
                     </button>
                     <button 
                       onClick={() => setIsEditingTargets(false)}
-                      className="px-3 py-1.5 hover:bg-[#0c0d12] border border-border/60 text-text-muted hover:text-white text-[10px] font-bold rounded-lg transition-colors cursor-pointer"
+                      className="px-3 py-1.5 hover:bg-[#0c0d12] border border-border/60 text-text-muted hover:text-white text-[10px] font-bold rounded-xl transition-colors cursor-pointer"
                     >
                       Cancel
                     </button>
@@ -491,17 +491,17 @@ export function SdrWorkspacePanel({
               {/* Targets Progress Section */}
               <div className="space-y-5">
                 {/* 1. Calls Goal Progress */}
-                <div className="p-4 bg-[#0a0b10] border border-border/80 rounded-2xl space-y-3">
+                <div className="p-4 border border-border/80 rounded-xl space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="p-1 bg-amber-500/10 rounded-lg text-amber-500">
+                      <div className="p-1 bg-amber-500/10 rounded-xl text-amber-500">
                         <Phone className="w-3.5 h-3.5" />
                       </div>
-                      <span className="text-xs font-bold text-slate-200">Calls Handled</span>
+                      <span className="text-xs font-bold text-text">Calls Handled</span>
                     </div>
 
                     <div className="flex items-center gap-1.5 font-mono">
-                      <span className="text-xs font-bold text-white">{callActual}</span>
+                      <span className="text-xs font-bold text-text">{callActual}</span>
                       <span className="text-[10px] text-text-muted">/ {callTarget}</span>
                       {isCallGoalMet && (
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 ml-1 shrink-0" />
@@ -511,9 +511,9 @@ export function SdrWorkspacePanel({
 
                   {/* Progress Line */}
                   <div className="space-y-1.5">
-                    <div className="w-full bg-[#12131a] h-2 rounded-full overflow-hidden border border-border/40">
+                    <div className="w-full h-2 rounded-full overflow-hidden border border-border/40">
                       <div 
-                        className="h-full bg-gradient-to-r from-amber-500 to-amber-400 rounded-full transition-all duration-500"
+                        className="h-full rounded-full transition-all duration-500"
                         style={{ width: `${callPercentage}%` }}
                       />
                     </div>
@@ -527,14 +527,14 @@ export function SdrWorkspacePanel({
                   <div className="flex items-center gap-1.5 pt-1">
                     <button 
                       onClick={() => incrementCalls(1)}
-                      className="flex-1 py-1.5 bg-[#0c0d12] hover:bg-[#12131a]/80 hover:text-white border border-border/60 hover:border-amber-500/30 text-xs font-bold rounded-xl transition-all cursor-pointer text-center text-slate-300 flex items-center justify-center gap-1"
+                      className="flex-1 py-1.5 hover:bg-[#12131a]/80 hover:text-white border border-border/60 hover:border-amber-500/30 text-xs font-bold rounded-xl transition-all cursor-pointer text-center text-text flex items-center justify-center gap-1"
                     >
                       <Plus className="w-3.5 h-3.5 text-amber-400" />
                       +1 Call
                     </button>
                     <button 
                       onClick={() => incrementCalls(5)}
-                      className="px-2.5 py-1.5 bg-[#0c0d12] hover:bg-[#12131a]/80 text-text-muted hover:text-white border border-border/60 hover:border-amber-500/30 text-[10px] font-mono rounded-xl transition-all cursor-pointer"
+                      className="px-2.5 py-1.5 hover:bg-[#12131a]/80 text-text-muted hover:text-white border border-border/60 hover:border-amber-500/30 text-[10px] font-mono rounded-xl transition-all cursor-pointer"
                       title="Add 5 Calls"
                     >
                       +5
@@ -542,7 +542,7 @@ export function SdrWorkspacePanel({
                     <button 
                       onClick={() => incrementCalls(-1)}
                       disabled={callActual <= 0}
-                      className="p-1.5 bg-[#0c0d12] hover:bg-[#12131a]/80 disabled:opacity-40 border border-border/60 rounded-xl text-text-muted hover:text-white transition-colors cursor-pointer"
+                      className="p-1.5 hover:bg-[#12131a]/80 disabled:opacity-40 border border-border/60 rounded-xl text-text-muted hover:text-white transition-colors cursor-pointer"
                       title="Decrease by 1"
                     >
                       <Minus className="w-3.5 h-3.5" />
@@ -551,17 +551,17 @@ export function SdrWorkspacePanel({
                 </div>
 
                 {/* 2. Emails Goal Progress */}
-                <div className="p-4 bg-[#0a0b10] border border-border/80 rounded-2xl space-y-3">
+                <div className="p-4 border border-border/80 rounded-xl space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="p-1 bg-[#40a9ff]/10 rounded-lg text-[#40a9ff]">
+                      <div className="p-1 rounded-xl">
                         <Mail className="w-3.5 h-3.5" />
                       </div>
-                      <span className="text-xs font-bold text-slate-200">Emails Sent</span>
+                      <span className="text-xs font-bold text-text">Emails Sent</span>
                     </div>
 
                     <div className="flex items-center gap-1.5 font-mono">
-                      <span className="text-xs font-bold text-white">{emailActual}</span>
+                      <span className="text-xs font-bold text-text">{emailActual}</span>
                       <span className="text-[10px] text-text-muted">/ {emailTarget}</span>
                       {isEmailGoalMet && (
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 ml-1 shrink-0" />
@@ -571,15 +571,15 @@ export function SdrWorkspacePanel({
 
                   {/* Progress Line */}
                   <div className="space-y-1.5">
-                    <div className="w-full bg-[#12131a] h-2 rounded-full overflow-hidden border border-border/40">
+                    <div className="w-full h-2 rounded-full overflow-hidden border border-border/40">
                       <div 
-                        className="h-full bg-gradient-to-r from-blue-500 to-[#40a9ff] rounded-full transition-all duration-500"
+                        className="h-full rounded-full transition-all duration-500"
                         style={{ width: `${emailPercentage}%` }}
                       />
                     </div>
                     <div className="flex justify-between items-center text-[9px] font-mono text-text-muted">
                       <span>Progress Status</span>
-                      <span className="font-bold text-[#40a9ff]">{emailPercentage}%</span>
+                      <span className="font-bold">{emailPercentage}%</span>
                     </div>
                   </div>
 
@@ -587,14 +587,14 @@ export function SdrWorkspacePanel({
                   <div className="flex items-center gap-1.5 pt-1">
                     <button 
                       onClick={() => incrementEmails(1)}
-                      className="flex-1 py-1.5 bg-[#0c0d12] hover:bg-[#12131a]/80 hover:text-white border border-border/60 hover:border-blue-500/30 text-xs font-bold rounded-xl transition-all cursor-pointer text-center text-slate-300 flex items-center justify-center gap-1"
+                      className="flex-1 py-1.5 hover:bg-[#12131a]/80 hover:text-white border border-border/60 hover:border-blue-500/30 text-xs font-bold rounded-xl transition-all cursor-pointer text-center text-text flex items-center justify-center gap-1"
                     >
                       <Plus className="w-3.5 h-3.5 text-blue-400" />
                       +1 Email
                     </button>
                     <button 
                       onClick={() => incrementEmails(5)}
-                      className="px-2.5 py-1.5 bg-[#0c0d12] hover:bg-[#12131a]/80 text-text-muted hover:text-white border border-border/60 hover:border-blue-500/30 text-[10px] font-mono rounded-xl transition-all cursor-pointer"
+                      className="px-2.5 py-1.5 hover:bg-[#12131a]/80 text-text-muted hover:text-white border border-border/60 hover:border-blue-500/30 text-[10px] font-mono rounded-xl transition-all cursor-pointer"
                       title="Add 5 Emails"
                     >
                       +5
@@ -602,7 +602,7 @@ export function SdrWorkspacePanel({
                     <button 
                       onClick={() => incrementEmails(-1)}
                       disabled={emailActual <= 0}
-                      className="p-1.5 bg-[#0c0d12] hover:bg-[#12131a]/80 disabled:opacity-40 border border-border/60 rounded-xl text-text-muted hover:text-white transition-colors cursor-pointer"
+                      className="p-1.5 hover:bg-[#12131a]/80 disabled:opacity-40 border border-border/60 rounded-xl text-text-muted hover:text-white transition-colors cursor-pointer"
                       title="Decrease by 1"
                     >
                       <Minus className="w-3.5 h-3.5" />
@@ -611,20 +611,20 @@ export function SdrWorkspacePanel({
                 </div>
 
                 {/* 3. Daily Outreach Goal Progress (AI-Generated Messages from Firestore) */}
-                <div className="p-4 bg-[#0a0b10] border border-border/80 rounded-2xl space-y-3">
+                <div className="p-4 border border-border/80 rounded-xl space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="p-1 bg-[#a78bfa]/10 rounded-lg text-[#a78bfa]">
+                      <div className="p-1 rounded-xl">
                         <Sparkles className="w-3.5 h-3.5" />
                       </div>
-                      <span className="text-xs font-bold text-slate-200">AI Outreach Dispatches</span>
+                      <span className="text-xs font-bold text-text">AI Outreach Dispatches</span>
                     </div>
 
                     <div className="flex items-center gap-1.5 font-mono">
                       {loadingAiLogs ? (
-                        <RefreshCw className="w-3.5 h-3.5 text-[#a78bfa] animate-spin shrink-0" />
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin shrink-0" />
                       ) : (
-                        <span className="text-xs font-bold text-white">{aiActual}</span>
+                        <span className="text-xs font-bold text-text">{aiActual}</span>
                       )}
                       <span className="text-[10px] text-text-muted">/ {aiTarget}</span>
                       {isAiGoalMet && (
@@ -635,15 +635,15 @@ export function SdrWorkspacePanel({
 
                   {/* Progress Line */}
                   <div className="space-y-1.5">
-                    <div className="w-full bg-[#12131a] h-2 rounded-full overflow-hidden border border-border/40">
+                    <div className="w-full h-2 rounded-full overflow-hidden border border-border/40">
                       <div 
-                        className="h-full bg-gradient-to-r from-purple-500 to-[#a78bfa] rounded-full transition-all duration-300"
+                        className="h-full rounded-full transition-all duration-300"
                         style={{ width: `${aiPercentage}%` }}
                       />
                     </div>
                     <div className="flex justify-between items-center text-[9px] font-mono text-text-muted">
                       <span>{aiRemaining > 0 ? `${aiRemaining} messages left to meet daily outreach quota` : "🔥 Outbound quota complete!"}</span>
-                      <span className="font-bold text-[#a78bfa]">{aiPercentage}%</span>
+                      <span className="font-bold">{aiPercentage}%</span>
                     </div>
                   </div>
                 </div>
@@ -676,18 +676,18 @@ export function SdrWorkspacePanel({
       {/* PERSONAL OUTBOUND METRICS */}
       {activeTab === 'stats' && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-          <div className="bg-surface border border-border rounded-2xl p-6 space-y-2">
+          <div className="bg-surface border border-border rounded-xl p-6 space-y-2">
             <div className="text-3xl font-syne font-bold text-amber-400">142</div>
             <div className="text-[9px] text-text-muted font-bold uppercase tracking-widest">Dials & Sequence Dispatches</div>
             <div className="text-[10px] text-emerald-400 font-semibold">+15% from campaign average</div>
           </div>
-          <div className="bg-surface border border-border rounded-2xl p-6 space-y-2">
-            <div className="text-3xl font-syne font-bold text-[#60a5fa]">26.4%</div>
+          <div className="bg-surface border border-border rounded-xl p-6 space-y-2">
+            <div className="text-3xl font-syne font-bold">26.4%</div>
             <div className="text-[9px] text-text-muted font-bold uppercase tracking-widest">Personal Average Email Open rate</div>
             <div className="text-[10px] text-emerald-400 font-semibold">Above company target (20%)</div>
           </div>
-          <div className="bg-surface border border-border rounded-2xl p-6 space-y-2">
-            <div className="text-3xl font-syne font-bold text-[#a78bfa]">12</div>
+          <div className="bg-surface border border-border rounded-xl p-6 space-y-2">
+            <div className="text-3xl font-syne font-bold">12</div>
             <div className="text-[9px] text-text-muted font-bold uppercase tracking-widest">Meetings Booked this Month</div>
             <div className="text-[10px] text-amber-500 font-semibold font-syne">80% of personal quota</div>
           </div>
@@ -707,7 +707,7 @@ export function SdrWorkspacePanel({
       {activeTab === 'leads_pipeline' && (
         <div className="space-y-6">
           {/* Controls Bar */}
-          <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-[#0a0b10] border border-border p-4 rounded-2xl">
+          <div className="flex flex-col md:flex-row gap-4 items-center justify-between border border-border p-4 rounded-xl">
             {/* Search/Filter Inputs */}
             <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
               <div className="relative flex-1 md:w-64">
@@ -717,14 +717,14 @@ export function SdrWorkspacePanel({
                   placeholder="Search lead or company..."
                   value={sdrSearch}
                   onChange={(e) => setSdrSearch(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 bg-[#0c0d12] border border-border rounded-xl text-xs text-white placeholder-text-muted focus:outline-none focus:border-amber-400"
+                  className="w-full pl-9 pr-4 py-2 border border-border rounded-xl text-xs text-text placeholder-text-muted focus:outline-none focus:border-amber-400"
                 />
               </div>
 
               <select
                 value={sdrIndustryFilter}
                 onChange={(e) => setSdrIndustryFilter(e.target.value)}
-                className="px-3 py-2 bg-[#0c0d12] border border-border rounded-xl text-xs text-slate-300 focus:outline-none focus:border-amber-400"
+                className="px-3 py-2 border border-border rounded-xl text-xs text-text focus:outline-none focus:border-amber-400"
               >
                 <option value="all">All Industries</option>
                 {Array.from(new Set((leads || []).map(l => l.industry).filter(Boolean))).map((ind: any) => (
@@ -734,7 +734,7 @@ export function SdrWorkspacePanel({
             </div>
 
             {/* View Toggle button (Kanban or List) */}
-            <div className="flex items-center gap-1.5 p-1 bg-[#0c0d12] border border-border rounded-xl self-end md:self-auto">
+            <div className="flex items-center gap-1.5 p-1 border border-border rounded-xl self-end md:self-auto">
               <button
                 onClick={() => setSdrViewType('kanban')}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
@@ -814,11 +814,11 @@ export function SdrWorkspacePanel({
                           col.id === 'sent' ? 'bg-blue-400' :
                           col.id === 'failed' ? 'bg-red-400' : 'bg-emerald-400'
                         } ${isPulsing ? 'animate-ping' : ''}`} />
-                        <span className="font-bold text-[10px] uppercase text-slate-200 tracking-wider">
+                        <span className="font-bold text-[10px] uppercase text-text tracking-wider">
                           {col.name}
                         </span>
                       </div>
-                      <span className="bg-[#0c0d12] border border-border text-[9px] px-2 py-0.5 rounded font-bold text-slate-300 font-mono">
+                      <span className="border border-border text-[9px] px-2 py-0.5 rounded-xl font-bold text-text font-mono">
                         {colLeads.length}
                       </span>
                     </div>
@@ -845,7 +845,7 @@ export function SdrWorkspacePanel({
                             }`}
                           >
                             <div className="flex justify-between items-start gap-2">
-                              <h4 className="text-xs font-bold text-white leading-snug line-clamp-1">{lead.name}</h4>
+                              <h4 className="text-xs font-bold text-text leading-snug line-clamp-1">{lead.name}</h4>
                               <span className={`text-[8px] font-extrabold px-1.5 py-0.5 rounded uppercase tracking-wider ${
                                 lead.score >= 80 ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
                                 lead.score >= 60 ? 'bg-blue-500/10 text-[#40a9ff] border border-blue-500/20' :
@@ -857,7 +857,7 @@ export function SdrWorkspacePanel({
 
                             <div className="text-[10px] text-text-muted mt-1 font-semibold">{lead.role} &bull; {lead.company}</div>
 
-                            <div className="mt-3.5 space-y-1 bg-[#0c0d12]/40 p-2.5 rounded-lg border border-border/40 text-[9px]">
+                            <div className="mt-3.5 space-y-1 p-2.5 rounded-xl border border-border/40 text-[9px]">
                               {lead.email && (
                                 <div className="flex items-center gap-1.5 text-text-muted">
                                   <Mail className="w-3 h-3 text-amber-500/50 shrink-0" />
@@ -889,7 +889,7 @@ export function SdrWorkspacePanel({
                                   const statusValue = targetVal === 'pending' ? 'imported' : targetVal;
                                   handleUpdateLeadStatus(lead.id, statusValue);
                                 }}
-                                className="bg-[#0c0d12] border border-border text-[9px] px-1.5 py-1 rounded text-amber-400 font-bold focus:outline-none focus:border-amber-400 cursor-pointer"
+                                className="border border-border text-[9px] px-1.5 py-1 rounded-xl text-amber-400 font-bold focus:outline-none focus:border-amber-400 cursor-pointer"
                               >
                                 <option value="pending">Prospect Pool &bull; Cold</option>
                                 <option value="sent">Campaign Contacting</option>
@@ -914,10 +914,10 @@ export function SdrWorkspacePanel({
             </div>
           ) : (
             /* LIST VIEW SYSTEM */
-            <div className="bg-[#0a0b10] border border-border rounded-2xl overflow-hidden shadow-xl">
+            <div className="border border-border rounded-xl overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-[#0c0d12] text-[10px] text-text-muted uppercase font-mono tracking-wider border-b border-border">
+                  <thead className="text-[10px] text-text-muted uppercase font-mono tracking-wider border-b border-border">
                     <tr>
                       <th className="p-4 font-bold">Contact Name</th>
                       <th className="p-4 font-bold">Job Role & Company</th>
@@ -927,7 +927,7 @@ export function SdrWorkspacePanel({
                       <th className="p-4 font-bold text-right text-text-muted">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-border/60 bg-[#0a0b10] text-slate-300">
+                  <tbody className="divide-y divide-border/60 text-text">
                     {(leads || [])
                       .filter(lead => {
                         const matchSearch = lead.name?.toLowerCase().includes(sdrSearch.toLowerCase()) || 
@@ -940,15 +940,15 @@ export function SdrWorkspacePanel({
                         return (
                           <tr key={lead.id} className="hover:bg-surface-alt/70 transition-colors">
                             <td className="p-4">
-                              <div className="font-bold text-white text-xs">{lead.name}</div>
+                              <div className="font-bold text-text text-xs">{lead.name}</div>
                               <div className="text-[10px] text-text-muted mt-0.5">{lead.email}</div>
                             </td>
                             <td className="p-4">
-                              <div className="text-white text-xs font-semibold">{lead.role}</div>
+                              <div className="text-text text-xs font-semibold">{lead.role}</div>
                               <div className="text-[10px] text-text-muted mt-0.5">{lead.company}</div>
                             </td>
                             <td className="p-4">
-                              <div className="text-slate-300 font-medium">{lead.industry || 'Enterprise Client'}</div>
+                              <div className="text-text font-medium">{lead.industry || 'Enterprise Client'}</div>
                               <div className="text-[10px] text-text-muted mt-0.5">{lead.country || 'Global'}</div>
                             </td>
                             <td className="p-4">
@@ -980,7 +980,7 @@ export function SdrWorkspacePanel({
                                   const statusValue = targetVal === 'pending' ? 'imported' : targetVal;
                                   handleUpdateLeadStatus(lead.id, statusValue);
                                 }}
-                                className="bg-[#0c0d12] border border-border text-[10px] px-2 py-1.5 rounded text-amber-400 font-bold focus:outline-none focus:border-amber-400 cursor-pointer"
+                                className="border border-border text-[10px] px-2 py-1.5 rounded-xl text-amber-400 font-bold focus:outline-none focus:border-amber-400 cursor-pointer"
                               >
                                 <option value="pending">Prospect Pool &bull; Cold</option>
                                 <option value="sent">Contacting</option>
