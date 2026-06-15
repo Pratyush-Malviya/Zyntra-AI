@@ -94,22 +94,22 @@ export function OrgAdminPanel({
   };
 
   return (
-    <div >
+    <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
       {/* Sidebar Controls */}
-      <div >
-        <div >
-          <div >
-            <div >
-              <Building  />
+      <div className="md:col-span-1 space-y-2">
+        <div className="p-4 border border-border/80 rounded-xl mb-4">
+          <div className="flex items-center gap-2.5">
+            <div className="w-10 h-10 rounded-xl bg-brand/10 border border-border flex items-center justify-center text-brand">
+              <Building className="w-5 h-5" />
             </div>
             <div>
-              <div >{orgName}</div>
-              <div >Tier 2 Admin Profile</div>
+              <div className="text-xs font-bold text-text uppercase truncate max-w-[120px]">{orgName}</div>
+              <div className="text-[9px] font-extrabold uppercase tracking-wide">Tier 2 Admin Profile</div>
             </div>
           </div>
         </div>
 
-        <div >
+        <div className="flex flex-col gap-1">
           {[
             { id: 'overview', label: 'Tenant Overview', icon: Building },
             { id: 'members', label: 'Member Management', icon: Users },
@@ -124,9 +124,13 @@ export function OrgAdminPanel({
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                
+                className={`w-full flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs font-bold transition-all text-left ${
+                  isActive 
+                    ? 'bg-brand/10 text-brand border border-brand/30' 
+                    : 'text-text-muted hover:bg-surface-alt hover:text-text border border-transparent'
+                }`}
               >
-                <tab.icon  />
+                <tab.icon className={`w-4 h-4${isActive ? 'text-brand' : 'text-text-muted'}`} />
                 {tab.label}
               </button>
             );
@@ -135,52 +139,52 @@ export function OrgAdminPanel({
       </div>
 
       {/* Main Panel Content */}
-      <div >
+      <div className="md:col-span-3 min-h-[500px]">
         {/* OVERVIEW TAB */}
         {activeTab === 'overview' && (
-          <div >
-            <div >
-              <h1 >Organization Profile & Tenant Overview</h1>
-              <p >Manage multi-tenant settings and monitor regional activity.</p>
+          <div className="space-y-6">
+            <div className="space-y-1">
+              <h1 className="text-xl md:text-2xl font-bold tracking-tight">Organization Profile & Tenant Overview</h1>
+              <p className="text-text-muted text-xs md:text-sm">Manage multi-tenant settings and monitor regional activity.</p>
             </div>
 
-            <div >
-              <div >
-                <div >{members.length + 1} / 10</div>
-                <div >Active Seats Allocated</div>
-                <div >
-                  <div  style={{ width: `${((members.length + 1) / 10) * 100}%` }}></div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              <div className="bg-surface border border-border rounded-xl p-6 space-y-2">
+                <div className="text-3xl font-syne font-bold text-brand">{members.length + 1} / 10</div>
+                <div className="text-[9px] text-text-muted font-bold uppercase tracking-widest">Active Seats Allocated</div>
+                <div className="w-full h-1.5 rounded-full mt-2 overflow-hidden">
+                  <div className="bg-brand h-full rounded-full" style={{ width: `${((members.length + 1) / 10) * 100}%` }}></div>
                 </div>
               </div>
-              <div >
-                <div >$245.80</div>
-                <div >Remaining AI Credits</div>
-                <div >Auto Top-Up Active &gt; $50</div>
+              <div className="bg-surface border border-border rounded-xl p-6 space-y-2">
+                <div className="text-3xl font-syne font-bold">$245.80</div>
+                <div className="text-[9px] text-text-muted font-bold uppercase tracking-widest">Remaining AI Credits</div>
+                <div className="text-[10px] text-emerald-400 font-bold">Auto Top-Up Active &gt; $50</div>
               </div>
-              <div >
-                <div >Enterprise</div>
-                <div >Pricing Plan Tier</div>
-                <div >Renews in 18 days</div>
+              <div className="bg-surface border border-border rounded-xl p-6 space-y-2">
+                <div className="text-3xl font-syne font-bold text-amber-500">Enterprise</div>
+                <div className="text-[9px] text-text-muted font-bold uppercase tracking-widest">Pricing Plan Tier</div>
+                <div className="text-[10px] font-semibold">Renews in 18 days</div>
               </div>
             </div>
 
             {/* Platform status cards */}
-            <div >
-              <h3 >Tenant Regional Infrastructure</h3>
-              <div >
-                <div >
+            <div className="border border-border rounded-xl p-6 space-y-4">
+              <h3 className="text-xs font-bold uppercase tracking-widest text-text-muted">Tenant Regional Infrastructure</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="bg-surface border border-border/60 rounded-xl p-4 flex items-center justify-between">
                   <div>
-                    <div >Default Data Residency</div>
-                    <div >EU (Frankfurt Region)</div>
+                    <div className="text-xs font-bold text-text">Default Data Residency</div>
+                    <div className="text-[10px] text-text-muted mt-1">EU (Frankfurt Region)</div>
                   </div>
-                  <span >GDPR COMPLIANT</span>
+                  <span className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold text-[8px] px-2 py-0.5 rounded-xl uppercase">GDPR COMPLIANT</span>
                 </div>
-                <div >
+                <div className="bg-surface border border-border/60 rounded-xl p-4 flex items-center justify-between">
                   <div>
-                    <div >SSO Directory Mapping</div>
-                    <div >SAML 2.0 Identity Provider</div>
+                    <div className="text-xs font-bold text-text">SSO Directory Mapping</div>
+                    <div className="text-[10px] text-text-muted mt-1">SAML 2.0 Identity Provider</div>
                   </div>
-                  <span >ACTIVE</span>
+                  <span className="bg-blue-500/10 border border-blue-500/20 text-blue-400 font-bold text-[8px] px-2 py-0.5 rounded-xl uppercase">ACTIVE</span>
                 </div>
               </div>
             </div>
@@ -189,30 +193,30 @@ export function OrgAdminPanel({
 
         {/* MEMBER MANAGEMENT TAB */}
         {activeTab === 'members' && (
-          <div >
-            <div >
-              <h1 >Organization Member Management</h1>
-              <p >Add seats, modify permissions, or configure workflows.</p>
+          <div className="space-y-6">
+            <div className="space-y-1">
+              <h1 className="text-xl md:text-2xl font-bold tracking-tight">Organization Member Management</h1>
+              <p className="text-text-muted text-xs md:text-sm">Add seats, modify permissions, or configure workflows.</p>
             </div>
 
             {/* Invite Form */}
-            <form onSubmit={handleInvite} >
-              <div >
-                <label >Invite Team Employee</label>
+            <form onSubmit={handleInvite} className="bg-surface border border-border rounded-xl p-6 flex flex-col sm:flex-row gap-4 items-end">
+              <div className="flex-1 space-y-1">
+                <label className="text-[9px] font-bold text-text-muted uppercase tracking-widest">Invite Team Employee</label>
                 <input 
                   type="email" 
                   value={inviteEmail}
                   onChange={e => setInviteEmail(e.target.value)}
                   placeholder="name@organization.com"
-                  
+                  className="w-full border border-border rounded-xl p-3 text-xs text-text focus:border-brand outline-none transition-all"
                 />
               </div>
-              <div >
-                <label >Select Access Role</label>
+              <div className="w-full sm:w-44 space-y-1">
+                <label className="text-[9px] font-bold text-text-muted uppercase tracking-widest">Select Access Role</label>
                 <select 
                   value={inviteRole}
                   onChange={e => setInviteRole(e.target.value)}
-                  
+                  className="w-full border border-border rounded-xl p-3 text-xs text-text focus:border-brand outline-none transition-all"
                 >
                   <option value="sdr">SDR (Prospect & Out)</option>
                   <option value="ae">Account Executive (AE)</option>
@@ -222,67 +226,67 @@ export function OrgAdminPanel({
               </div>
               <button 
                 type="submit"
-                
+                className="w-full sm:w-auto bg-brand hover:bg-brand/90 font-extrabold h-11 px-5 rounded-xl text-xs flex items-center justify-center gap-2 cursor-pointer transition-colors"
               >
-                <PlusCircle  />
+                <PlusCircle className="w-4.5 h-4.5" />
                 Invite Member
               </button>
             </form>
 
             {/* List */}
-            <div >
-              <table >
+            <div className="bg-surface border border-border rounded-xl overflow-hidden">
+              <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr >
-                    <th >User</th>
-                    <th >Workspace Scope</th>
-                    <th >Status</th>
-                    <th >Actions</th>
+                  <tr className="border-b border-border">
+                    <th className="px-6 py-4 text-[9px] font-bold uppercase tracking-widest text-text-muted">User</th>
+                    <th className="px-6 py-4 text-[9px] font-bold uppercase tracking-widest text-text-muted">Workspace Scope</th>
+                    <th className="px-6 py-4 text-[9px] font-bold uppercase tracking-widest text-text-muted">Status</th>
+                    <th className="px-6 py-4 text-[9px] font-bold uppercase tracking-widest text-text-muted text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody >
-                  <tr >
-                    <td >
-                      <div >
-                        <div >
+                <tbody className="divide-y divide-border">
+                  <tr className="hover:bg-[#0c0d12]/40 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-xl bg-brand flex items-center justify-center font-bold text-xs">
                           O
                         </div>
                         <div>
-                          <div >{profile.displayName || 'You'} (Org Admin)</div>
-                          <div >{profile.email}</div>
+                          <div className="text-xs font-bold text-text">{profile.displayName || 'You'} (Org Admin)</div>
+                          <div className="text-[10px] text-text-muted">{profile.email}</div>
                         </div>
                       </div>
                     </td>
-                    <td >
-                      <span >
+                    <td className="px-6 py-4">
+                      <span className="px-2 py-0.5 rounded-full bg-brand-alt/10 border border-brand-alt/20 text-brand-alt text-[9px] font-extrabold uppercase">
                         Org Admin
                       </span>
                     </td>
-                    <td >
-                      <div >
-                        <span  />
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-1.5 text-[10px] font-semibold text-emerald-400">
+                        <span className="w-1.5 h-1.5 rounded-full bg-brand animate-pulse" />
                         ACTIVE
                       </div>
                     </td>
-                    <td >
+                    <td className="px-6 py-4 text-right text-[10px] text-text-muted font-bold">
                       Full Privilege
                     </td>
                   </tr>
 
                   {members.map(m => (
-                    <tr key={m.uid} >
-                      <td >
-                        <div >
-                          <div >
+                    <tr key={m.uid} className="hover:bg-[#0c0d12]/40 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-xl border border-border flex items-center justify-center font-bold text-xs text-text-muted">
                             {m.displayName[0]}
                           </div>
                           <div>
-                            <div >{m.displayName}</div>
-                            <div >{m.email}</div>
+                            <div className="text-xs font-bold text-text">{m.displayName}</div>
+                            <div className="text-[10px] text-text-muted">{m.email}</div>
                           </div>
                         </div>
                       </td>
-                      <td >
+                      <td className="px-6 py-4 flex items-center gap-1.5">
                         <select 
                           value={m.role}
                           onChange={(e) => {
@@ -290,7 +294,7 @@ export function OrgAdminPanel({
                             setMembers(members.map(x => x.uid === m.uid ? { ...x, role: newRole } : x));
                             showToast(`Updated role profile for customer to ${newRole.toUpperCase()}`, 'success');
                           }}
-                          
+                          className="border border-border rounded-xl text-[10px] p-1 text-text focus:border-brand outline-none"
                         >
                           <option value="sdr">SDR Workspace</option>
                           <option value="ae">Account Exec</option>
@@ -298,19 +302,19 @@ export function OrgAdminPanel({
                           <option value="viewer">Viewer Scope</option>
                         </select>
                       </td>
-                      <td >
-                        <div >
-                          <span  />
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-1.5 text-[10px] font-semibold text-emerald-400">
+                          <span className="w-1.5 h-1.5 rounded-full bg-brand-alt" />
                           {m.status.toUpperCase()}
                         </div>
                       </td>
-                      <td >
+                      <td className="px-6 py-4 text-right">
                         <button 
                           onClick={() => {
                             setMembers(members.filter(x => x.uid !== m.uid));
                             showToast(`Revoked access license for ${m.email}`, 'warning');
                           }}
-                          
+                          className="text-[10px] text-rose-500 hover:underline font-extrabold cursor-pointer"
                         >
                           Revoke Seat
                         </button>
@@ -325,29 +329,29 @@ export function OrgAdminPanel({
 
         {/* CUSTOM BRANDING TAB */}
         {activeTab === 'branding' && (
-          <div >
-            <div >
-              <h1 >White-Label Branding Controls</h1>
-              <p >Customize visual identifiers to match your corporate layout.</p>
+          <div className="space-y-6">
+            <div className="space-y-1">
+              <h1 className="text-xl md:text-2xl font-bold tracking-tight">White-Label Branding Controls</h1>
+              <p className="text-text-muted text-xs md:text-sm">Customize visual identifiers to match your corporate layout.</p>
             </div>
 
-            <div >
-              <div >
-                <div >
-                  <label >Organization Name</label>
+            <div className="bg-surface border border-border rounded-xl p-6 md:p-8 space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-text-muted uppercase tracking-widest">Organization Name</label>
                   <input 
                     type="text" 
                     value={orgName}
                     onChange={e => setOrgName(e.target.value)}
-                    
+                    className="w-full border border-border rounded-xl p-3 text-xs text-text focus:border-brand outline-none"
                   />
                 </div>
-                <div >
-                  <label >Timezone Preference</label>
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-text-muted uppercase tracking-widest">Timezone Preference</label>
                   <select 
                     value={timezone}
                     onChange={e => setTimezone(e.target.value)}
-                    
+                    className="w-full border border-border rounded-xl p-3 text-xs text-text focus:border-brand outline-none"
                   >
                     <option value="UTC-5 (EST)">UTC-5 (Eastern Standard Time)</option>
                     <option value="UTC+0 (GMT)">UTC+0 (Greenwich Mean Time)</option>
@@ -357,27 +361,27 @@ export function OrgAdminPanel({
                 </div>
               </div>
 
-              <div >
-                <label >Primary Theme Color</label>
-                <div >
+              <div className="space-y-2">
+                <label className="text-[9px] font-bold text-text-muted uppercase tracking-widest block">Primary Theme Color</label>
+                <div className="flex items-center gap-4">
                   <input 
                     type="color" 
                     value={brandColor}
                     onChange={e => setBrandColor(e.target.value)}
-                    
+                    className="w-12 h-12 rounded-xl bg-transparent border border-border cursor-pointer"
                   />
                   <div>
-                    <div >{brandColor}</div>
-                    <div >Primary brand accent applied across elements</div>
+                    <div className="text-xs font-extrabold text-text">{brandColor}</div>
+                    <div className="text-[10px] text-text-muted">Primary brand accent applied across elements</div>
                   </div>
                 </div>
               </div>
 
-              <div >
-                <label >Dashboard Tenant Logo</label>
-                <div >
-                  <img src={logoPreview}  />
-                  <div >
+              <div className="space-y-2">
+                <label className="text-[9px] font-bold text-text-muted uppercase tracking-widest block">Dashboard Tenant Logo</label>
+                <div className="flex items-center gap-6 p-4 rounded-xl border border-border">
+                  <img src={logoPreview} className="w-16 h-16 rounded-xl border border-border object-cover" />
+                  <div className="space-y-1">
                     <button 
                       type="button"
                       onClick={() => {
@@ -385,11 +389,11 @@ export function OrgAdminPanel({
                         setLogoPreview(`https://picsum.photos/seed/${seed}/200`);
                         showToast('Simulated corporate logo upload success!', 'success');
                       }}
-                      
+                      className="px-4 py-2 bg-surface border border-border text-text rounded-xl text-xs font-bold transition-all"
                     >
                       Upload Vector Logo
                     </button>
-                    <div >PNG / SVG up to 2MB. Dynamic transparency supported.</div>
+                    <div className="text-[9px] text-text-muted">PNG / SVG up to 2MB. Dynamic transparency supported.</div>
                   </div>
                 </div>
               </div>
@@ -397,7 +401,7 @@ export function OrgAdminPanel({
               <button 
                 type="button"
                 onClick={() => showToast('Branding preferences successfully deployed to client portal!', 'success')}
-                
+                className="w-full bg-brand py-4 rounded-xl text-xs font-extrabold"
               >
                 Deploy Custom Branding Settings
               </button>
@@ -407,76 +411,82 @@ export function OrgAdminPanel({
 
         {/* DOMAIN SETUP TAB */}
         {activeTab === 'domain' && (
-          <div >
-            <div >
-              <h1 >Sending Domain & DNS Records Wizard</h1>
-              <p >Configure DKIM/SPF/DMARC routing to maximize email deliverability.</p>
+          <div className="space-y-6">
+            <div className="space-y-1">
+              <h1 className="text-xl md:text-2xl font-bold tracking-tight">Sending Domain & DNS Records Wizard</h1>
+              <p className="text-text-muted text-xs md:text-sm">Configure DKIM/SPF/DMARC routing to maximize email deliverability.</p>
             </div>
 
-            <div >
-              <div >
-                <label >Corporate Domain Name</label>
-                <div >
+            <div className="bg-surface border border-border rounded-xl p-6 md:p-8 space-y-6">
+              <div className="space-y-2">
+                <label className="text-[9px] font-bold text-text-muted uppercase tracking-widest block">Corporate Domain Name</label>
+                <div className="flex gap-3">
                   <input 
                     type="text" 
                     value={domainName}
                     onChange={e => setDomainName(e.target.value)}
-                    
+                    className="flex-1 border border-border rounded-xl p-3 text-xs text-text focus:border-brand outline-none font-mono"
                   />
                   <button 
                     onClick={handleVerifyDns}
                     disabled={isVerifying}
-                    
+                    className="bg-brand px-4 rounded-xl text-xs font-bold shrink-0 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                   >
-                    {isVerifying ? <RefreshCw  /> : 'Run DNS Lookup'}
+                    {isVerifying ? <RefreshCw className="w-4 h-4 animate-spin" /> : 'Run DNS Lookup'}
                   </button>
                 </div>
               </div>
 
-              <div >
-                <h3 >Required DNS TXT Parameters</h3>
+              <div className="space-y-4">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-text-muted">Required DNS TXT Parameters</h3>
                 
-                <div >
+                <div className="border border-border rounded-xl overflow-hidden text-xs">
                   {/* SPF */}
-                  <div >
-                    <div >
-                      <div >
-                        <span >SPF Record</span>
-                        <span >
+                  <div className="p-4 border-b border-border flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div className="space-y-1.5 flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-extrabold uppercase text-[10px]">SPF Record</span>
+                        <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded border ${
+                          domainVerified.spf ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25' : 'bg-red-500/10 text-rose-400 border-rose-500/25'
+                        }`}>
                           {domainVerified.spf ? 'VERIFIED' : 'PENDING'}
                         </span>
                       </div>
-                      <div >
+                      <div className="font-mono text-[9px] text-text-muted bg-surface p-2 rounded-xl truncate">
                         TXT @ "v=spf1 include:spf.zyntra.ai ~all"
                       </div>
                     </div>
                   </div>
 
                   {/* DKIM */}
-                  <div >
-                    <div >
-                      <div >
-                        <span >DKIM (zyntra._domainkey)</span>
-                        <span >
+                  <div className="p-4 border-b border-border flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div className="space-y-1.5 flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-extrabold uppercase text-[10px]">DKIM (zyntra._domainkey)</span>
+                        <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded border ${
+                          domainVerified.dkim ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25' : 'bg-red-500/10 text-rose-400 border-rose-500/25'
+                        }`}>
                           {domainVerified.dkim ? 'VERIFIED' : 'PENDING'}
                         </span>
                       </div>
-                      <div >
+                      <div className="font-mono text-[9px] text-text-muted bg-surface p-2 rounded-xl truncate">
                         TXT zyntra._domainkey "k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA..."
                       </div>
                     </div>
                   </div>
 
                   {/* DMARC */}
-                  <div >
-                    <div >
-                      <div >
-                        <span >DMARC (_dmarc)</span>
-                        <span >
+                  <div className="p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div className="space-y-1.5 flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-extrabold uppercase text-[10px]">DMARC (_dmarc)</span>
+                        <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded border ${
+                          domainVerified.dmarc ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25' : 'bg-red-500/10 text-rose-400 border-rose-500/25'
+                        }`}>
                           {domainVerified.dmarc ? 'VERIFIED' : 'PENDING'}
                         </span>
                       </div>
-                      <div >
+                      <div className="font-mono text-[9px] text-text-muted bg-surface p-2 rounded-xl truncate">
                         TXT _dmarc "v=DMARC1; p=quarantine; pct=100; rua=mailto:dmarc@co.zyntra.ai"
                       </div>
                     </div>
@@ -489,60 +499,60 @@ export function OrgAdminPanel({
 
         {/* BILLING TAB */}
         {activeTab === 'billing' && (
-          <div >
-            <div >
-              <h1 >Billing & Plans Portal</h1>
-              <p >Manage enterprise licensing and buy auxiliary AI credits packages.</p>
+          <div className="space-y-6">
+            <div className="space-y-1">
+              <h1 className="text-xl md:text-2xl font-bold tracking-tight">Billing & Plans Portal</h1>
+              <p className="text-text-muted text-xs md:text-sm">Manage enterprise licensing and buy auxiliary AI credits packages.</p>
             </div>
 
-            <div >
-              <div >
+            <div className="bg-surface border border-border rounded-xl p-6 md:p-8 space-y-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-xl bg-brand/5 border border-border">
                 <div>
-                  <div >Current Licensing Bundle</div>
-                  <div >Enterprise Plus Subscription</div>
-                  <div >10 total user seats, priority failover SLA routing.</div>
+                  <div className="text-xs font-bold text-text-muted uppercase tracking-wider">Current Licensing Bundle</div>
+                  <div className="text-lg font-bold text-text mt-1">Enterprise Plus Subscription</div>
+                  <div className="text-[10px] text-text-muted mt-0.5">10 total user seats, priority failover SLA routing.</div>
                 </div>
-                <div >
-                  <div >$1,299/mo</div>
-                  <div >Next bill on June 18, 2026</div>
+                <div className="text-right">
+                  <div className="text-lg font-bold text-brand">$1,299/mo</div>
+                  <div className="text-[9px] text-text-muted uppercase font-bold mt-1">Next bill on June 18, 2026</div>
                 </div>
               </div>
 
               {/* Department Budgets */}
-              <div >
-                <h3 >Department-Level AI Credit Budgets</h3>
-                <div >
-                  <div >
-                    <div >
-                      <span >SDR Outbound Team</span>
-                      <span >$150 / $250</span>
+              <div className="space-y-4">
+                <h3 className="text-xs font-extrabold uppercase tracking-widest text-text-muted">Department-Level AI Credit Budgets</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="border border-border rounded-xl p-4 space-y-3">
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="font-bold text-text">SDR Outbound Team</span>
+                      <span className="font-semibold text-text-muted">$150 / $250</span>
                     </div>
-                    <div >
-                      <div  style={{ width: '60%' }} />
+                    <div className="w-full bg-surface h-2 rounded-full overflow-hidden">
+                      <div className="bg-brand h-full rounded-full" style={{ width: '60%' }} />
                     </div>
                   </div>
-                  <div >
-                    <div >
-                      <span >AE Account Team</span>
-                      <span >$80 / $100</span>
+                  <div className="border border-border rounded-xl p-4 space-y-3">
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="font-bold text-text">AE Account Team</span>
+                      <span className="font-semibold text-text-muted">$80 / $100</span>
                     </div>
-                    <div >
-                      <div  style={{ width: '80%' }} />
+                    <div className="w-full bg-surface h-2 rounded-full overflow-hidden">
+                      <div className="h-full rounded-full" style={{ width: '80%' }} />
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div >
+              <div className="grid grid-cols-2 gap-4">
                 <button 
                   onClick={() => showToast('Connecting to payment provider Gateway...', 'info')}
-                  
+                  className="bg-surface border border-border text-text text-center py-4 rounded-xl text-xs font-bold transition-all"
                 >
                   Download Last Invoices
                 </button>
                 <button 
                   onClick={() => showToast('Purchasing additional 50,000 credit package...', 'success')}
-                  
+                  className="bg-brand py-4 rounded-xl text-xs font-extrabold hover:bg-brand/90 transition-all cursor-pointer"
                 >
                   Buy Overage AI Credits
                 </button>
@@ -553,14 +563,14 @@ export function OrgAdminPanel({
 
         {/* FEATURE CONTROLS TAB */}
         {activeTab === 'features' && (
-          <div >
-            <div >
-              <h1 >Active Module & Feature Controls</h1>
-              <p >Turn specific capabilities on or off for employees within your workspace.</p>
+          <div className="space-y-6">
+            <div className="space-y-1">
+              <h1 className="text-xl md:text-2xl font-bold tracking-tight">Active Module & Feature Controls</h1>
+              <p className="text-text-muted text-xs md:text-sm">Turn specific capabilities on or off for employees within your workspace.</p>
             </div>
 
-            <div >
-              <div >
+            <div className="bg-surface border border-border rounded-xl p-6 md:p-8 space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {[
                   { id: 'outreach', label: 'AI Outreach Engine', desc: 'Allows multi-channel sequencing and deep personalization.' },
                   { id: 'crm', label: 'AI CRM Co-pilot', desc: 'SDR/AE workspace sidebar containing interactive leads pipeline.' },
@@ -571,19 +581,21 @@ export function OrgAdminPanel({
                 ].map(mod => {
                   const val = activeModules[mod.id as keyof typeof activeModules];
                   return (
-                    <div key={mod.id} >
-                      <div >
-                        <div >{mod.label}</div>
-                        <div >{mod.desc}</div>
+                    <div key={mod.id} className="border border-border rounded-xl p-4 flex items-start justify-between gap-3">
+                      <div className="space-y-1 flex-1">
+                        <div className="text-xs font-bold text-text mb-0.5">{mod.label}</div>
+                        <div className="text-[10px] text-text-muted leading-relaxed font-semibold">{mod.desc}</div>
                       </div>
                       <button
                         onClick={() => {
                           setActiveModules({ ...activeModules, [mod.id]: !val });
                           showToast(`Successfully toggled ${mod.label}`, 'info');
                         }}
-                        
+                        className={`w-11 h-6 rounded-full p-0.5 transition-all outline-none ${
+                          val ? 'bg-brand' : 'bg-zinc-800'
+                        }`}
                       >
-                        <div  />
+                        <div className={`w-5 h-5 bg-white rounded-full transition-all${val ? 'translate-x-5' : 'translate-x-0'}`} />
                       </button>
                     </div>
                   );
@@ -595,39 +607,41 @@ export function OrgAdminPanel({
 
         {/* SECURITY TAB */}
         {activeTab === 'security' && (
-          <div >
-            <div >
-              <h1 >Security Settings & Encryption Policy</h1>
-              <p >Enforce Multi-Factor Authentication (MFA) and construct corporate access corridors.</p>
+          <div className="space-y-6">
+            <div className="space-y-1">
+              <h1 className="text-xl md:text-2xl font-bold tracking-tight">Security Settings & Encryption Policy</h1>
+              <p className="text-text-muted text-xs md:text-sm">Enforce Multi-Factor Authentication (MFA) and construct corporate access corridors.</p>
             </div>
 
-            <div >
-              <div >
+            <div className="bg-surface border border-border rounded-xl p-6 md:p-8 space-y-6">
+              <div className="border border-border/80 rounded-xl p-4 flex justify-between items-center">
                 <div>
-                  <div >Enforce Multi-Factor Authentication (MFA)</div>
-                  <div >Force physical keys or SMS validation for all employee roles.</div>
+                  <div className="text-xs font-bold text-text mb-0.5">Enforce Multi-Factor Authentication (MFA)</div>
+                  <div className="text-[10px] text-text-muted font-semibold">Force physical keys or SMS validation for all employee roles.</div>
                 </div>
                 <button
                   onClick={() => {
                     setMfaRequired(!mfaRequired);
                     showToast('SMS MFA policy updated!', 'warning');
                   }}
-                  
+                  className={`w-11 h-6 rounded-full p-0.5 transition-all outline-none ${
+                    mfaRequired ? 'bg-brand' : 'bg-zinc-800'
+                  }`}
                 >
-                  <div  />
+                  <div className={`w-5 h-5 bg-white rounded-full transition-all${mfaRequired ? 'translate-x-5' : 'translate-x-0'}`} />
                 </button>
               </div>
 
-              <div >
-                <div >
-                  <label >Session Idle Timeout</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-text-muted uppercase tracking-widest block">Session Idle Timeout</label>
                   <select
                     value={sessionTimeout}
                     onChange={e => {
                       setSessionTimeout(e.target.value);
                       showToast(`Idle timeout limit changed to ${e.target.value}`, 'success');
                     }}
-                    
+                    className="w-full border border-border rounded-xl p-3 text-xs text-text"
                   >
                     <option value="15m">15 Minutes</option>
                     <option value="30m">30 Minutes</option>
@@ -635,28 +649,28 @@ export function OrgAdminPanel({
                     <option value="none">No Expiry (Not recommended)</option>
                   </select>
                 </div>
-                <div >
-                  <label >Allowed IP Access Corridors</label>
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-text-muted uppercase tracking-widest block">Allowed IP Access Corridors</label>
                   <input
                     type="text"
                     value={ipRestrictedRanges}
                     onChange={e => setIpRestrictedRanges(e.target.value)}
                     placeholder="e.g. 192.168.1.1/24"
-                    
+                    className="w-full border border-border rounded-xl p-3 text-xs text-text focus:border-brand outline-none"
                   />
                 </div>
               </div>
 
-              <div >
-                <Lock  />
-                <div >
+              <div className="p-4 bg-brand-alt/5 border border-brand-alt/10 rounded-xl flex items-start gap-3">
+                <Lock className="w-5 h-5 text-brand-alt shrink-0" />
+                <div className="text-[10px] text-text-muted leading-relaxed">
                   <strong>Encryption Standard:</strong> All tenant databases are dynamically logical partitioned and encrypted utilizing hardware security modules (HSM) at rest under premium AES-256 TLS protocols.
                 </div>
               </div>
 
               <button
                 onClick={() => showToast('Security parameters committed to tenant vault!', 'success')}
-                
+                className="w-full bg-brand py-4 rounded-xl text-xs font-extrabold hover:bg-brand/90 transition-all"
               >
                 Save Security Safeguards
               </button>

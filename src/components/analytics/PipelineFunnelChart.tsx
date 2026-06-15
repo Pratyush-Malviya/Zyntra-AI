@@ -109,37 +109,37 @@ export function PipelineFunnelChart({ orgId }: PipelineFunnelChartProps) {
   ];
 
   return (
-    <div >
+    <div className="space-y-6">
       {/* KPI Summary */}
-      <div >
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
           { label: 'Total Leads',    value: totalLeads.toString(), icon: Users,       color: '#6366f1', delta: '+12%' },
           { label: 'Pipeline Value', value: `$${(totalPipelineValue/1000).toFixed(0)}K`, icon: DollarSign, color: '#10b981', delta: '+8%' },
           { label: 'Avg Velocity',   value: `${avgVelocity.toFixed(1)}d`,  icon: Clock,       color: '#f59e0b', delta: '-2d' },
           { label: 'Win Rate',       value: '24%',                         icon: Award,       color: '#3b82f6', delta: '+3%' },
         ].map(({ label, value, icon: Icon, color, delta }) => (
-          <div key={label} >
-            <div >
-              <div  style={{ background: color + '15' }}>
-                <Icon  style={{ color }} />
+          <div key={label} className="card p-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="p-1.5 rounded-xl" style={{ background: color + '15' }}>
+                <Icon className="w-4 h-4" style={{ color }} />
               </div>
-              <span >
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400">
                 {delta}
               </span>
             </div>
-            <div >{value}</div>
-            <div >{label}</div>
+            <div className="text-xl font-bold text-text">{value}</div>
+            <div className="text-xs text-text-secondary">{label}</div>
           </div>
         ))}
       </div>
 
       {/* Tab nav */}
-      <div >
+      <div className="flex gap-1 p-1 bg-surface-elevated rounded-xl w-fit">
         {tabs.map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            
+            className="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
             style={{
               background: activeTab === tab.id ? 'var(--color-primary)' : 'transparent',
               color: activeTab === tab.id ? 'white' : 'var(--text-secondary)',
@@ -152,41 +152,41 @@ export function PipelineFunnelChart({ orgId }: PipelineFunnelChartProps) {
 
       {/* Pipeline Funnel */}
       {activeTab === 'funnel' && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} >
-          <div >8-Stage Sales Pipeline</div>
-          <div >
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="card p-6 space-y-4">
+          <div className="text-sm font-bold text-text">8-Stage Sales Pipeline</div>
+          <div className="space-y-2">
             {stageData.map((stage, idx) => (
-              <div key={stage.stage} >
-                <div >
+              <div key={stage.stage} className="flex items-center gap-3">
+                <div className="w-32 text-[11px] text-text-secondary font-medium truncate shrink-0">
                   {stage.label}
                 </div>
-                <div >
+                <div className="flex-1 h-8 bg-surface-elevated rounded-xl overflow-hidden relative">
                   <motion.div
-                    
+                    className="h-full rounded-xl flex items-center px-3"
                     initial={{ width: 0 }}
                     animate={{ width: `${stage.conversionRate}%` }}
                     transition={{ delay: idx * 0.05, duration: 0.5 }}
                     style={{ background: stage.color + '25', borderLeft: `3px solid ${stage.color}` }}
                   >
-                    <span  style={{ color: stage.color }}>
+                    <span className="text-[11px] font-bold" style={{ color: stage.color }}>
                       {stage.count} leads
                     </span>
                   </motion.div>
                 </div>
-                <div >{stage.conversionRate.toFixed(0)}%</div>
+                <div className="w-12 text-[11px] text-text-secondary text-right">{stage.conversionRate.toFixed(0)}%</div>
               </div>
             ))}
           </div>
 
-          <div >
+          <div className="grid grid-cols-3 gap-3 pt-4 border-t border-border">
             {[
               { label: 'Lead → Discovery', rate: '68%' },
               { label: 'Discovery → Demo', rate: '52%' },
               { label: 'Demo → Closing', rate: '31%' },
             ].map(({ label, rate }) => (
-              <div key={label} >
-                <div >{rate}</div>
-                <div >{label}</div>
+              <div key={label} className="text-center p-3 bg-surface-elevated rounded-xl">
+                <div className="text-lg font-bold text-text">{rate}</div>
+                <div className="text-[10px] text-text-secondary mt-1">{label}</div>
               </div>
             ))}
           </div>
@@ -195,8 +195,8 @@ export function PipelineFunnelChart({ orgId }: PipelineFunnelChartProps) {
 
       {/* Channel Attribution */}
       {activeTab === 'channels' && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} >
-          <div >Lead Source Attribution</div>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="card p-6 space-y-4">
+          <div className="text-sm font-bold text-text">Lead Source Attribution</div>
           <ResponsiveContainer width="100%" height={240}>
             <BarChart data={channelData} barSize={28} barGap={4}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
@@ -210,11 +210,11 @@ export function PipelineFunnelChart({ orgId }: PipelineFunnelChartProps) {
               <Bar dataKey="closed"    name="Closed"          fill="#f59e0b" radius={[4,4,0,0]} />
             </BarChart>
           </ResponsiveContainer>
-          <div >
+          <div className="flex gap-4 justify-center text-xs">
             {[['#6366f1','Total Leads'],['#10b981','Qualified'],['#f59e0b','Closed']].map(([c,l]) => (
-              <div key={l} >
-                <div  style={{ background: c }} />
-                <span >{l}</span>
+              <div key={l} className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full" style={{ background: c }} />
+                <span className="text-text-secondary">{l}</span>
               </div>
             ))}
           </div>
@@ -223,10 +223,10 @@ export function PipelineFunnelChart({ orgId }: PipelineFunnelChartProps) {
 
       {/* Stage Velocity */}
       {activeTab === 'velocity' && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} >
-          <div >
-            <div >Average Days per Stage</div>
-            <div >SLA threshold = orange line</div>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="card p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="text-sm font-bold text-text">Average Days per Stage</div>
+            <div className="text-xs text-text-secondary">SLA threshold = orange line</div>
           </div>
           <ResponsiveContainer width="100%" height={240}>
             <BarChart data={velocityData} barSize={24}>
@@ -244,14 +244,14 @@ export function PipelineFunnelChart({ orgId }: PipelineFunnelChartProps) {
               </Bar>
             </BarChart>
           </ResponsiveContainer>
-          <div >
-            <div >
-              <div >{velocityData.filter(d => d.avgDays <= d.slaDays).length}</div>
-              <div >Stages within SLA</div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-center">
+              <div className="text-sm font-bold text-emerald-400">{velocityData.filter(d => d.avgDays <= d.slaDays).length}</div>
+              <div className="text-[10px] text-text-secondary">Stages within SLA</div>
             </div>
-            <div >
-              <div >{velocityData.filter(d => d.avgDays > d.slaDays).length}</div>
-              <div >SLA Breaches</div>
+            <div className="p-3 rounded-xl bg-danger/10 border border-danger/20 text-center">
+              <div className="text-sm font-bold text-danger">{velocityData.filter(d => d.avgDays > d.slaDays).length}</div>
+              <div className="text-[10px] text-text-secondary">SLA Breaches</div>
             </div>
           </div>
         </motion.div>
@@ -259,9 +259,9 @@ export function PipelineFunnelChart({ orgId }: PipelineFunnelChartProps) {
 
       {/* BANT Distribution */}
       {activeTab === 'bant' && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} >
-          <div >BANT Score Distribution</div>
-          <div >
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="card p-6 space-y-4">
+          <div className="text-sm font-bold text-text">BANT Score Distribution</div>
+          <div className="flex gap-6 items-center">
             <ResponsiveContainer width={200} height={200}>
               <PieChart>
                 <Pie data={bantData} cx="50%" cy="50%" innerRadius={55} outerRadius={85} paddingAngle={3} dataKey="value">
@@ -269,31 +269,31 @@ export function PipelineFunnelChart({ orgId }: PipelineFunnelChartProps) {
                 </Pie>
               </PieChart>
             </ResponsiveContainer>
-            <div >
+            <div className="flex-1 space-y-2">
               {bantData.map(d => (
-                <div key={d.name} >
-                  <div >
-                    <div  style={{ background: d.color }} />
-                    <span >{d.name}</span>
+                <div key={d.name} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2.5 h-2.5 rounded-full" style={{ background: d.color }} />
+                    <span className="text-sm text-text-secondary">{d.name}</span>
                   </div>
-                  <div >
-                    <div >
-                      <div  style={{
+                  <div className="flex items-center gap-2">
+                    <div className="h-1.5 w-24 bg-surface-elevated rounded-full overflow-hidden">
+                      <div className="h-full rounded-full" style={{
                         width: `${(d.value / totalLeads) * 100}%`,
                         background: d.color
                       }} />
                     </div>
-                    <span >{d.value}</span>
+                    <span className="text-xs font-bold text-text w-8 text-right">{d.value}</span>
                   </div>
                 </div>
               ))}
             </div>
           </div>
-          <div >
-            <div >Priority Action</div>
-            <div >
-              <span >{bantData[0].value} A-leads</span> ready for immediate demo scheduling.
-              <span >{bantData[1].value} B-leads</span> need proposal follow-up within 48h.
+          <div className="p-3 rounded-xl bg-surface-elevated border border-border">
+            <div className="text-xs font-bold text-text-secondary mb-2">Priority Action</div>
+            <div className="text-xs text-text">
+              <span className="text-emerald-400 font-bold">{bantData[0].value} A-leads</span> ready for immediate demo scheduling.
+              <span className="text-primary font-bold ml-1">{bantData[1].value} B-leads</span> need proposal follow-up within 48h.
             </div>
           </div>
         </motion.div>

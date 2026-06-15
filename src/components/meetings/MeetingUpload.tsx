@@ -86,15 +86,15 @@ export default function MeetingUpload({ meeting, onComplete, onBack }: MeetingUp
     /\.(mp3|wav|m4a|mp4|webm|ogg)$/i.test(f.name);
 
   return (
-    <div >
+    <div className="p-6 max-w-2xl mx-auto space-y-6">
       {/* Header */}
-      <div >
-        <button onClick={onBack} >
-          <ChevronRight  />
+      <div className="flex items-center gap-3">
+        <button onClick={onBack} className="p-2 rounded-xl hover:bg-surface-elevated text-text-secondary transition-colors">
+          <ChevronRight className="w-4 h-4 rotate-180" />
         </button>
         <div>
-          <h2 >Upload Recording</h2>
-          <p >{meeting.title}</p>
+          <h2 className="text-lg font-bold text-text">Upload Recording</h2>
+          <p className="text-xs text-text-secondary">{meeting.title}</p>
         </div>
       </div>
 
@@ -107,7 +107,7 @@ export default function MeetingUpload({ meeting, onComplete, onBack }: MeetingUp
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
-            
+            className="space-y-4"
           >
             {/* Drop zone */}
             <div
@@ -115,33 +115,37 @@ export default function MeetingUpload({ meeting, onComplete, onBack }: MeetingUp
               onDragLeave={() => setPhase('idle')}
               onDrop={handleDrop}
               onClick={() => fileInputRef.current?.click()}
-              
+              className={`border-2 border-dashed rounded-2xl p-12 text-center cursor-pointer transition-all ${
+                phase === 'dragging'
+                  ? 'border-primary bg-primary/5'
+                  : 'border-border hover:border-primary/50 hover:bg-surface-elevated'
+              }`}
             >
               <input
                 ref={fileInputRef}
                 type="file"
                 accept=".mp3,.wav,.m4a,.mp4,.webm,.ogg"
-                
+                className="hidden"
                 onChange={e => { const f = e.target.files?.[0]; if (f) handleFileSelect(f); }}
               />
-              <div >
-                <div >
-                  <FileAudio  />
+              <div className="flex flex-col items-center gap-4">
+                <div className="w-16 h-16 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <FileAudio className="w-8 h-8 text-primary" />
                 </div>
                 <div>
-                  <div >Drop audio file here</div>
-                  <div >or click to browse</div>
-                  <div >MP3, WAV, M4A, MP4, WebM supported</div>
+                  <div className="text-base font-semibold text-text">Drop audio file here</div>
+                  <div className="text-sm text-text-secondary mt-1">or click to browse</div>
+                  <div className="text-xs text-text-secondary mt-2">MP3, WAV, M4A, MP4, WebM supported</div>
                 </div>
                 {WHISPER_URL && (
-                  <div >
-                    <div  />
+                  <div className="flex items-center gap-1.5 text-xs text-emerald-400">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                     Whisper transcription service connected
                   </div>
                 )}
                 {!WHISPER_URL && (
-                  <div >
-                    <div  />
+                  <div className="flex items-center gap-1.5 text-xs text-amber-400">
+                    <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />
                     Demo mode — configure Whisper service in Settings for real transcription
                   </div>
                 )}
@@ -149,27 +153,27 @@ export default function MeetingUpload({ meeting, onComplete, onBack }: MeetingUp
             </div>
 
             {error && (
-              <div >
-                <AlertCircle  />
+              <div className="flex items-center gap-2 p-3 rounded-xl bg-danger/10 border border-danger/20 text-danger text-sm">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
                 {error}
               </div>
             )}
 
             {/* Manual entry option */}
-            <div >
-              <div >
-                <div  />
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-border" />
               </div>
-              <div >
-                <span >or</span>
+              <div className="relative flex justify-center text-xs">
+                <span className="px-3 bg-bg text-text-secondary">or</span>
               </div>
             </div>
 
             <button
               onClick={() => setShowManual(true)}
-              
+              className="w-full py-3 rounded-xl border border-border hover:border-primary/40 text-sm text-text-secondary hover:text-text transition-all"
             >
-              <FileText  />
+              <FileText className="w-4 h-4 inline mr-2" />
               Paste transcript manually
             </button>
           </motion.div>
@@ -177,9 +181,9 @@ export default function MeetingUpload({ meeting, onComplete, onBack }: MeetingUp
 
         {/* MANUAL TRANSCRIPT */}
         {showManual && (
-          <motion.div key="manual" initial={{ opacity: 0 }} animate={{ opacity: 1 }} >
+          <motion.div key="manual" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
             <div>
-              <label >
+              <label className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2 block">
                 Paste Meeting Transcript
               </label>
               <textarea
@@ -187,21 +191,21 @@ export default function MeetingUpload({ meeting, onComplete, onBack }: MeetingUp
                 onChange={e => setManualTranscript(e.target.value)}
                 placeholder="Paste the transcript from Vibe, Otter.ai, or any other transcription tool..."
                 rows={12}
-                
+                className="w-full px-4 py-3 rounded-xl bg-surface-elevated border border-border text-sm resize-none focus:outline-none focus:border-primary transition-colors font-mono"
               />
-              <div >{manualTranscript.length} characters</div>
+              <div className="text-xs text-text-secondary mt-1">{manualTranscript.length} characters</div>
             </div>
-            <div >
+            <div className="flex gap-3">
               <button
                 onClick={() => setShowManual(false)}
-                
+                className="flex-1 py-3 rounded-xl border border-border text-sm text-text-secondary hover:text-text transition-colors"
               >
                 Back
               </button>
               <button
                 onClick={() => { onComplete(manualTranscript); }}
                 disabled={manualTranscript.trim().length < 50}
-                
+                className="flex-1 py-3 rounded-xl text-text font-semibold text-sm hover:opacity-90 transition-all disabled:opacity-40"
               >
                 Analyse Transcript
               </button>
@@ -211,56 +215,56 @@ export default function MeetingUpload({ meeting, onComplete, onBack }: MeetingUp
 
         {/* TRANSCRIBING */}
         {(phase === 'uploading' || phase === 'transcribing') && (
-          <motion.div key="progress" initial={{ opacity: 0 }} animate={{ opacity: 1 }} >
-            <div >
-              <div >
-                <div >
-                  <Volume2  />
+          <motion.div key="progress" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6 py-8">
+            <div className="text-center space-y-4">
+              <div className="w-20 h-20 mx-auto relative">
+                <div className="w-full h-full rounded-full bg-primary/10 flex items-center justify-center">
+                  <Volume2 className="w-8 h-8 text-primary animate-pulse" />
                 </div>
-                <div  />
+                <div className="absolute inset-0 rounded-full border-2 border-primary/30 animate-ping" />
               </div>
               <div>
-                <div >
+                <div className="text-base font-semibold text-text">
                   {phase === 'uploading' ? 'Uploading recording...' : 'Transcribing with Whisper...'}
                 </div>
-                <div >
+                <div className="text-sm text-text-secondary mt-1">
                   {phase === 'transcribing' ? `Processing audio — ${progress}% complete` : 'Sending to transcription service'}
                 </div>
               </div>
             </div>
 
             {file && (
-              <div >
-                <FileAudio  />
-                <div >
-                  <div >{file.name}</div>
-                  <div >{(file.size / 1024 / 1024).toFixed(1)} MB</div>
+              <div className="flex items-center gap-3 p-4 rounded-xl bg-surface-elevated border border-border">
+                <FileAudio className="w-5 h-5 text-primary flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium text-text truncate">{file.name}</div>
+                  <div className="text-xs text-text-secondary">{(file.size / 1024 / 1024).toFixed(1)} MB</div>
                 </div>
               </div>
             )}
 
-            <div >
-              <div >
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs text-text-secondary">
                 <span>Progress</span>
                 <span>{progress}%</span>
               </div>
-              <div >
+              <div className="h-2 bg-surface-elevated rounded-full overflow-hidden">
                 <motion.div
-                  
+                  className="h-full rounded-full"
                   style={{ width: `${progress}%` }}
                   transition={{ duration: 0.3 }}
                 />
               </div>
             </div>
 
-            <div >
+            <div className="space-y-2 text-xs text-text-secondary">
               {['Uploading audio file', 'Initialising Whisper model', 'Transcribing speech', 'Formatting output'].map((step, i) => (
-                <div key={step} >
+                <div key={step} className={`flex items-center gap-2${progress >= (i + 1) * 25 ? 'text-emerald-400' : ''}`}>
                   {progress >= (i + 1) * 25
-                    ? <CheckCircle2  />
+                    ? <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" />
                     : progress >= i * 25
-                    ? <Loader2  />
-                    : <div  />
+                    ? <Loader2 className="w-3.5 h-3.5 animate-spin flex-shrink-0" />
+                    : <div className="w-3.5 h-3.5 rounded-full border border-border flex-shrink-0" />
                   }
                   {step}
                 </div>
@@ -271,38 +275,38 @@ export default function MeetingUpload({ meeting, onComplete, onBack }: MeetingUp
 
         {/* DONE */}
         {phase === 'done' && (
-          <motion.div key="done" initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} >
-            <div >
-              <div >
-                <CheckCircle2  />
+          <motion.div key="done" initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} className="space-y-6">
+            <div className="text-center space-y-3">
+              <div className="w-16 h-16 mx-auto rounded-full bg-emerald-500/10 flex items-center justify-center">
+                <CheckCircle2 className="w-8 h-8 text-emerald-500" />
               </div>
               <div>
-                <div >Transcription complete!</div>
-                <div >{Math.round(transcript.length / 5)} words captured</div>
+                <div className="text-base font-semibold text-text">Transcription complete!</div>
+                <div className="text-sm text-text-secondary">{Math.round(transcript.length / 5)} words captured</div>
               </div>
             </div>
 
             {/* Preview */}
-            <div >
-              <div >Preview</div>
-              <p >
+            <div className="bg-surface-elevated rounded-xl p-4 border border-border max-h-48 overflow-y-auto">
+              <div className="text-xs font-bold text-text-secondary uppercase tracking-wider mb-2">Preview</div>
+              <p className="text-xs text-text-secondary font-mono leading-relaxed whitespace-pre-wrap">
                 {transcript.slice(0, 600)}{transcript.length > 600 ? '...' : ''}
               </p>
             </div>
 
-            <div >
+            <div className="flex gap-3">
               <button
                 onClick={() => { setPhase('idle'); setFile(null); setTranscript(''); setProgress(0); }}
-                
+                className="flex-1 py-3 rounded-xl border border-border text-sm text-text-secondary hover:text-text transition-colors"
               >
                 Re-upload
               </button>
               <button
                 onClick={() => onComplete(transcript)}
-                
+                className="flex-1 py-3 rounded-xl text-text font-semibold text-sm hover:opacity-90 transition-all flex items-center justify-center gap-2"
               >
                 Analyse with AI
-                <ChevronRight  />
+                <ChevronRight className="w-4 h-4" />
               </button>
             </div>
           </motion.div>

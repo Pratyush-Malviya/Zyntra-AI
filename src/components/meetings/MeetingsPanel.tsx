@@ -117,8 +117,8 @@ export default function MeetingsPanel({ orgId, profile }: MeetingsPanelProps) {
 
   if (loading) {
     return (
-      <div >
-        <Loader2  />
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -141,39 +141,39 @@ export default function MeetingsPanel({ orgId, profile }: MeetingsPanelProps) {
   if (view === 'detail' && selectedMeeting) {
     const live = meetings.find(m => m.id === selectedMeeting.id) || selectedMeeting;
     return (
-      <div >
-        <div >
+      <div className="p-6 space-y-6">
+        <div className="flex items-center gap-3">
           <button
             onClick={() => setView('list')}
-            
+            className="p-2 rounded-xl hover:bg-surface-elevated transition-colors text-text-secondary"
           >
-            <ChevronRight  />
+            <ChevronRight className="w-4 h-4 rotate-180" />
           </button>
-          <div >
-            <h2 >{live.title}</h2>
-            <div >
-              <span  style={{
+          <div className="flex-1 min-w-0">
+            <h2 className="text-lg font-bold text-text truncate">{live.title}</h2>
+            <div className="flex items-center gap-2 mt-0.5">
+              <span className="text-xs font-mono px-2 py-0.5 rounded-full" style={{
                 background: MEETING_TYPE_CONFIG[live.meetingType]?.color + '20',
                 color: MEETING_TYPE_CONFIG[live.meetingType]?.color
               }}>
                 {MEETING_TYPE_CONFIG[live.meetingType]?.icon} {MEETING_TYPE_CONFIG[live.meetingType]?.label}
               </span>
-              <span >{new Date(live.scheduledAt).toLocaleDateString()}</span>
+              <span className="text-xs text-text-secondary">{new Date(live.scheduledAt).toLocaleDateString()}</span>
               {live.processingStatus && (
-                <span  style={{ color: STATUS_CONFIG[live.processingStatus]?.color }}>
-                  {STATUS_CONFIG[live.processingStatus]?.pulse && <Loader2  />}
+                <span className="flex items-center gap-1 text-xs font-medium" style={{ color: STATUS_CONFIG[live.processingStatus]?.color }}>
+                  {STATUS_CONFIG[live.processingStatus]?.pulse && <Loader2 className="w-3 h-3 animate-spin" />}
                   {STATUS_CONFIG[live.processingStatus]?.label}
                 </span>
               )}
             </div>
           </div>
-          <div >
+          <div className="flex gap-2">
             {!live.transcript && (
               <button
                 onClick={() => { setSelectedMeeting(live); setView('upload'); }}
-                
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-text text-sm font-semibold hover:bg-primary-dark transition-colors"
               >
-                <Upload  />
+                <Upload className="w-4 h-4" />
                 Upload Recording
               </button>
             )}
@@ -181,9 +181,9 @@ export default function MeetingsPanel({ orgId, profile }: MeetingsPanelProps) {
               <button
                 onClick={() => handleAnalyseMeeting(live)}
                 disabled={processing[live.id!]}
-                
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-text text-sm font-semibold hover:opacity-90 transition-all disabled:opacity-50"
               >
-                {processing[live.id!] ? <Loader2  /> : <Brain  />}
+                {processing[live.id!] ? <Loader2 className="w-4 h-4 animate-spin" /> : <Brain className="w-4 h-4" />}
                 Analyse with AI
               </button>
             )}
@@ -200,40 +200,40 @@ export default function MeetingsPanel({ orgId, profile }: MeetingsPanelProps) {
 
   if (view === 'create') {
     return (
-      <div >
-        <div >
-          <button onClick={() => setView('list')} >
-            <ChevronRight  />
+      <div className="p-6 max-w-xl mx-auto space-y-6">
+        <div className="flex items-center gap-3">
+          <button onClick={() => setView('list')} className="p-2 rounded-xl hover:bg-surface-elevated text-text-secondary">
+            <ChevronRight className="w-4 h-4 rotate-180" />
           </button>
-          <h2 >Schedule Meeting</h2>
+          <h2 className="text-lg font-bold">Schedule Meeting</h2>
         </div>
 
-        <div >
+        <div className="space-y-4">
           <div>
-            <label >Meeting Title</label>
+            <label className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1 block">Meeting Title</label>
             <input
               value={newMeeting.title}
               onChange={e => setNewMeeting(p => ({ ...p, title: e.target.value }))}
               placeholder="e.g. Discovery Call — Acme Corp"
-              
+              className="w-full px-4 py-3 rounded-xl bg-surface-elevated border border-border text-sm focus:outline-none focus:border-primary transition-colors"
             />
           </div>
 
           <div>
-            <label >Meeting Type</label>
-            <div >
+            <label className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1 block">Meeting Type</label>
+            <div className="grid grid-cols-4 gap-2">
               {(Object.entries(MEETING_TYPE_CONFIG) as any).map(([type, cfg]: any) => (
                 <button
                   key={type}
                   onClick={() => setNewMeeting(p => ({ ...p, meetingType: type }))}
-                  
+                  className="p-3 rounded-xl border text-center transition-all"
                   style={{
                     background: newMeeting.meetingType === type ? cfg.color + '15' : 'var(--surface-elevated)',
                     borderColor: newMeeting.meetingType === type ? cfg.color : 'var(--border)',
                   }}
                 >
-                  <div >{cfg.icon}</div>
-                  <div  style={{ color: newMeeting.meetingType === type ? cfg.color : 'var(--text-secondary)' }}>
+                  <div className="text-lg">{cfg.icon}</div>
+                  <div className="text-[10px] font-semibold mt-1" style={{ color: newMeeting.meetingType === type ? cfg.color : 'var(--text-secondary)' }}>
                     {cfg.label}
                   </div>
                 </button>
@@ -242,29 +242,29 @@ export default function MeetingsPanel({ orgId, profile }: MeetingsPanelProps) {
           </div>
 
           <div>
-            <label >Lead Name</label>
+            <label className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1 block">Lead Name</label>
             <input
               value={newMeeting.leadName || ''}
               onChange={e => setNewMeeting(p => ({ ...p, leadName: e.target.value, leadId: e.target.value.toLowerCase().replace(/\s+/g, '-') }))}
               placeholder="Prospect or company name"
-              
+              className="w-full px-4 py-3 rounded-xl bg-surface-elevated border border-border text-sm focus:outline-none focus:border-primary transition-colors"
             />
           </div>
 
           <div>
-            <label >Scheduled At</label>
+            <label className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1 block">Scheduled At</label>
             <input
               type="datetime-local"
               value={newMeeting.scheduledAt?.slice(0, 16) || ''}
               onChange={e => setNewMeeting(p => ({ ...p, scheduledAt: e.target.value }))}
-              
+              className="w-full px-4 py-3 rounded-xl bg-surface-elevated border border-border text-sm focus:outline-none focus:border-primary transition-colors"
             />
           </div>
 
           <button
             onClick={handleCreateMeeting}
             disabled={!newMeeting.title}
-            
+            className="w-full py-3 rounded-xl text-text font-semibold text-sm hover:opacity-90 transition-all disabled:opacity-40"
           >
             Schedule Meeting
           </button>
@@ -282,49 +282,49 @@ export default function MeetingsPanel({ orgId, profile }: MeetingsPanelProps) {
   };
 
   return (
-    <div >
+    <div className="p-6 space-y-6">
       {/* Header */}
-      <div >
+      <div className="flex items-center justify-between">
         <div>
-          <h1 >Meeting Intelligence</h1>
-          <p >Transcribe calls, extract BANT signals, draft follow-ups automatically</p>
+          <h1 className="text-xl font-bold text-text">Meeting Intelligence</h1>
+          <p className="text-xs text-text-secondary mt-0.5">Transcribe calls, extract BANT signals, draft follow-ups automatically</p>
         </div>
         <button
           onClick={() => setView('create')}
-          
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-text text-sm font-semibold hover:opacity-90 transition-all"
         >
-          <Plus  />
+          <Plus className="w-4 h-4" />
           Schedule Meeting
         </button>
       </div>
 
       {/* Stats */}
-      <div >
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
           { label: 'Total Meetings', value: stats.total, icon: Calendar, color: '#6366f1' },
           { label: 'Analysed', value: stats.complete, icon: Brain, color: '#10b981' },
           { label: 'Awaiting Recording', value: stats.pending, icon: Mic, color: '#f59e0b' },
           { label: 'A-Score Leads', value: stats.aScore, icon: Sparkles, color: '#10b981' },
         ].map(({ label, value, icon: Icon, color }) => (
-          <div key={label} >
-            <div >
-              <div  style={{ background: color + '15' }}>
-                <Icon  style={{ color }} />
+          <div key={label} className="card p-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="p-1.5 rounded-xl" style={{ background: color + '15' }}>
+                <Icon className="w-4 h-4" style={{ color }} />
               </div>
-              <span >{value}</span>
+              <span className="text-2xl font-bold text-text">{value}</span>
             </div>
-            <div >{label}</div>
+            <div className="text-xs text-text-secondary">{label}</div>
           </div>
         ))}
       </div>
 
       {/* Filter tabs */}
-      <div >
+      <div className="flex gap-1 p-1 bg-surface-elevated rounded-xl w-fit">
         {(['all', 'discovery', 'demo', 'pilot_review', 'closing'] as const).map(f => (
           <button
             key={f}
             onClick={() => setFilter(f)}
-            
+            className="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
             style={{
               background: filter === f ? 'var(--color-primary)' : 'transparent',
               color: filter === f ? 'white' : 'var(--text-secondary)',
@@ -337,13 +337,13 @@ export default function MeetingsPanel({ orgId, profile }: MeetingsPanelProps) {
 
       {/* Meeting list */}
       {filteredMeetings.length === 0 ? (
-        <div >
-          <Calendar  />
-          <div >No meetings yet</div>
-          <div >Schedule your first meeting to get started</div>
+        <div className="text-center py-16 text-text-secondary">
+          <Calendar className="w-12 h-12 mx-auto mb-3 opacity-30" />
+          <div className="font-semibold">No meetings yet</div>
+          <div className="text-xs mt-1">Schedule your first meeting to get started</div>
         </div>
       ) : (
-        <div >
+        <div className="space-y-3">
           {filteredMeetings.map((meeting) => {
             const typeCfg = MEETING_TYPE_CONFIG[meeting.meetingType];
             const statusCfg = meeting.processingStatus ? STATUS_CONFIG[meeting.processingStatus] : null;
@@ -353,21 +353,21 @@ export default function MeetingsPanel({ orgId, profile }: MeetingsPanelProps) {
                 layout
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                
+                className="card p-4 hover:border-primary/40 transition-colors cursor-pointer"
                 onClick={() => { setSelectedMeeting(meeting); setView('detail'); }}
               >
-                <div >
-                  <div >
-                    <div >
-                      <span >{meeting.title}</span>
-                      <span  style={{
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-semibold text-text">{meeting.title}</span>
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{
                         background: typeCfg?.color + '15',
                         color: typeCfg?.color,
                       }}>
                         {typeCfg?.icon} {typeCfg?.label}
                       </span>
                       {meeting.bantScore && (
-                        <span  style={{
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{
                           background: BANT_SCORE_CONFIG[meeting.bantScore].bg,
                           color: BANT_SCORE_CONFIG[meeting.bantScore].color,
                         }}>
@@ -376,41 +376,41 @@ export default function MeetingsPanel({ orgId, profile }: MeetingsPanelProps) {
                       )}
                     </div>
                     {meeting.leadName && (
-                      <div >{meeting.leadName}</div>
+                      <div className="text-xs text-text-secondary mt-1">{meeting.leadName}</div>
                     )}
-                    <div >
-                      <span >
-                        <Calendar  />
+                    <div className="flex items-center gap-3 mt-2 text-xs text-text-secondary">
+                      <span className="flex items-center gap-1">
+                        <Calendar className="w-3 h-3" />
                         {new Date(meeting.scheduledAt).toLocaleDateString()}
                       </span>
                       {meeting.transcript && (
-                        <span >
-                          <FileText  />
+                        <span className="flex items-center gap-1 text-success">
+                          <FileText className="w-3 h-3" />
                           Transcript
                         </span>
                       )}
                       {meeting.summary && (
-                        <span >
-                          <Brain  />
+                        <span className="flex items-center gap-1 text-primary">
+                          <Brain className="w-3 h-3" />
                           AI Summary
                         </span>
                       )}
                     </div>
                   </div>
 
-                  <div >
+                  <div className="flex flex-col items-end gap-2 shrink-0">
                     {statusCfg && (
-                      <span  style={{ color: statusCfg.color }}>
-                        {statusCfg.pulse && <Loader2  />}
+                      <span className="flex items-center gap-1 text-[10px] font-semibold" style={{ color: statusCfg.color }}>
+                        {statusCfg.pulse && <Loader2 className="w-3 h-3 animate-spin" />}
                         {statusCfg.label}
                       </span>
                     )}
                     {!meeting.transcript && (
                       <button
                         onClick={(e) => { e.stopPropagation(); setSelectedMeeting(meeting); setView('upload'); }}
-                        
+                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-primary/10 text-primary text-[11px] font-semibold hover:bg-primary hover:text-white transition-all"
                       >
-                        <Upload  />
+                        <Upload className="w-3 h-3" />
                         Upload
                       </button>
                     )}
@@ -418,27 +418,27 @@ export default function MeetingsPanel({ orgId, profile }: MeetingsPanelProps) {
                       <button
                         onClick={(e) => { e.stopPropagation(); handleAnalyseMeeting(meeting); }}
                         disabled={processing[meeting.id!]}
-                        
+                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-violet-500/10 text-violet-400 text-[11px] font-semibold hover:bg-violet-500 hover:text-white transition-all disabled:opacity-50"
                       >
-                        {processing[meeting.id!] ? <Loader2  /> : <Sparkles  />}
+                        {processing[meeting.id!] ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
                         Analyse
                       </button>
                     )}
-                    <ChevronRight  />
+                    <ChevronRight className="w-4 h-4 text-text-secondary" />
                   </div>
                 </div>
 
                 {/* Action items preview */}
                 {meeting.actionItems && meeting.actionItems.length > 0 && (
-                  <div >
+                  <div className="mt-3 pt-3 border-t border-border flex gap-2 flex-wrap">
                     {meeting.actionItems.slice(0, 2).map((item, i) => (
-                      <span key={i} 
+                      <span key={i} className={`text-[10px] px-2 py-1 rounded-full border${item.completed ? 'opacity-50 line-through' : ''}`}
                         style={{ borderColor: 'var(--border)' }}>
                         {item.task}
                       </span>
                     ))}
                     {meeting.actionItems.length > 2 && (
-                      <span >+{meeting.actionItems.length - 2} more</span>
+                      <span className="text-[10px] text-text-secondary">+{meeting.actionItems.length - 2} more</span>
                     )}
                   </div>
                 )}

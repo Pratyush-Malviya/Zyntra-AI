@@ -617,7 +617,7 @@ export function AppShell({
                   cursor="pointer"
                   _hover={{ bg: "rgba(99, 102, 241, 0.15)" }}
                 >
-                  <Box w={1.5} h={1.5} rounded="full" bg="#818cf8"  />
+                  <Box w={1.5} h={1.5} rounded="full" bg="#818cf8" className="animate-pulse" />
                   <Text fontSize="3xs" fontWeight="bold" color="#a5b4fc" textTransform="uppercase" letterSpacing="0.08em">
                     AI: Idle
                   </Text>
@@ -632,21 +632,21 @@ export function AppShell({
                   <VStack align="stretch" spacing={1.5}>
                     <Flex justify="space-between" align="center" py={0.5}>
                       <HStack spacing={1.5}>
-                        <Search size={10}  />
+                        <Search size={10} className="text-indigo-400" />
                         <Text fontSize="3xs">Research Agent</Text>
                       </HStack>
                       <Text fontSize="3xs" color="gray.500">Idle</Text>
                     </Flex>
                     <Flex justify="space-between" align="center" py={0.5}>
                       <HStack spacing={1.5}>
-                        <Mic size={10}  />
+                        <Mic size={10} className="text-purple-400" />
                         <Text fontSize="3xs">Post-Meeting Agent</Text>
                       </HStack>
                       <Text fontSize="3xs" color="gray.500">Idle</Text>
                     </Flex>
                     <Flex justify="space-between" align="center" py={0.5}>
                       <HStack spacing={1.5}>
-                        <Mail size={10}  />
+                        <Mail size={10} className="text-emerald-400" />
                         <Text fontSize="3xs">Outreach Writer</Text>
                       </HStack>
                       <Text fontSize="3xs" color="gray.500">Idle</Text>
@@ -718,7 +718,7 @@ export function AppShell({
         <ModalContent bg="#12131a" border="1px solid rgba(255,255,255,0.08)" borderRadius="2xl" color="white" mt="15vh">
           <ModalHeader pb={2} borderBottomWidth={1} borderColor="rgba(255,255,255,0.06)">
             <Flex align="center" gap={2}>
-              <Search size={16}  />
+              <Search size={16} className="text-indigo-400" />
               <Text fontSize="sm" fontWeight="bold">Global Search Palette</Text>
             </Flex>
           </ModalHeader>
@@ -770,7 +770,7 @@ export function AppShell({
                           <Text fontSize="xs" fontWeight="semibold">{item.label}</Text>
                           <Text fontSize="3xs" color="gray.400">{item.desc}</Text>
                         </Box>
-                        <ChevronRight size={14}  />
+                        <ChevronRight size={14} className="text-gray-500" />
                       </Flex>
                     ))}
                 </VStack>

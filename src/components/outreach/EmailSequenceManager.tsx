@@ -21,10 +21,10 @@ interface EmailSequenceManagerProps {
 }
 
 const STATUS_CFG = {
-  active:    { label: 'Active',    color: '#10b981', icon: <Play  /> },
-  paused:    { label: 'Paused',    color: '#f59e0b', icon: <Pause  /> },
-  completed: { label: 'Complete',  color: '#6366f1', icon: <CheckCircle2  /> },
-  bounced:   { label: 'Bounced',   color: '#ef4444', icon: <XCircle  /> },
+  active:    { label: 'Active',    color: '#10b981', icon: <Play className="w-3 h-3" /> },
+  paused:    { label: 'Paused',    color: '#f59e0b', icon: <Pause className="w-3 h-3" /> },
+  completed: { label: 'Complete',  color: '#6366f1', icon: <CheckCircle2 className="w-3 h-3" /> },
+  bounced:   { label: 'Bounced',   color: '#ef4444', icon: <XCircle className="w-3 h-3" /> },
 };
 
 const DEFAULT_TOUCHES: EmailTouch[] = [
@@ -137,25 +137,25 @@ export default function EmailSequenceManager({ orgId, profile }: EmailSequenceMa
     opened: sequences.filter(s => s.openedAt).length,
   };
 
-  if (loading) return <div ><Loader2  /></div>;
+  if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="w-7 h-7 animate-spin text-primary" /></div>;
 
   if (view === 'create') {
     return (
-      <div >
-        <div >
-          <button onClick={() => setView('list')} >
-            <ChevronRight  />
+      <div className="p-6 space-y-6 max-w-2xl mx-auto">
+        <div className="flex items-center gap-3">
+          <button onClick={() => setView('list')} className="p-2 rounded-xl hover:bg-surface-elevated text-text-secondary">
+            <ChevronRight className="w-4 h-4 rotate-180" />
           </button>
           <div>
-            <h2 >Create Email Sequence</h2>
-            <p >3-touch sequence — Day 1, Day 4, Day 8</p>
+            <h2 className="text-lg font-bold">Create Email Sequence</h2>
+            <p className="text-xs text-text-secondary">3-touch sequence — Day 1, Day 4, Day 8</p>
           </div>
         </div>
 
         {/* Contact info */}
-        <div >
-          <div >Contact Details</div>
-          <div >
+        <div className="card p-5 space-y-4">
+          <div className="text-xs font-bold text-text-secondary uppercase tracking-wider">Contact Details</div>
+          <div className="grid grid-cols-2 gap-3">
             {[
               { label: 'Sequence Name', key: 'sequenceName', placeholder: 'e.g. Wealth Advisory — Q1', full: true },
               { label: 'Prospect Name', key: 'contactName', placeholder: 'John Smith' },
@@ -163,13 +163,13 @@ export default function EmailSequenceManager({ orgId, profile }: EmailSequenceMa
               { label: 'Company', key: 'companyName', placeholder: 'Acme Corp' },
               { label: 'Role / Title', key: 'prospectRole', placeholder: 'Head of Operations' },
             ].map(({ label, key, placeholder, full }) => (
-              <div key={key} >
-                <label >{label}</label>
+              <div key={key} className={full ? 'col-span-2' : ''}>
+                <label className="text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-1 block">{label}</label>
                 <input
                   value={(form as any)[key]}
                   onChange={e => setForm(p => ({ ...p, [key]: e.target.value }))}
                   placeholder={placeholder}
-                  
+                  className="w-full px-3 py-2.5 rounded-xl bg-surface-elevated border border-border text-sm focus:outline-none focus:border-primary transition-colors"
                 />
               </div>
             ))}
@@ -177,13 +177,13 @@ export default function EmailSequenceManager({ orgId, profile }: EmailSequenceMa
 
           {/* ICP Segment selector */}
           <div>
-            <label >ICP Segment</label>
-            <div >
+            <label className="text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-2 block">ICP Segment</label>
+            <div className="grid grid-cols-4 gap-2">
               {ICP_SEGMENTS.map(seg => (
                 <button
                   key={seg.id}
                   onClick={() => setForm(p => ({ ...p, icpSegment: seg.id }))}
-                  
+                  className="p-2.5 rounded-xl border text-center text-xs font-semibold transition-all"
                   style={{
                     background: form.icpSegment === seg.id ? 'rgba(99,102,241,0.12)' : 'var(--surface-elevated)',
                     borderColor: form.icpSegment === seg.id ? '#6366f1' : 'var(--border)',
@@ -195,7 +195,7 @@ export default function EmailSequenceManager({ orgId, profile }: EmailSequenceMa
               ))}
             </div>
             {form.icpSegment && ICP_HOOKS[form.icpSegment] && (
-              <p >
+              <p className="text-[11px] text-primary mt-2 italic">
                 Hook: "{ICP_HOOKS[form.icpSegment].painHook}"
               </p>
             )}
@@ -205,53 +205,53 @@ export default function EmailSequenceManager({ orgId, profile }: EmailSequenceMa
           <button
             onClick={handlePersonalise}
             disabled={!form.contactName || !form.companyName || generating}
-            
+            className="w-full py-2.5 rounded-xl text-text text-sm font-semibold hover:opacity-90 disabled:opacity-40 flex items-center justify-center gap-2"
           >
-            {generating ? <Loader2  /> : <Sparkles  />}
+            {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
             {generating ? 'Personalising...' : 'AI Personalise All 3 Touches'}
           </button>
         </div>
 
         {/* Email touches */}
-        <div >
-          <div >Email Sequence Touches</div>
+        <div className="space-y-3">
+          <div className="text-xs font-bold text-text-secondary uppercase tracking-wider">Email Sequence Touches</div>
           {form.touches.map((touch, idx) => (
-            <div key={idx} >
-              <div >
-                <div >
-                  <span >
+            <div key={idx} className="card p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-full bg-primary text-text text-[11px] font-bold flex items-center justify-center">
                     {idx + 1}
                   </span>
-                  <span >Day {touch.day}</span>
+                  <span className="text-sm font-semibold text-text">Day {touch.day}</span>
                   {touch.variantUsed && (
-                    <span >
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20">
                       Variant {touch.variantUsed}
                     </span>
                   )}
                 </div>
                 <button
                   onClick={() => setEditingTouch(editingTouch === idx ? null : idx)}
-                  
+                  className="p-1.5 rounded-xl hover:bg-surface-elevated text-text-secondary transition-colors"
                 >
-                  <Edit3  />
+                  <Edit3 className="w-3.5 h-3.5" />
                 </button>
               </div>
 
               <div>
-                <div >Subject</div>
-                <div >
+                <div className="text-[10px] font-bold text-text-secondary uppercase mb-1">Subject</div>
+                <div className="text-sm text-text bg-surface-elevated px-3 py-2 rounded-xl border border-border">
                   {touch.subject}
                 </div>
               </div>
 
               {editingTouch === idx && (
                 <div>
-                  <div >Email Body</div>
+                  <div className="text-[10px] font-bold text-text-secondary uppercase mb-1">Email Body</div>
                   <textarea
                     value={touch.body}
                     onChange={e => setForm(f => ({ ...f, touches: f.touches.map((t, i) => i === idx ? { ...t, body: e.target.value } : t) }))}
                     rows={8}
-                    
+                    className="w-full px-3 py-2.5 rounded-xl bg-surface-elevated border border-border text-sm resize-none focus:outline-none focus:border-primary font-mono"
                   />
                 </div>
               )}
@@ -259,14 +259,14 @@ export default function EmailSequenceManager({ orgId, profile }: EmailSequenceMa
           ))}
         </div>
 
-        <div >
-          <button onClick={() => setView('list')} >
+        <div className="flex gap-3">
+          <button onClick={() => setView('list')} className="flex-1 py-3 rounded-xl border border-border text-sm text-text-secondary">
             Cancel
           </button>
           <button
             onClick={handleCreate}
             disabled={!form.sequenceName}
-            
+            className="flex-1 py-3 rounded-xl text-text font-semibold text-sm hover:opacity-90 disabled:opacity-40"
           >
             Launch Sequence
           </button>
@@ -277,14 +277,14 @@ export default function EmailSequenceManager({ orgId, profile }: EmailSequenceMa
 
   if (view === 'personalize') {
     return (
-      <div >
-        <div >
-          <button onClick={() => setView('list')} >
-            <ChevronRight  />
+      <div className="p-6 space-y-6">
+        <div className="flex items-center gap-3">
+          <button onClick={() => setView('list')} className="p-2 rounded-xl hover:bg-surface-elevated text-text-secondary">
+            <ChevronRight className="w-4 h-4 rotate-180" />
           </button>
           <div>
-            <h2 >AI Outreach Personalisation</h2>
-            <p >Generate customized email copy using the AI copywriter agent</p>
+            <h2 className="text-lg font-bold">AI Outreach Personalisation</h2>
+            <p className="text-xs text-text-secondary font-sans mt-0.5">Generate customized email copy using the AI copywriter agent</p>
           </div>
         </div>
 
@@ -321,25 +321,25 @@ export default function EmailSequenceManager({ orgId, profile }: EmailSequenceMa
 
   // LIST VIEW
   return (
-    <div >
-      <div >
+    <div className="p-6 space-y-6">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 >Email Sequences</h1>
-          <p >3-touch outreach sequences per ICP segment</p>
+          <h1 className="text-xl font-bold text-text">Email Sequences</h1>
+          <p className="text-xs text-text-secondary mt-0.5">3-touch outreach sequences per ICP segment</p>
         </div>
-        <div >
+        <div className="flex items-center gap-2">
           <button
             onClick={() => setView('personalize')}
-            
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-indigo-500/30 text-indigo-400 text-sm font-semibold hover:bg-indigo-500/10 transition-colors"
           >
-            <Sparkles  />
+            <Sparkles className="w-4 h-4" />
             AI Writer
           </button>
           <button
             onClick={() => setView('create')}
-            
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-text text-sm font-semibold hover:opacity-90"
           >
-            <Plus  />
+            <Plus className="w-4 h-4" />
             New Sequence
           </button>
         </div>
@@ -347,53 +347,53 @@ export default function EmailSequenceManager({ orgId, profile }: EmailSequenceMa
 
 
       {/* Stats */}
-      <div >
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
           { label: 'Total',     value: stats.total,     icon: Mail,        color: '#6366f1' },
           { label: 'Active',    value: stats.active,    icon: Play,        color: '#10b981' },
           { label: 'Complete',  value: stats.completed, icon: CheckCircle2,color: '#3b82f6' },
           { label: 'Opened',    value: stats.opened,    icon: Eye,         color: '#f59e0b' },
         ].map(({ label, value, icon: Icon, color }) => (
-          <div key={label} >
-            <div >
-              <div  style={{ background: color + '15' }}>
-                <Icon  style={{ color }} />
+          <div key={label} className="card p-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="p-1.5 rounded-xl" style={{ background: color + '15' }}>
+                <Icon className="w-4 h-4" style={{ color }} />
               </div>
-              <span >{value}</span>
+              <span className="text-2xl font-bold text-text">{value}</span>
             </div>
-            <div >{label}</div>
+            <div className="text-xs text-text-secondary">{label}</div>
           </div>
         ))}
       </div>
 
       {/* Listmonk integration info */}
-      <div >
-        <div >
-          <div >
-            <Zap  />
+      <div className="card p-4 border border-amber-500/20 bg-amber-500/5">
+        <div className="flex items-start gap-3">
+          <div className="p-2 rounded-xl bg-amber-500/10">
+            <Zap className="w-4 h-4 text-amber-400" />
           </div>
-          <div >
-            <div >Listmonk Integration</div>
-            <div >
+          <div className="flex-1">
+            <div className="text-sm font-semibold text-text">Listmonk Integration</div>
+            <div className="text-xs text-text-secondary mt-0.5">
               {localStorage.getItem('zy_listmonk_url')
                 ? `Connected to ${localStorage.getItem('zy_listmonk_url')}`
                 : 'Not configured — sequences run in local mode. Configure Listmonk in Settings for real delivery.'}
             </div>
           </div>
-          <button >
+          <button className="text-xs text-amber-400 font-semibold hover:text-amber-300 whitespace-nowrap">
             Configure →
           </button>
         </div>
       </div>
 
       {sequences.length === 0 ? (
-        <div >
-          <Mail  />
-          <div >No email sequences yet</div>
-          <div >Create your first 3-touch outreach sequence</div>
+        <div className="text-center py-16 text-text-secondary">
+          <Mail className="w-12 h-12 mx-auto mb-3 opacity-30" />
+          <div className="font-semibold">No email sequences yet</div>
+          <div className="text-xs mt-1">Create your first 3-touch outreach sequence</div>
         </div>
       ) : (
-        <div >
+        <div className="space-y-3">
           {sequences.map(seq => {
             const statusCfg = STATUS_CFG[seq.status];
             return (
@@ -402,48 +402,48 @@ export default function EmailSequenceManager({ orgId, profile }: EmailSequenceMa
                 layout
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                
+                className="card p-5"
               >
-                <div >
-                  <div >
-                    <div >
-                      <span >{seq.sequenceName}</span>
-                      <span 
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold text-sm text-text">{seq.sequenceName}</span>
+                      <span className="flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full"
                         style={{ background: statusCfg.color + '15', color: statusCfg.color }}>
                         {statusCfg.icon}
                         {statusCfg.label}
                       </span>
                       {seq.icpSegment && (
-                        <span >
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
                           {ICP_SEGMENTS.find(s => s.id === seq.icpSegment)?.label}
                         </span>
                       )}
                     </div>
                     {seq.contactName && (
-                      <div >
+                      <div className="text-xs text-text-secondary mt-0.5">
                         {seq.contactName}{seq.contactEmail ? ` · ${seq.contactEmail}` : ''}
                       </div>
                     )}
                     {/* Touch progress */}
-                    <div >
+                    <div className="flex items-center gap-1.5 mt-3">
                       {[1, 2, 3].map(touch => (
-                        <div key={touch} 
+                        <div key={touch} className="flex-1 h-1.5 rounded-full"
                           style={{ background: touch <= seq.currentTouch ? '#6366f1' : 'var(--border)' }} />
                       ))}
-                      <span >Touch {seq.currentTouch}/3</span>
+                      <span className="text-[10px] text-text-secondary ml-1">Touch {seq.currentTouch}/3</span>
                     </div>
-                    <div >
-                      {seq.openedAt && <span ><CheckCircle2  />Opened</span>}
-                      {seq.clickedAt && <span ><CheckCircle2  />Clicked</span>}
-                      {seq.repliedAt && <span ><MessageSquare  />Replied</span>}
+                    <div className="flex items-center gap-3 mt-2 text-xs">
+                      {seq.openedAt && <span className="text-emerald-400 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" />Opened</span>}
+                      {seq.clickedAt && <span className="text-primary flex items-center gap-1"><CheckCircle2 className="w-3 h-3" />Clicked</span>}
+                      {seq.repliedAt && <span className="text-amber-400 flex items-center gap-1"><MessageSquare className="w-3 h-3" />Replied</span>}
                     </div>
                   </div>
 
                   <button
                     onClick={() => handleToggleStatus(seq)}
-                    
+                    className="p-2 rounded-xl hover:bg-surface-elevated text-text-secondary transition-colors"
                   >
-                    {seq.status === 'active' ? <Pause  /> : <Play  />}
+                    {seq.status === 'active' ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
                   </button>
                 </div>
               </motion.div>

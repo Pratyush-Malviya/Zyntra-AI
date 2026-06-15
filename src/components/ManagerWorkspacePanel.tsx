@@ -217,15 +217,15 @@ export function ManagerWorkspacePanel({
   const activeCall = calls.find(c => c.id === selectedCallId) || calls[0];
 
   return (
-    <div >
+    <div className="max-w-6xl mx-auto space-y-8">
       {/* Tab Select & Header */}
-      <div >
-        <div >
-          <h1 >Manager Coaching & Analytics Workspace</h1>
-          <p >Oversee pipeline metrics, approve sequences, and coach reps with AI intelligence.</p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="space-y-1">
+          <h1 className="text-xl md:text-2xl font-bold tracking-tight">Manager Coaching & Analytics Workspace</h1>
+          <p className="text-text-muted text-xs md:text-sm">Oversee pipeline metrics, approve sequences, and coach reps with AI intelligence.</p>
         </div>
 
-        <div >
+        <div className="flex items-center gap-1.5 p-1 border border-border rounded-xl">
           {[
             { id: 'stats', label: 'Team Dashboard', icon: BarChart2 },
             { id: 'approvals', label: 'Sequence Approval Queue', icon: CheckCircle2 },
@@ -236,12 +236,16 @@ export function ManagerWorkspacePanel({
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                activeTab === tab.id 
+                  ? 'bg-teal-500/10 text-teal-400 border border-teal-500/25' 
+                  : 'text-text-muted hover:text-text border border-transparent'
+              }`}
             >
-              <tab.icon  />
+              <tab.icon className="w-4 h-4" />
               {tab.label}
               {tab.id === 'approvals' && approvalsQueue.length > 0 && (
-                <span >{approvalsQueue.length}</span>
+                <span className="bg-rose-500/15 text-rose-400 px-1.5 py-0.5 rounded-full text-[10px] ml-1 font-extrabold">{approvalsQueue.length}</span>
               )}
             </button>
           ))}
@@ -250,52 +254,52 @@ export function ManagerWorkspacePanel({
 
       {/* STATS & TEAM FEED VIEW */}
       {activeTab === 'stats' && (
-        <div >
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           {/* Main KPI Boards */}
-          <div >
-            <div >
-              <div >
-                <div >184 / 300</div>
-                <div >Team Outbound Dispatched</div>
-                <div >61% Quota attainment</div>
+          <div className="md:col-span-3 space-y-8">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              <div className="bg-surface border border-border rounded-xl p-6 space-y-2">
+                <div className="text-3xl font-syne font-bold text-teal-400">184 / 300</div>
+                <div className="text-[9px] text-text-muted font-bold uppercase tracking-widest">Team Outbound Dispatched</div>
+                <div className="text-[10px] text-teal-400 font-semibold">61% Quota attainment</div>
               </div>
-              <div >
-                <div >18%</div>
-                <div >Average Reply Interest Weight</div>
-                <div >+4% from last month</div>
+              <div className="bg-surface border border-border rounded-xl p-6 space-y-2">
+                <div className="text-3xl font-syne font-bold">18%</div>
+                <div className="text-[9px] text-text-muted font-bold uppercase tracking-widest">Average Reply Interest Weight</div>
+                <div className="text-[10px] text-emerald-400 font-semibold">+4% from last month</div>
               </div>
-              <div >
-                <div >$135,000</div>
-                <div >Active Forecast Value</div>
-                <div >90% of Quota target</div>
+              <div className="bg-surface border border-border rounded-xl p-6 space-y-2">
+                <div className="text-3xl font-syne font-bold">$135,000</div>
+                <div className="text-[9px] text-text-muted font-bold uppercase tracking-widest">Active Forecast Value</div>
+                <div className="text-[10px] font-semibold">90% of Quota target</div>
               </div>
             </div>
 
             {/* Leaderboards */}
-            <div >
-              <h3 >SDR Outbound Leaderboard</h3>
-              <div >
+            <div className="border border-border rounded-xl p-6 space-y-4">
+              <h3 className="text-xs font-bold uppercase tracking-widest">SDR Outbound Leaderboard</h3>
+              <div className="space-y-4 text-xs">
                 {[
                   { rep: 'John Miller', dials: '85', emails: '140', score: '92%', booked: 7, color: 'bg-teal-400' },
                   { rep: 'David Joost', dials: '62', emails: '115', score: '84%', booked: 5, color: 'bg-[#4da6ff]' },
                   { rep: 'Alice Vance', dials: '40', emails: '90', score: '78%', booked: 3, color: 'bg-purple-400' },
                 ].map((row, idx) => (
-                  <div key={idx} >
-                    <div >
-                      <span >#{idx + 1}</span>
+                  <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-surface border border-border/80">
+                    <div className="flex items-center gap-3">
+                      <span className="font-bold text-text-muted">#{idx + 1}</span>
                       <div>
-                        <div >{row.rep}</div>
-                        <div >{row.dials} dials / {row.emails} sequences</div>
+                        <div className="font-bold text-text">{row.rep}</div>
+                        <div className="text-[10px] text-text-muted mt-0.5">{row.dials} dials / {row.emails} sequences</div>
                       </div>
                     </div>
-                    <div >
-                      <div >
-                        <div >{row.score}</div>
-                        <div >Approval level</div>
+                    <div className="flex items-center gap-6">
+                      <div className="text-right">
+                        <div className="font-bold text-teal-400">{row.score}</div>
+                        <div className="text-[9px] text-text-muted">Approval level</div>
                       </div>
-                      <div >
-                        <div >{row.booked}</div>
-                        <div >Booked Ops</div>
+                      <div className="text-right">
+                        <div className="font-bold text-text text-sm">{row.booked}</div>
+                        <div className="text-[9px] text-text-muted">Booked Ops</div>
                       </div>
                     </div>
                   </div>
@@ -304,17 +308,17 @@ export function ManagerWorkspacePanel({
             </div>
           </div>
 
-          <div >
-            <h3 >Rep Activity stream</h3>
-            <div >
+          <div className="md:col-span-1 bg-surface border border-border rounded-xl p-6 space-y-6">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-text-muted">Rep Activity stream</h3>
+            <div className="space-y-4">
               {activityFeed.map(feed => (
-                <div key={feed.id} >
-                  <div >
-                    <span >{feed.rep}</span>
-                    <span >{feed.time}</span>
+                <div key={feed.id} className="text-[11px] border-b border-border/60 pb-3 last:border-b-0">
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="font-bold text-text">{feed.rep}</span>
+                    <span className="text-[9px] text-text-muted font-medium italic shrink-0">{feed.time}</span>
                   </div>
-                  <div >{feed.action}</div>
-                  <div >{feed.target}</div>
+                  <div className="text-text-muted mt-1 leading-snug">{feed.action}</div>
+                  <div className="mt-1.5 text-[9px] font-bold text-teal-400 uppercase tracking-wider">{feed.target}</div>
                 </div>
               ))}
             </div>
@@ -324,45 +328,45 @@ export function ManagerWorkspacePanel({
 
       {/* SEQUENCE APPROVALS QUEUE VIEW */}
       {activeTab === 'approvals' && (
-        <div >
-          <div >
+        <div className="space-y-6">
+          <div className="bg-surface border border-border rounded-xl p-6">
             {approvalsQueue.length === 0 ? (
-              <div >
-                <div >
-                  <Check  />
+              <div className="text-center py-12 space-y-3">
+                <div className="w-12 h-12 rounded-full bg-teal-500/10 flex items-center justify-center text-teal-400 mx-auto">
+                  <Check className="w-6 h-6" />
                 </div>
-                <h3 >Approvals Queue Clear</h3>
-                <p >SDRs have no drafts pending review. Automated AI sequences are deployed seamlessly.</p>
+                <h3 className="text-sm font-bold text-text">Approvals Queue Clear</h3>
+                <p className="text-xs text-text-muted max-w-sm mx-auto">SDRs have no drafts pending review. Automated AI sequences are deployed seamlessly.</p>
               </div>
             ) : (
-              <div >
+              <div className="space-y-8">
                 {approvalsQueue.map(ap => (
-                  <div key={ap.id} >
-                    <div >
+                  <div key={ap.id} className="border border-border/80 rounded-xl p-6 space-y-4">
+                    <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pb-3 border-b border-border/60">
                       <div>
-                        <div >Submitted by {ap.sdr}</div>
-                        <h3 >Campaign: {ap.campaign}</h3>
+                        <div className="text-xs font-bold text-text-muted uppercase tracking-wider">Submitted by {ap.sdr}</div>
+                        <h3 className="text-sm font-bold text-text mt-1">Campaign: {ap.campaign}</h3>
                       </div>
-                      <span >
+                      <span className="bg-amber-500/10 border border-amber-500/20 text-amber-400 font-bold text-[9px] px-2.5 py-1 rounded-full uppercase">
                         {ap.channel} OUTBOUND
                       </span>
                     </div>
 
-                    <div >
-                      <label >Active Copy Draft</label>
+                    <div className="space-y-2">
+                      <label className="text-[9px] font-bold text-text-muted uppercase tracking-widest">Active Copy Draft</label>
                       <textarea
                         value={ap.draft}
                         onChange={(e) => {
                           setApprovalsQueue(approvalsQueue.map(x => x.id === ap.id ? { ...x, draft: e.target.value } : x));
                         }}
                         rows={5}
-                        
+                        className="w-full bg-surface border border-border rounded-xl p-4 text-xs font-mono text-text focus:border-brand outline-none"
                       />
                     </div>
 
-                    <div >
-                      <div >
-                        <label >Coaching Notes / Suggestions for Rejection</label>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+                      <div className="sm:col-span-2 space-y-1">
+                        <label className="text-[9px] font-bold text-text-muted uppercase tracking-widest">Coaching Notes / Suggestions for Rejection</label>
                         <input
                           type="text"
                           value={ap.feedback}
@@ -370,21 +374,21 @@ export function ManagerWorkspacePanel({
                             setApprovalsQueue(approvalsQueue.map(x => x.id === ap.id ? { ...x, feedback: e.target.value } : x));
                           }}
                           placeholder="e.g. Include specific metrics. Reduce first sentence pitch length."
-                          
+                          className="w-full bg-surface border border-border rounded-xl p-3 text-xs text-brand focus:border-brand outline-none"
                         />
                       </div>
-                      <div >
+                      <div className="grid grid-cols-2 gap-3 h-11">
                         <button
                           onClick={() => handleReject(ap.id, ap.campaign)}
-                          
+                          className="bg-surface border border-border hover:bg-rose-500/10 text-rose-500 hover:border-rose-500/30 text-xs font-bold rounded-xl transition-all cursor-pointer"
                         >
                           Reject Setup
                         </button>
                         <button
                           onClick={() => handleApprove(ap.id, ap.campaign)}
-                          
+                          className="bg-teal-500 hover:bg-teal-600 text-text text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1"
                         >
-                          <Check  /> Approve Out
+                          <Check className="w-4 h-4" /> Approve Out
                         </button>
                       </div>
                     </div>
@@ -398,88 +402,96 @@ export function ManagerWorkspacePanel({
 
       {/* CONVERSATION COACHING INTEL VIEW */}
       {activeTab === 'coaching' && (
-        <div >
-          <div >
-            <h3 >Recorded Coaching Logs</h3>
-            <div >
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="md:col-span-1 space-y-4">
+            <h3 className="text-xs font-bold uppercase tracking-widest">Recorded Coaching Logs</h3>
+            <div className="flex flex-col gap-3">
               {calls.map(c => {
                 const isSelected = selectedCallId === c.id;
                 return (
                   <button
                     key={c.id}
                     onClick={() => setSelectedCallId(c.id)}
-                    
+                    className={`w-full p-4 rounded-2xl border text-left transition-all cursor-pointer ${
+                      isSelected 
+                        ? 'bg-teal-500/15 border-teal-500/50 block' 
+                        : 'bg-surface border-border hover:bg-surface-alt block'
+                    }`}
                   >
-                    <div >
+                    <div className="flex justify-between items-center text-[10px] text-text-muted font-bold uppercase tracking-wider">
                       <span>{c.date}</span>
-                      <span >AI Score: {c.score}</span>
+                      <span className={`px-1.5 py-0.5 rounded ${
+                        c.score >= 80 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-500'
+                      }`}>AI Score: {c.score}</span>
                     </div>
-                    <div >{c.prospect}</div>
-                    <div >Rep: {c.rep}</div>
+                    <div className="text-xs font-bold text-text mt-1.5 truncate">{c.prospect}</div>
+                    <div className="text-[10px] text-text-muted mt-0.5">Rep: {c.rep}</div>
                   </button>
                 );
               })}
             </div>
           </div>
 
-          <div >
-            <div >
+          <div className="md:col-span-2 border border-border p-6 rounded-xl space-y-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pb-3 border-b border-border/60">
               <div>
-                <h3 >Call Details: {activeCall.prospect}</h3>
-                <div >Dialed reps: {activeCall.rep}</div>
+                <h3 className="text-sm font-bold text-text">Call Details: {activeCall.prospect}</h3>
+                <div className="text-[10px] text-text-muted mt-0.5">Dialed reps: {activeCall.rep}</div>
               </div>
-              <div >
-                <div >
-                  <div >{activeCall.talkRatio.rep}% / {activeCall.talkRatio.prospect}%</div>
-                  <div >Talk-Listen Ratio</div>
+              <div className="flex items-center gap-6">
+                <div className="text-right">
+                  <div className="text-sm font-bold text-teal-400">{activeCall.talkRatio.rep}% / {activeCall.talkRatio.prospect}%</div>
+                  <div className="text-[9px] text-text-muted uppercase tracking-wider font-semibold">Talk-Listen Ratio</div>
                 </div>
-                <div >
-                  <div >{activeCall.fillerWords}</div>
-                  <div >Filler Words (Uh, Like)</div>
+                <div className="text-right">
+                  <div className="text-sm font-bold text-text">{activeCall.fillerWords}</div>
+                  <div className="text-[9px] text-text-muted uppercase tracking-wider font-semibold">Filler Words (Uh, Like)</div>
                 </div>
               </div>
             </div>
 
             {/* Transcript pane */}
-            <div >
+            <div className="space-y-3 bg-surface p-4 rounded-xl max-h-60 overflow-y-auto border border-border">
               {activeCall.transcript.map((line, idx) => (
-                <div key={idx} >
-                  <span >{line.speaker}:</span>
-                  <span >{line.text}</span>
+                <div key={idx} className="text-xs leading-relaxed">
+                  <span className={`font-bold uppercase tracking-wide mr-2 text-[10px] ${
+                    line.speaker === 'Rep' ? 'text-teal-400' : 'text-purple-400'
+                  }`}>{line.speaker}:</span>
+                  <span className="text-gray-300">{line.text}</span>
                 </div>
               ))}
             </div>
 
             {/* Coach Objections Map */}
-            <div >
-              <div >
-                <h4 >
-                  <ShieldAlert  />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="bg-surface/50 border border-border rounded-xl p-4 space-y-2">
+                <h4 className="text-[10px] font-bold uppercase tracking-wider text-rose-400 flex items-center gap-1.5">
+                  <ShieldAlert className="w-3.5 h-3.5" />
                   Objections Flagged
                 </h4>
-                <div >
+                <div className="flex flex-wrap gap-1.5 pt-1">
                   {activeCall.objections.map((obj, idx) => (
-                    <span key={idx} >
+                    <span key={idx} className="bg-rose-500/10 border border-rose-500/20 text-rose-400 font-bold text-[9px] px-2 py-0.5 rounded-xl">
                       {obj.toUpperCase()}
                     </span>
                   ))}
                 </div>
               </div>
 
-              <div >
-                <h4 >
-                  <Cpu  />
+              <div className="bg-surface/50 border border-border rounded-xl p-4 space-y-1.5">
+                <h4 className="text-[10px] font-bold uppercase tracking-wider text-teal-400 flex items-center gap-1.5">
+                  <Cpu className="w-3.5 h-3.5" />
                   AI Objections Battlecard Recommendation
                 </h4>
-                <p >
+                <p className="text-[10px] text-text-muted leading-relaxed font-semibold">
                   For pricing comparison objections, point out our credits calculator: "We are utility billed; agency fees are flat, billing you even for cold data."
                 </p>
               </div>
             </div>
 
-            <div >
-              <div >Coaching Notes for Rep</div>
-              <p >{activeCall.coachingNotes}</p>
+            <div className="p-4 bg-teal-500/5 border border-teal-500/20 rounded-xl">
+              <div className="text-[10px] font-extrabold uppercase tracking-wide text-teal-400">Coaching Notes for Rep</div>
+              <p className="text-xs text-text-muted mt-1 leading-normal italic">{activeCall.coachingNotes}</p>
             </div>
           </div>
         </div>
@@ -487,43 +499,43 @@ export function ManagerWorkspacePanel({
 
       {/* FORECAST & QUOTA MANAGEMENT VIEW */}
       {activeTab === 'forecast' && (
-        <div >
-          <div >
-            <div >
-              <div >
-                <h3 >Manager Override Portal</h3>
+        <div className="space-y-6">
+          <div className="bg-surface border border-border rounded-xl p-6 md:p-8 space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+              <div className="space-y-4">
+                <h3 className="text-xs font-bold uppercase tracking-widest">Manager Override Portal</h3>
                 
-                <form onSubmit={handleApplyOverride} >
-                  <div >
-                    <label >Team Target Quota ($)</label>
+                <form onSubmit={handleApplyOverride} className="space-y-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[9px] font-bold text-text-muted uppercase tracking-widest block">Team Target Quota ($)</label>
                     <input
                       type="number"
                       disabled
                       value={pipelineTarget}
-                      
+                      className="w-full border border-border text-text-muted rounded-xl p-3 text-xs"
                     />
                   </div>
-                  <div >
-                    <label >Adjusted Forecast Commit ($)</label>
+                  <div className="space-y-1.5">
+                    <label className="text-[9px] font-bold text-text-muted uppercase tracking-widest block">Adjusted Forecast Commit ($)</label>
                     <input
                       type="number"
                       value={overrideValue}
                       onChange={e => setOverrideValue(e.target.value)}
-                      
+                      className="w-full border border-border text-text focus:border-brand rounded-xl p-3 text-xs outline-none"
                     />
                   </div>
-                  <div >
-                    <label >Required Audit rationale (Mandatory)</label>
+                  <div className="space-y-1.5">
+                    <label className="text-[9px] font-bold text-text-muted uppercase tracking-widest block">Required Audit rationale (Mandatory)</label>
                     <textarea
                       value={overrideComment}
                       onChange={e => setOverrideComment(e.target.value)}
                       placeholder="Indicate why this override is necessary e.g., CFO validated higher probability size of Staffel deals"
-                      
+                      className="w-full border border-border text-text focus:border-brand rounded-xl p-3 text-xs h-20 outline-none"
                     />
                   </div>
                   <button
                     type="submit"
-                    
+                    className="w-full bg-teal-500 hover:bg-teal-600 text-text py-3.5 rounded-xl font-bold text-xs"
                   >
                     Commit Manual Forecast Override
                   </button>
@@ -531,20 +543,20 @@ export function ManagerWorkspacePanel({
               </div>
 
               {/* Audit history */}
-              <div >
-                <h3 >Audit Trail & Overrides History</h3>
-                <div >
+              <div className="space-y-4">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-text-muted">Audit Trail & Overrides History</h3>
+                <div className="space-y-3 border border-border p-4 rounded-xl max-h-80 overflow-y-auto">
                   {overrideHistory.map(hist => (
-                    <div key={hist.id} >
-                      <div >
-                        <span >{hist.user}</span>
-                        <span >{hist.date}</span>
+                    <div key={hist.id} className="text-[10px] border-b border-border/40 pb-3 last:border-b-0">
+                      <div className="flex justify-between items-center">
+                        <span className="font-extrabold text-text">{hist.user}</span>
+                        <span className="text-[9px] font-medium">{hist.date}</span>
                       </div>
-                      <div >
-                        <span >{hist.before}</span>
-                        <span >&gt; {hist.after}</span>
+                      <div className="text-[10.5px] mt-1.5 flex gap-2">
+                        <span className="text-text-muted line-through">{hist.before}</span>
+                        <span className="text-emerald-400 font-extrabold">&gt; {hist.after}</span>
                       </div>
-                      <p >Rationale: {hist.rationale}</p>
+                      <p className="text-[10px] text-text-muted mt-1 leading-relaxed font-semibold italic">Rationale: {hist.rationale}</p>
                     </div>
                   ))}
                 </div>
@@ -556,49 +568,53 @@ export function ManagerWorkspacePanel({
 
       {/* AI GENERATION AUDIT LOGS VIEW */}
       {activeTab === 'audit' && (
-        <div >
-          <div >
-            <div >
-              <div >
-                <h3 >
-                  <Cpu  />
+        <div className="space-y-6">
+          <div className="bg-surface border border-border rounded-xl p-6 md:p-8 space-y-6">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-4 border-b border-border/40">
+              <div className="space-y-1">
+                <h3 className="text-base font-bold font-syne text-text flex items-center gap-2">
+                  <Cpu className="w-5 h-5 text-purple-400" />
                   AI Response Generation & Audit Logs
                 </h3>
-                <p >
+                <p className="text-xs text-text-muted">
                   Audit precise AI-generated personalized outreach copy directly populated from live rest runs.
                 </p>
               </div>
               <button
                 onClick={fetchLogs}
                 disabled={loadingLogs}
-                
+                className="px-4 py-2 hover:bg-[#12131a] border border-border rounded-xl text-xs font-bold font-mono transition-all text-text flex items-center gap-2 cursor-pointer"
               >
-                <RefreshCw  />
+                <RefreshCw className={`w-3.5 h-3.5${loadingLogs ? 'animate-spin' : ''}`} />
                 {loadingLogs ? 'Refreshing...' : 'Refresh Logs'}
               </button>
             </div>
 
             {/* Filter controls */}
-            <div >
-              <div >
-                <Search  />
+            <div className="flex flex-col sm:flex-row gap-4 border border-border p-4 rounded-xl">
+              <div className="flex-1 relative">
+                <Search className="w-4 h-4 text-text-muted absolute left-3 top-3.5" />
                 <input
                   type="text"
                   placeholder="Search by lead name, company name, or campaign..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  
+                  className="w-full pl-10 pr-4 py-2.5 border border-border rounded-xl text-xs text-text focus:outline-none focus:border-purple-500 font-medium"
                 />
               </div>
 
-              <div >
-                <span >Status:</span>
-                <div >
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-extrabold uppercase text-text-muted tracking-wider">Status:</span>
+                <div className="flex border border-border rounded-xl p-0.5">
                   {(['all', 'success', 'fallback'] as const).map((status) => (
                     <button
                       key={status}
                       onClick={() => setStatusFilter(status)}
-                      
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                        statusFilter === status
+                          ? 'bg-purple-500/10 text-purple-400 border border-purple-500/25'
+                          : 'text-text-muted hover:text-white border border-transparent'
+                      }`}
                     >
                       {status}
                     </button>
@@ -608,18 +624,18 @@ export function ManagerWorkspacePanel({
             </div>
 
             {/* Content Grid */}
-            <div >
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
               {/* Logs Table column */}
-              <div >
+              <div className="lg:col-span-12 xl:col-span-7 space-y-4">
                 {loadingLogs ? (
-                  <div >
-                    <RefreshCw  />
-                    <p >Querying Firestore 'generation_logs' collection...</p>
+                  <div className="text-center py-12 space-y-3">
+                    <RefreshCw className="w-8 h-8 text-purple-400 animate-spin mx-auto" />
+                    <p className="text-xs text-text-muted">Querying Firestore 'generation_logs' collection...</p>
                   </div>
                 ) : logs.length === 0 ? (
-                  <div >
-                    <AlertCircle  />
-                    <p >No generation logs found in database. Start generating messages to record audit logs!</p>
+                  <div className="text-center py-12 border border-dashed border-border rounded-xl space-y-2">
+                    <AlertCircle className="w-8 h-8 text-text-muted mx-auto" />
+                    <p className="text-xs text-text-muted">No generation logs found in database. Start generating messages to record audit logs!</p>
                   </div>
                 ) : (
                   (() => {
@@ -635,14 +651,14 @@ export function ManagerWorkspacePanel({
 
                     if (filtered.length === 0) {
                       return (
-                        <div >
-                          <p >No logs matching search/filter terms.</p>
+                        <div className="text-center py-12 border border-dashed border-border rounded-xl">
+                          <p className="text-xs text-text-muted">No logs matching search/filter terms.</p>
                         </div>
                       );
                     }
 
                     return (
-                      <div >
+                      <div className="border border-border rounded-xl overflow-hidden divide-y divide-border/60">
                         {filtered.map((log) => {
                           const dateObj = log.timestamp?.toDate ? log.timestamp.toDate() : new Date(log.timestamp);
                           const formattedDate = dateObj ? dateObj.toLocaleString('en-US', { month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : 'Unknown Date';
@@ -652,33 +668,41 @@ export function ManagerWorkspacePanel({
                             <div 
                               key={log.id}
                               onClick={() => setSelectedLog(log)}
-                              
+                              className={`p-4 transition-all cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
+                                isSelected 
+                                  ? 'bg-purple-500/5 border-l-2 border-purple-500 pl-3.5' 
+                                  : 'bg-[#0a0b10] hover:bg-[#0c0d12]/50'
+                              }`}
                             >
-                              <div >
-                                <div >
-                                  <span >
+                              <div className="space-y-1 flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap text-left">
+                                  <span className="text-xs font-bold text-text truncate max-w-[150px]">
                                     {log.leadName}
                                   </span>
-                                  <span >
+                                  <span className="text-[10px] text-text-muted font-medium truncate max-w-[150px]">
                                     @{log.leadCompany}
                                   </span>
-                                  <span >
+                                  <span className="text-[8px] font-mono border border-border/60 px-1.5 py-0.5 rounded-xl text-zinc-400 capitalize">
                                     {log.campaignName || 'Internal'}
                                   </span>
                                 </div>
-                                <div >
-                                  <span>Rep: <strong >{log.userName || 'System SDR'}</strong></span>
+                                <div className="flex items-center gap-3 text-[10px] text-text-muted text-left">
+                                  <span>Rep: <strong className="text-zinc-300 font-semibold">{log.userName || 'System SDR'}</strong></span>
                                   <span>•</span>
-                                  <span >{formattedDate}</span>
+                                  <span className="font-mono">{formattedDate}</span>
                                 </div>
                               </div>
 
-                              <div >
-                                <span >
+                              <div className="flex items-center gap-3 shrink-0 self-end sm:self-center">
+                                <span className={`text-[8px] font-extrabold px-2.5 py-1 rounded uppercase tracking-wider ${
+                                  log.status === 'success' 
+                                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                                    : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
+                                }`}>
                                   {log.status === 'success' ? 'SUCCESS' : 'FALLBACK'}
                                 </span>
-                                <button >
-                                  <Eye  />
+                                <button className="p-1.5 hover:bg-[#0c0d12] border border-transparent hover:border-border rounded-xl text-text-muted hover:text-white transition-all cursor-pointer">
+                                  <Eye className="w-3.5 h-3.5" />
                                 </button>
                               </div>
                             </div>
@@ -692,48 +716,48 @@ export function ManagerWorkspacePanel({
 
               {/* Single log details audit preview panel */}
               {selectedLog ? (
-                <div >
-                  <div >
-                    <div >
+                <div className="lg:col-span-12 xl:col-span-5 border border-border rounded-xl p-5 md:p-6 space-y-6 h-fit shrink-0 text-left">
+                  <div className="border-b border-border/40 pb-4 space-y-2">
+                    <div className="flex items-start justify-between">
                       <div>
-                        <span >
+                        <span className="text-[9px] font-extrabold uppercase tracking-widest bg-purple-500/10 border border-purple-500/25 px-2.5 py-1 rounded-xl">
                           Audit Trail Details
                         </span>
-                        <h4 >
+                        <h4 className="text-sm font-bold text-text mt-3 font-syne truncate max-w-[200px]">
                           {selectedLog.leadName}
                         </h4>
-                        <p >
+                        <p className="text-[10px] text-text-muted mt-0.5">
                           Generated on: {selectedLog.timestamp?.toDate ? selectedLog.timestamp.toDate().toLocaleString() : new Date(selectedLog.timestamp).toLocaleString()}
                         </p>
                       </div>
                       <button 
                         onClick={() => setSelectedLog(null)}
-                        
+                        className="px-2.5 py-1 text-[10px] font-bold text-text-muted hover:text-white border border-border/60 rounded-xl hover:bg-[#0c0d12] transition-colors cursor-pointer"
                       >
                         Close
                       </button>
                     </div>
                   </div>
 
-                  <div >
+                  <div className="space-y-4">
                     {/* Channel selection output preview */}
                     {selectedLog.messages ? (
-                      <div >
+                      <div className="space-y-4 font-sans text-xs">
                         {/* Email */}
                         {(selectedLog.messages.email_subject || selectedLog.messages.email_body) && (
-                          <div >
-                            <span >
-                              <Mail  />
+                          <div className="space-y-1.5">
+                            <span className="text-[9px] font-extrabold font-mono uppercase tracking-wider flex items-center gap-1">
+                              <Mail className="w-3.5 h-3.5 text-blue-400" />
                               Email Outreach Body
                             </span>
-                            <div >
+                            <div className="border border-border/60 rounded-xl p-3 space-y-2 text-text font-medium">
                               {selectedLog.messages.email_subject && (
-                                <div >
-                                  <strong >Subject:</strong> 
-                                  <span >{selectedLog.messages.email_subject}</span>
+                                <div className="border-b border-border/40 pb-1.5 mb-1.5">
+                                  <strong className="text-text-muted text-[10px] mr-1 select-none">Subject:</strong> 
+                                  <span className="text-text font-bold">{selectedLog.messages.email_subject}</span>
                                 </div>
                               )}
-                              <p >
+                              <p className="whitespace-pre-wrap leading-relaxed text-[10.5px]">
                                 {selectedLog.messages.email_body}
                               </p>
                             </div>
@@ -742,12 +766,12 @@ export function ManagerWorkspacePanel({
 
                         {/* LinkedIn Request */}
                         {selectedLog.messages.linkedin_connect && (
-                          <div >
-                            <span >
-                              <Layers  />
+                          <div className="space-y-1.5">
+                            <span className="text-[9px] font-extrabold font-mono uppercase tracking-wider flex items-center gap-1">
+                              <Layers className="w-3.5 h-3.5 text-indigo-400" />
                               LinkedIn Connection Intro Note
                             </span>
-                            <div >
+                            <div className="border border-border/60 rounded-xl p-3 text-text font-medium whitespace-pre-wrap leading-relaxed text-[10.5px]">
                               {selectedLog.messages.linkedin_connect}
                             </div>
                           </div>
@@ -755,12 +779,12 @@ export function ManagerWorkspacePanel({
 
                         {/* LinkedIn DM */}
                         {selectedLog.messages.linkedin_dm && (
-                          <div >
-                            <span >
-                              <MessageSquare  />
+                          <div className="space-y-1.5">
+                            <span className="text-[9px] font-extrabold font-mono uppercase tracking-wider flex items-center gap-1">
+                              <MessageSquare className="w-3.5 h-3.5 text-purple-400" />
                               LinkedIn DM Sequence Step
                             </span>
-                            <div >
+                            <div className="border border-border/60 rounded-xl p-3 text-text font-medium whitespace-pre-wrap leading-relaxed text-[10.5px]">
                               {selectedLog.messages.linkedin_dm}
                             </div>
                           </div>
@@ -768,40 +792,40 @@ export function ManagerWorkspacePanel({
 
                         {/* WhatsApp message */}
                         {selectedLog.messages.whatsapp && (
-                          <div >
-                            <span >
-                              <MessageSquare  />
+                          <div className="space-y-1.5">
+                            <span className="text-[9px] font-extrabold font-mono uppercase tracking-wider flex items-center gap-1">
+                              <MessageSquare className="w-3.5 h-3.5 text-emerald-400" />
                               WhatsApp Quick Intro
                             </span>
-                            <div >
+                            <div className="border border-border/60 rounded-xl p-3 text-text font-medium whitespace-pre-wrap leading-relaxed text-[10.5px]">
                               {selectedLog.messages.whatsapp}
                             </div>
                           </div>
                         )}
                       </div>
                     ) : (
-                      <div >
-                        <p >No generated messages associated. Check status failure notes.</p>
+                      <div className="p-6 text-center border border-dashed border-border rounded-xl">
+                        <p className="text-xs text-text-muted">No generated messages associated. Check status failure notes.</p>
                       </div>
                     )}
 
                     {/* Rationale Failures */}
                     {selectedLog.error && (
-                      <div >
-                        <div >
-                          <ShieldAlert  />
+                      <div className="p-3 bg-rose-500/5 border border-rose-500/20 text-rose-400 text-xs rounded-xl space-y-1">
+                        <div className="font-extrabold text-[9px] tracking-widest uppercase flex items-center gap-1 text-rose-400">
+                          <ShieldAlert className="w-4 h-4 text-rose-500" />
                           Failure Traceback Logs
                         </div>
-                        <p >
+                        <p className="font-mono text-[10px] break-all">
                           {selectedLog.error}
                         </p>
                       </div>
                     )}
 
                     {/* Compliance Checkbox */}
-                    <div >
-                      <div >
-                        <FileText  />
+                    <div className="border border-border/80 rounded-xl p-3 space-y-2 text-[10px] text-text-muted font-mono leading-relaxed">
+                      <div className="font-extrabold text-text uppercase text-[8px] tracking-wider flex items-center gap-1">
+                        <FileText className="w-3.5 h-3.5 text-purple-400" />
                         Compliance Rationale
                       </div>
                       <p>
@@ -811,9 +835,9 @@ export function ManagerWorkspacePanel({
                   </div>
                 </div>
               ) : (
-                <div >
-                  <Cpu  />
-                  <p >
+                <div className="lg:col-span-12 xl:col-span-5 border border-dashed border-border rounded-xl p-8 text-center flex flex-col justify-center items-center gap-3 h-80">
+                  <Cpu className="w-8 h-8 animate-pulse" />
+                  <p className="text-xs text-text-muted max-w-xs font-medium">
                     No log coordinates chosen. Select any generation entry on the left column to run the full copy audit.
                   </p>
                 </div>
