@@ -431,7 +431,7 @@ export async function generateProspectResearchBackend(companyInput: string, cust
   const isVercel = process.env.VERCEL === "1";
   const searchRetries = isVercel ? 1 : 3;
   const backoffBase = isVercel ? 500 : 1500;
-  const mainTimeoutMs = isVercel ? 4000 : 90000;
+  const mainTimeoutMs = isVercel ? 55000 : 90000;
 
   try {
     const completion = await retryWithBackoff(async () => {
