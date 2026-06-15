@@ -959,84 +959,84 @@ export function SuperAdminDashboard({
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 pb-16 text-text">
+    <div >
 
 
 
       {/* 1. VIEW CONTENDER: Dashboard Tab (Contains Payments, Global statistics, Invoice Logger) */}
       {activeTab === 'dashboard' && (
-        <div className="space-y-8">
+        <div >
           {/* Dynamic Header Deck */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-8 border border-border/80 rounded-xl relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-brand/10 rounded-full pointer-events-none" />
-            <div className="space-y-1 relative z-10">
-              <div className="inline-flex items-center gap-1.5 bg-brand/20 text-brand border border-border px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest block w-fit mb-2">
-                <ShieldCheck className="w-3.5 h-3.5 text-brand" />
+          <div >
+            <div  />
+            <div >
+              <div >
+                <ShieldCheck  />
                 <span>Master System Deck</span>
               </div>
-              <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-text font-syne leading-tight">Workspace Platform Controller</h1>
-              <p className="text-text-muted text-xs md:text-sm">Logged Admin: <span className="text-brand font-semibold font-mono">Pratyush Malviya</span> • Complete platform oversight & control panel.</p>
+              <h1 >Workspace Platform Controller</h1>
+              <p >Logged Admin: <span >Pratyush Malviya</span> • Complete platform oversight & control panel.</p>
             </div>
           </div>
 
           {/* Dynamic Bento metrics dashboard counters */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div >
             {[
               { label: 'Platform Tenants', val: `${orgs.length} orgs`, desc: 'Active sandbox teams', icon: Globe, color: 'text-brand', bg: 'bg-brand/5' },
               { label: 'Active Users (Global)', val: `${users.length} users`, desc: 'SDR credential users', icon: Users, color: 'text-teal-400', bg: 'bg-teal-500/5' },
               { label: 'Gross Closed Revenue', val: `$${billingTotalRecurring.toLocaleString()}`, desc: `Outstanding debt: $${outstandingTotalCollected.toLocaleString()}`, icon: DollarSign, color: 'text-amber-400', bg: 'bg-amber-500/5' },
               { label: 'Captured Platform Leads', val: `${globalLeads.length} leads`, desc: `${billingHealthRate}% Billing collection health`, icon: Target, color: 'text-emerald-400', bg: 'bg-emerald-500/5' }
             ].map((s, i) => (
-              <div key={i} className="bg-surface border border-border/80 rounded-xl p-5 flex flex-col justify-between hover:border-zinc-700 transition-all">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-text-muted font-bold uppercase tracking-widest">{s.label}</span>
-                  <div className={`w-8 h-8 rounded-xl${s.bg}flex items-center justify-center${s.color}`}>
-                    <s.icon className="w-4 h-4" />
+              <div key={i} >
+                <div >
+                  <span >{s.label}</span>
+                  <div >
+                    <s.icon  />
                   </div>
                 </div>
-                <div className="mt-4 space-y-1">
-                  <div className="text-lg md:text-2xl font-syne font-bold text-text">{s.val}</div>
-                  <p className="text-[10px] text-zinc-500 font-mono tracking-tight">{s.desc}</p>
+                <div >
+                  <div >{s.val}</div>
+                  <p >{s.desc}</p>
                 </div>
               </div>
             ))}
           </div>
 
-          <div className="grid lg:grid-cols-12 gap-6 items-start">
+          <div >
             
             {/* Interactive subscriptions client base editor */}
-            <div className="lg:col-span-7 bg-surface border border-border rounded-xl p-6 space-y-4">
-              <div className="flex items-center justify-between border-b border-border pb-3">
-                <div className="space-y-0.5">
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-text">Client Subscriptions Manager</h3>
-                  <p className="text-[10px] text-text-muted">Manage corporate subscription plan tiers and modify recurring contractual rates.</p>
+            <div >
+              <div >
+                <div >
+                  <h3 >Client Subscriptions Manager</h3>
+                  <p >Manage corporate subscription plan tiers and modify recurring contractual rates.</p>
                 </div>
                 <button 
                   onClick={() => setShowPayForm(!showPayForm)}
-                  className="px-3 py-1.5 bg-brand hover:opacity-90 text-text rounded-xl text-[10px] font-bold transition-all flex items-center gap-1.5 cursor-pointer select-none"
+                  
                 >
-                  <PlusCircle className="w-3.5 h-3.5" />
+                  <PlusCircle  />
                   <span>Log Direct Payment</span>
                 </button>
               </div>
 
               {/* Collapsible log invoice manual form */}
               {showPayForm && (
-                <form onSubmit={handleRecordPayment} className="p-5 border border-border/80 rounded-xl space-y-4">
-                  <div className="flex items-center justify-between border-b border-border/60 pb-2">
-                    <span className="text-xs font-bold font-syne uppercase tracking-wide">Register Manual Payment Log</span>
-                    <button type="button" onClick={() => setShowPayForm(false)} className="text-zinc-500 hover:text-white">
-                      <X className="w-4 h-4" />
+                <form onSubmit={handleRecordPayment} >
+                  <div >
+                    <span >Register Manual Payment Log</span>
+                    <button type="button" onClick={() => setShowPayForm(false)} >
+                      <X  />
                     </button>
                   </div>
 
-                  <div className="grid sm:grid-cols-2 gap-3.5">
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-bold uppercase text-text-muted">Target Company</label>
+                  <div >
+                    <div >
+                      <label >Target Company</label>
                       <select 
                         value={payOrgId}
                         onChange={(e) => setPayOrgId(e.target.value)}
-                        className="w-full px-3 py-2 border border-border rounded-xl text-xs text-text focus:outline-none focus:border-brand cursor-pointer"
+                        
                       >
                         {orgs.map(o => (
                           <option key={o.id} value={o.id}>{o.name}</option>
@@ -1044,35 +1044,35 @@ export function SuperAdminDashboard({
                       </select>
                     </div>
 
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-bold uppercase text-text-muted">Invoice Identifier</label>
+                    <div >
+                      <label >Invoice Identifier</label>
                       <input 
                         type="text" 
                         placeholder="e.g. INV-2026-092"
                         value={payInvoiceNum}
                         onChange={(e) => setPayInvoiceNum(e.target.value)}
-                        className="w-full px-3 py-2 border border-border rounded-xl text-xs text-text placeholder-slate-600 focus:outline-none focus:border-brand"
+                        
                       />
                     </div>
 
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-bold uppercase text-text-muted">Invoice Sum (USD)</label>
+                    <div >
+                      <label >Invoice Sum (USD)</label>
                       <input 
                         type="number" 
                         placeholder="1499"
                         value={payAmount}
                         onChange={(e) => setPayAmount(e.target.value)}
-                        className="w-full px-3 py-2 border border-border rounded-xl text-xs text-text placeholder-slate-600 focus:outline-none focus:border-brand"
+                        
                         required
                       />
                     </div>
 
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-bold uppercase text-text-muted">Tier Designation</label>
+                    <div >
+                      <label >Tier Designation</label>
                       <select 
                         value={payTier}
                         onChange={(e) => setPayTier(e.target.value)}
-                        className="w-full px-3 py-2 border border-border rounded-xl text-xs text-text focus:outline-none focus:border-brand cursor-pointer"
+                        
                       >
                         <option value="Starter SDR Plan">Starter Partner Plan</option>
                         <option value="Professional SDR">Professional Team SDR</option>
@@ -1080,24 +1080,24 @@ export function SuperAdminDashboard({
                       </select>
                     </div>
 
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-bold uppercase text-text-muted">Invoice Status</label>
+                    <div >
+                      <label >Invoice Status</label>
                       <select
                         value={payStatus}
                         onChange={(e) => setPayStatus(e.target.value as any)}
-                        className="w-full px-3 py-2 border border-border rounded-xl text-xs text-text focus:outline-none focus:border-brand cursor-pointer"
+                        
                       >
                         <option value="Paid">Mark as Paid</option>
                         <option value="Outstanding">Mark as Outstanding</option>
                       </select>
                     </div>
 
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-bold uppercase text-text-muted">Payment Channel</label>
+                    <div >
+                      <label >Payment Channel</label>
                       <select 
                         value={payMethod}
                         onChange={(e) => setPayMethod(e.target.value)}
-                        className="w-full px-3 py-2 border border-border rounded-xl text-xs text-text focus:outline-none focus:border-brand cursor-pointer"
+                        
                       >
                         <option value="Stripe Credit Card">Stripe Credit Card</option>
                         <option value="Wire Transfer">Wire Transfer Routing</option>
@@ -1110,40 +1110,40 @@ export function SuperAdminDashboard({
                   <button 
                     type="submit" 
                     disabled={isSavingPay}
-                    className="w-full py-2.5 rounded-xl hover:opacity-90 text-text text-xs font-bold transition-all shadow flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-40"
+                    
                   >
-                    {isSavingPay ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                    {isSavingPay ? <Loader2  /> : <Check  />}
                     <span>Deploy Invoice Transaction</span>
                   </button>
                 </form>
               )}
 
               {/* Subscriptions Tier Listing */}
-              <div className="space-y-3 max-h-[360px] overflow-y-auto custom-scrollbar">
+              <div >
                 {orgs.length === 0 ? (
-                  <div className="py-12 text-center text-xs text-text-muted">
+                  <div >
                     No active corporate units registered. Create a company in the Organizations Unit tab first.
                   </div>
                 ) : (
                   orgs.map(o => (
-                    <div key={o.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border border-border/60 hover:border-zinc-700 transition-all gap-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-xl bg-indigo-500/15 border border-indigo-500/25 flex items-center justify-center font-bold text-indigo-400 font-syne text-xs uppercase">
+                    <div key={o.id} >
+                      <div >
+                        <div >
                           {(o.name || '?')[0]}
                         </div>
                         <div>
-                          <div className="text-xs font-bold text-text leading-tight">{o.name}</div>
-                          <p className="text-[10px] text-zinc-500 font-mono">{o.domain}</p>
+                          <div >{o.name}</div>
+                          <p >{o.domain}</p>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-3">
-                        <div className="space-y-1">
-                          <span className="text-[9px] uppercase font-bold text-text-muted block">Contract Tier Duration</span>
+                      <div >
+                        <div >
+                          <span >Contract Tier Duration</span>
                           <select 
                             value={o.tier || 'Professional SDR'}
                             onChange={(e) => handleUpdateOrgTierAndRate(o.id, e.target.value, o.price || 1499)}
-                            className="border border-border/80 hover:border-brand text-[10px] font-semibold px-2 py-1 rounded-xl focus:outline-none cursor-pointer"
+                            
                           >
                             <option value="Starter SDR Plan">Starter ($499/mo)</option>
                             <option value="Professional SDR">Professional ($1,499/mo)</option>
@@ -1151,14 +1151,14 @@ export function SuperAdminDashboard({
                           </select>
                         </div>
 
-                        <div className="space-y-1">
-                          <span className="text-[9px] uppercase font-bold text-text-muted block">Contract Cost (USD)</span>
+                        <div >
+                          <span >Contract Cost (USD)</span>
                           <input 
                             type="text" 
                             defaultValue={o.price || '1499'}
                             onBlur={(e) => handleUpdateOrgTierAndRate(o.id, o.tier || 'Professional SDR', Number(e.target.value) || 1499)}
                             placeholder="Rate"
-                            className="w-14 border border-border/80 text-[10px] font-semibold text-center py-0.5 rounded-xl focus:outline-none focus:border-brand"
+                            
                           />
                         </div>
                       </div>
@@ -1169,31 +1169,31 @@ export function SuperAdminDashboard({
             </div>
 
             {/* Quick stats on lead conversions and funnel analysis */}
-            <div className="lg:col-span-5 bg-surface border border-border rounded-xl p-6 space-y-4">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-text border-b border-border pb-3 block">Lead Generation Funnel Context</h3>
+            <div >
+              <h3 >Lead Generation Funnel Context</h3>
               
-              <div className="space-y-4">
-                <div className="p-4 bg-surface rounded-xl border border-border/65">
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-[10px] text-text-muted font-bold uppercase">Conversion Velocity</span>
-                    <span className="text-xs text-brand font-mono font-bold">Excellent</span>
+              <div >
+                <div >
+                  <div >
+                    <span >Conversion Velocity</span>
+                    <span >Excellent</span>
                   </div>
-                  <div className="w-full h-2 rounded-full overflow-hidden">
-                    <div className="bg-brand h-full rounded-full" style={{ width: '74%' }} />
+                  <div >
+                    <div  style={{ width: '74%' }} />
                   </div>
-                  <p className="text-[9px] text-zinc-500 mt-1.5 font-mono">Based on aggregated lead scores and outgoing sales outreach replies.</p>
+                  <p >Based on aggregated lead scores and outgoing sales outreach replies.</p>
                 </div>
 
-                <div className="space-y-3.5">
-                  <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block">Leads Distribution Per Tenant</span>
-                  <div className="space-y-2 max-h-[180px] overflow-y-auto custom-scrollbar">
+                <div >
+                  <span >Leads Distribution Per Tenant</span>
+                  <div >
                     {orgs.map(o => {
                       const count = globalLeads.filter(l => l.orgId === o.id).length;
                       return (
-                        <div key={o.id} className="flex items-center justify-between text-xs py-1.5 border-b border-border/40">
-                          <span className="text-zinc-300 font-medium truncate shrink">{o.name}</span>
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono bg-surface border border-border px-2 py-0.5 rounded-xl text-[10.5px] font-bold text-text shrink-0">{count} captures</span>
+                        <div key={o.id} >
+                          <span >{o.name}</span>
+                          <div >
+                            <span >{count} captures</span>
                           </div>
                         </div>
                       );
@@ -1205,59 +1205,57 @@ export function SuperAdminDashboard({
           </div>
 
           {/* Transactions Ledger Panel */}
-          <div className="bg-surface border border-border rounded-xl overflow-hidden p-6 space-y-4">
-            <div className="flex items-center justify-between border-b border-border pb-3">
-              <div className="space-y-0.5">
-                <h3 className="text-sm font-bold uppercase tracking-wider text-text flex items-center gap-1.5">
-                  <CreditCard className="w-4 h-4" />
+          <div >
+            <div >
+              <div >
+                <h3 >
+                  <CreditCard  />
                   Real-Time Transactions Ledger
                 </h3>
-                <p className="text-[10px] text-text-muted">Comprehensive history of direct invoiced company payments and online Stripe transaction accounts.</p>
+                <p >Comprehensive history of direct invoiced company payments and online Stripe transaction accounts.</p>
               </div>
             </div>
 
-            <div className="overflow-x-auto">
+            <div >
               {payments.length === 0 ? (
-                <div className="py-12 text-center text-xs text-text-muted flex flex-col items-center gap-2">
-                  <Loader2 className="w-8 h-8 animate-spin text-brand/40" />
+                <div >
+                  <Loader2  />
                   <span>Loading ledger transaction maps...</span>
                 </div>
               ) : (
-                <table className="w-full text-left border-collapse">
+                <table >
                   <thead>
-                    <tr className="bg-surface-alt/40 border-b border-border">
-                      <th className="px-5 py-3 text-[9px] font-bold uppercase tracking-widest">Invoice No.</th>
-                      <th className="px-5 py-3 text-[9px] font-bold uppercase tracking-widest">Tenant Company</th>
-                      <th className="px-5 py-3 text-[9px] font-bold uppercase tracking-widest">Contract Tier</th>
-                      <th className="px-5 py-3 text-[9px] font-bold uppercase tracking-widest">Rate (USD)</th>
-                      <th className="px-5 py-3 text-[9px] font-bold uppercase tracking-widest">Status</th>
-                      <th className="px-5 py-3 text-[9px] font-bold uppercase tracking-widest">Cleared Date</th>
-                      <th className="px-5 py-3 text-[9px] font-bold uppercase tracking-widest text-right">Delete</th>
+                    <tr >
+                      <th >Invoice No.</th>
+                      <th >Tenant Company</th>
+                      <th >Contract Tier</th>
+                      <th >Rate (USD)</th>
+                      <th >Status</th>
+                      <th >Cleared Date</th>
+                      <th >Delete</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-border/60">
+                  <tbody >
                     {payments.map(p => (
-                      <tr key={p.id} className="hover:bg-bg-subtle transition-colors">
-                        <td className="px-5 py-3 text-xs font-mono font-semibold text-text">{p.invoiceNum}</td>
-                        <td className="px-5 py-3 text-xs text-zinc-300 font-medium">{p.orgName}</td>
-                        <td className="px-5 py-3 text-[10.5px] uppercase tracking-wider font-mono text-zinc-400">{p.tier}</td>
-                        <td className="px-5 py-3 text-xs font-mono font-bold text-text">${p.amount.toLocaleString()}</td>
-                        <td className="px-5 py-3">
-                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
-                            p.status === 'Paid' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/15' : 'bg-amber-500/15 text-amber-300 border border-amber-500/10'
-                          }`}>
+                      <tr key={p.id} >
+                        <td >{p.invoiceNum}</td>
+                        <td >{p.orgName}</td>
+                        <td >{p.tier}</td>
+                        <td >${p.amount.toLocaleString()}</td>
+                        <td >
+                          <span >
                             {p.status}
                           </span>
                         </td>
-                        <td className="px-5 py-3 text-xs font-mono text-zinc-500">
+                        <td >
                           {p.createdAt ? new Date(p.createdAt.seconds * 1000).toLocaleDateString() : 'Pending'}
                         </td>
-                        <td className="px-5 py-3 text-right">
+                        <td >
                           <button 
                             onClick={() => handleDeletePaymentLog(p.id, p.invoiceNum)}
-                            className="p-1 text-rose-400 hover:bg-rose-500/15 rounded-xl transition-colors"
+                            
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Trash2  />
                           </button>
                         </td>
                       </tr>
@@ -1272,25 +1270,25 @@ export function SuperAdminDashboard({
 
       {/* 2. VIEW CONTENDER: Employees Directory */}
       {activeTab === 'employees_list' && (
-        <div className="space-y-6">
+        <div >
           {/* Filters Bar */}
-          <div className="bg-surface border border-border rounded-xl p-6 flex flex-col md:flex-row gap-4 items-center justify-between">
-            <div className="w-full md:w-80 relative">
+          <div >
+            <div >
               <input 
                 type="text"
                 placeholder="Search staff by name or email email..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full px-4 py-2.5 border border-border rounded-xl text-xs text-text placeholder-slate-600 focus:outline-none focus:border-brand"
+                
               />
             </div>
 
-            <div className="flex items-center gap-2 w-full md:w-auto">
-              <span className="text-xs text-text-muted whitespace-nowrap font-bold uppercase tracking-wider">Search Scope:</span>
+            <div >
+              <span >Search Scope:</span>
               <select 
                 value={filterOrg}
                 onChange={(e) => setFilterOrg(e.target.value)}
-                className="p-2.5 border border-border rounded-xl text-xs font-bold text-text cursor-pointer focus:outline-none focus:border-brand w-full md:w-56"
+                
               >
                 <option value="ALL">All Organizations</option>
                 {orgs.map(o => (
@@ -1301,57 +1299,57 @@ export function SuperAdminDashboard({
           </div>
 
           {/* Directory Users Table */}
-          <div className="bg-surface border border-border rounded-xl overflow-hidden">
+          <div >
             {filteredUsers.length === 0 ? (
-              <div className="py-16 text-center space-y-3 opacity-60">
-                <Users className="w-12 h-12 mx-auto text-brand/40" />
-                <p className="font-syne font-bold text-sm">No employees found matching filter criteria.</p>
+              <div >
+                <Users  />
+                <p >No employees found matching filter criteria.</p>
                 <button 
                   onClick={() => setActiveTab('add_employees')}
-                  className="px-4 py-2 bg-brand/10 border border-border hover:bg-brand text-brand hover:text-white rounded-xl text-xs font-bold transition-all"
+                  
                 >
                   Create New Employees Now
                 </button>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
+              <div >
+                <table >
                   <thead>
-                    <tr className="bg-surface-alt/50 border-b border-border">
-                      <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest">Workspace Staff</th>
-                      <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest">Assigned Organization</th>
-                      <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest">Role Privileges</th>
-                      <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-right">Access Controls</th>
+                    <tr >
+                      <th >Workspace Staff</th>
+                      <th >Assigned Organization</th>
+                      <th >Role Privileges</th>
+                      <th >Access Controls</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-border">
+                  <tbody >
                     {filteredUsers.map(u => (
-                      <tr key={u.uid} className="hover:bg-bg-subtle transition-colors">
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3.5">
+                      <tr key={u.uid} >
+                        <td >
+                          <div >
                             <img 
                               src={u.photoURL || `https://picsum.photos/seed/${u.uid}/100`} 
-                              className="w-10 h-10 rounded-full border border-border/80 bg-surface" 
+                               
                               alt="Avatar"
                               referrerPolicy="no-referrer"
                             />
                             <div>
-                              <div className="text-sm font-bold text-text font-sans flex items-center gap-1.5">
+                              <div >
                                 {u.displayName}
                                 {u.email === 'malviya.pratyush26@gmail.com' && (
-                                  <span className="text-[9px] bg-brand/20 text-brand border border-border px-1.5 py-0.5 rounded-xl font-mono">Owner</span>
+                                  <span >Owner</span>
                                 )}
                               </div>
-                              <div className="text-xs text-text-muted font-mono">{u.email}</div>
+                              <div >{u.email}</div>
                             </div>
                           </div>
                         </td>
                         
-                        <td className="px-6 py-4">
+                        <td >
                           <select 
                             value={u.orgId || ''}
                             onChange={(e) => handleUpdateMemberOrg(u.uid, e.target.value)}
-                            className="border border-border/60 border-border text-xs font-semibold px-2 py-1 rounded-xl focus:outline-none cursor-pointer"
+                            
                           >
                             <option value="">Unassigned</option>
                             {orgs.map(o => (
@@ -1360,12 +1358,12 @@ export function SuperAdminDashboard({
                           </select>
                         </td>
 
-                        <td className="px-6 py-4">
+                        <td >
                           <select 
                             value={u.role || 'user'}
                             onChange={(e) => handleUpdateRole(u.uid, e.target.value as any)}
                             disabled={u.email === 'malviya.pratyush26@gmail.com'}
-                            className="border border-border/60 border-border text-xs font-semibold px-2 py-1 rounded-xl focus:outline-none uppercase text-zinc-300 disabled:opacity-50 cursor-pointer"
+                            
                           >
                             <option value="user">User / SDR Agent</option>
                             <option value="org_admin">Organization Admin</option>
@@ -1373,14 +1371,14 @@ export function SuperAdminDashboard({
                           </select>
                         </td>
 
-                        <td className="px-6 py-4 text-right">
+                        <td >
                           <button 
                             onClick={() => handleDeleteEmployee(u.uid, u.displayName)}
                             disabled={u.email === 'malviya.pratyush26@gmail.com'}
-                            className="p-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 rounded-xl transition-all cursor-pointer disabled:opacity-30 disabled:pointer-events-none"
+                            
                             title="Revoke and delete member access"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Trash2  />
                           </button>
                         </td>
                       </tr>
@@ -1395,76 +1393,76 @@ export function SuperAdminDashboard({
 
       {/* 3. VIEW CONTENDER: Add Multiple Employees */}
       {activeTab === 'add_employees' && (
-        <form onSubmit={handleRegisterEmployeesBatch} className="bg-surface border border-border rounded-xl p-8 space-y-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-border pb-6">
-            <div className="space-y-1">
-              <h2 className="text-lg font-bold flex items-center gap-2">
-                <UserPlus className="w-5 h-5 text-brand" />
+        <form onSubmit={handleRegisterEmployeesBatch} >
+          <div >
+            <div >
+              <h2 >
+                <UserPlus  />
                 Bulk Provision SDR Employees
               </h2>
-              <p className="text-xs text-text-muted">Register corporate team members, pre-assign their organizational units and platform access privileges concurrently.</p>
+              <p >Register corporate team members, pre-assign their organizational units and platform access privileges concurrently.</p>
             </div>
             
             <button 
               type="button"
               onClick={handleAddEmployeeRow}
-              className="px-4 py-2 bg-brand/10 hover:bg-brand/20 border border-border text-brand rounded-xl text-xs font-bold transition-all cursor-pointer"
+              
             >
               + Add Employee Form Row
             </button>
           </div>
 
           {orgs.length === 0 ? (
-            <div className="p-8 bg-amber-500/5 border border-amber-500/20 rounded-xl text-xs text-amber-200 flex gap-3">
-              <AlertCircle className="w-5 h-5 text-amber-400 shrink-0" />
+            <div >
+              <AlertCircle  />
               <div>
-                <p className="font-bold mb-1">No Organization Units Registered Yet</p>
+                <p >No Organization Units Registered Yet</p>
                 <p>Employee provisioning requires at least one company tenant organization. Please click the <strong>Organizations Unit</strong> navigation tab to register your first business tenant first.</p>
               </div>
             </div>
           ) : (
-            <div className="space-y-4">
-              <div className="grid grid-cols-12 gap-4 text-[10px] font-bold uppercase tracking-widest text-text-muted px-2.5 hidden sm:grid">
-                <div className="col-span-4">Full Employee Name</div>
-                <div className="col-span-4">Work Email Address</div>
-                <div className="col-span-2">Client Org Assignment</div>
-                <div className="col-span-1.5">Default Access Role</div>
-                <div className="col-span-0.5 text-right">Delete</div>
+            <div >
+              <div >
+                <div >Full Employee Name</div>
+                <div >Work Email Address</div>
+                <div >Client Org Assignment</div>
+                <div >Default Access Role</div>
+                <div >Delete</div>
               </div>
 
-              <div className="space-y-3">
+              <div >
                 {employeesToCreate.map((emp, index) => (
-                  <div key={index} className="bg-surface-alt/40 border border-border/80 rounded-xl p-4 sm:p-2 sm:border-0 grid grid-cols-1 sm:grid-cols-12 gap-3.5 items-center">
-                    <div className="col-span-4">
-                      <label className="text-[9px] font-bold uppercase text-text-muted block sm:hidden mb-1">Full Employee Name</label>
+                  <div key={index} >
+                    <div >
+                      <label >Full Employee Name</label>
                       <input 
                         type="text" 
                         placeholder="e.g. Rachel Zane"
                         value={emp.displayName}
                         onChange={(e) => handleFieldChange(index, 'displayName', e.target.value)}
-                        className="w-full px-4 py-3 border border-border/60 rounded-xl text-xs text-text placeholder-slate-600 focus:outline-none focus:border-brand"
+                        
                         required
                       />
                     </div>
 
-                    <div className="col-span-4">
-                      <label className="text-[9px] font-bold uppercase text-text-muted block sm:hidden mb-1">Work Email Address</label>
+                    <div >
+                      <label >Work Email Address</label>
                       <input 
                         type="email" 
                         placeholder="e.g. rachel@pearsonco.com"
                         value={emp.email}
                         onChange={(e) => handleFieldChange(index, 'email', e.target.value)}
-                        className="w-full px-4 py-3 border border-border/60 rounded-xl text-xs text-text placeholder-slate-600 focus:outline-none focus:border-brand"
+                        
                         required
                       />
                     </div>
 
-                    <div className="col-span-2">
-                      <label className="text-[9px] font-bold uppercase text-text-muted block sm:hidden mb-1">Client Org Assignment</label>
+                    <div >
+                      <label >Client Org Assignment</label>
                       <select 
                         value={emp.orgId}
                         onChange={(e) => handleFieldChange(index, 'orgId', e.target.value)}
-                        className="w-full p-3 border border-border/60 rounded-xl text-xs text-text cursor-pointer focus:outline-none focus:border-brand"
+                        
                       >
                         {orgs.map(o => (
                           <option key={o.id} value={o.id}>{o.name}</option>
@@ -1472,12 +1470,12 @@ export function SuperAdminDashboard({
                       </select>
                     </div>
 
-                    <div className="col-span-1.5">
-                      <label className="text-[9px] font-bold uppercase text-text-muted block sm:hidden mb-1">Default Access Role</label>
+                    <div >
+                      <label >Default Access Role</label>
                       <select 
                         value={emp.role}
                         onChange={(e) => handleFieldChange(index, 'role', e.target.value as any)}
-                        className="w-full p-3 border border-border/60 rounded-xl text-xs text-text cursor-pointer focus:outline-none focus:border-brand uppercase"
+                        
                       >
                         <option value="user">USER (SDR)</option>
                         <option value="org_admin">ORG ADMIN</option>
@@ -1485,31 +1483,31 @@ export function SuperAdminDashboard({
                       </select>
                     </div>
 
-                    <div className="col-span-0.5 text-right flex sm:justify-end">
+                    <div >
                       <button 
                         type="button"
                         onClick={() => handleRemoveEmployeeRow(index)}
-                        className="text-xs text-rose-400 hover:text-rose-300 p-2 bg-rose-500/10 rounded-xl flex items-center justify-center border border-rose-500/10 cursor-pointer sm:w-10 sm:h-10 mt-2 sm:mt-0"
+                        
                         title="Remove work row"
                       >
-                        <X className="w-4 h-4" />
+                        <X  />
                       </button>
                     </div>
                   </div>
                 ))}
               </div>
 
-              <div className="pt-6 border-t border-border flex items-center justify-between">
-                <div className="text-xs text-text-muted">
-                  Ready to provision <span className="text-text font-bold font-mono">{employeesToCreate.filter(e => e.displayName && e.email).length}</span> workspace profiles.
+              <div >
+                <div >
+                  Ready to provision <span >{employeesToCreate.filter(e => e.displayName && e.email).length}</span> workspace profiles.
                 </div>
 
                 <button 
                   type="submit"
                   disabled={isSavingEmployees || orgs.length === 0}
-                  className="px-6 py-3 bg-brand hover:opacity-90 disabled:opacity-40 text-text rounded-xl text-xs font-bold transition-all tracking-wider cursor-pointer flex items-center gap-2"
+                  
                 >
-                  {isSavingEmployees ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                  {isSavingEmployees ? <Loader2  /> : <Check  />}
                   Register & Provision Employees
                 </button>
               </div>
@@ -1520,29 +1518,29 @@ export function SuperAdminDashboard({
 
       {/* 4. VIEW CONTENDER: Organizations Unit */}
       {activeTab === 'organizations' && (
-        <div className="grid md:grid-cols-12 gap-8 items-start">
+        <div >
           {/* List Companies */}
-          <div className="md:col-span-7 bg-surface border border-border rounded-xl p-6 space-y-4">
-            <h2 className="text-sm font-bold uppercase tracking-wider block border-b border-border pb-3">Active Registered Corporations</h2>
+          <div >
+            <h2 >Active Registered Corporations</h2>
             
-            <div className="space-y-3 max-h-[460px] overflow-y-auto custom-scrollbar">
+            <div >
               {orgs.length === 0 ? (
-                <div className="py-12 text-center text-xs text-text-muted">
+                <div >
                   No corporations registered yet. Create a company unit using the formulation tool.
                 </div>
               ) : (
                 orgs.map(o => (
-                  <div key={o.id} className="flex items-center justify-between p-4 rounded-xl border border-border hover:border-zinc-700 transition-all">
-                    <div className="flex items-center gap-3.5 font-sans">
-                      <div className="w-9 h-9 rounded-xl bg-brand/10 border border-border flex items-center justify-center font-bold text-brand font-syne uppercase text-sm">
+                  <div key={o.id} >
+                    <div >
+                      <div >
                         {(o.name || '?')[0]}
                       </div>
                       <div>
-                        <div className="text-xs font-bold text-text">{o.name}</div>
-                        <div className="text-[10px] text-text-muted font-mono">{o.domain} · ID: {o.id}</div>
+                        <div >{o.name}</div>
+                        <div >{o.domain} · ID: {o.id}</div>
                         {(o as any).adminName && (
-                          <div className="text-[10px] text-brand/90 font-medium mt-1">
-                            Admin: <span className="text-text">{(o as any).adminName}</span> ({(o as any).adminEmail})
+                          <div >
+                            Admin: <span >{(o as any).adminName}</span> ({(o as any).adminEmail})
                           </div>
                         )}
                       </div>
@@ -1550,10 +1548,10 @@ export function SuperAdminDashboard({
                     
                     <button 
                       onClick={() => handleDeleteOrg(o.id, o.name)}
-                      className="p-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-xl transition-colors cursor-pointer"
+                      
                       title="Delete Organization"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <Trash2  />
                     </button>
                   </div>
                 ))
@@ -1562,47 +1560,47 @@ export function SuperAdminDashboard({
           </div>
 
           {/* Create Company Form */}
-          <div className="md:col-span-5 bg-surface border border-border rounded-xl p-6 space-y-5">
-            <div className="space-y-1">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-brand">Register Organization</h2>
-              <p className="text-[11px] text-text-muted">Provision a corporate unit sandbox which automatically maps employee domains and lead registries.</p>
+          <div >
+            <div >
+              <h2 >Register Organization</h2>
+              <p >Provision a corporate unit sandbox which automatically maps employee domains and lead registries.</p>
             </div>
 
-            <div className="space-y-4 pt-1">
-              <div className="space-y-1.5">
-                <label className="text-[9px] font-bold uppercase tracking-widest">Company Trade Name</label>
+            <div >
+              <div >
+                <label >Company Trade Name</label>
                 <input 
                   type="text" 
                   placeholder="e.g. Pearson Hardman LLC"
                   value={newOrgName}
                   onChange={(e) => setNewOrgName(e.target.value)}
-                  className="w-full px-4 py-3 border border-border/60 rounded-xl text-xs text-text placeholder-slate-600 focus:outline-none focus:border-brand"
+                  
                   disabled={isSavingOrg}
                 />
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-[9px] font-bold uppercase tracking-widest">Website Domain</label>
+              <div >
+                <label >Website Domain</label>
                 <input 
                   type="text" 
                   placeholder="e.g. pearsonhardman.com"
                   value={newOrgDomain}
                   onChange={(e) => setNewOrgDomain(e.target.value)}
-                  className="w-full px-4 py-3 border border-border/60 rounded-xl text-xs text-text placeholder-slate-600 focus:outline-none focus:border-brand"
+                  
                   disabled={isSavingOrg}
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-1.5">
-                  <label className="text-[9px] font-bold uppercase tracking-widest">Default Plan</label>
+              <div >
+                <div >
+                  <label >Default Plan</label>
                   <select 
                     value={newOrgTier}
                     onChange={(e) => {
                       setNewOrgTier(e.target.value);
                       setNewOrgPrice(e.target.value === 'Starter SDR Plan' ? '499' : e.target.value === 'Enterprise Omnichannel' ? '4999' : '1499');
                     }}
-                    className="w-full p-3 border border-border/60 rounded-xl text-xs text-text cursor-pointer focus:outline-none focus:border-brand"
+                    
                   >
                     <option value="Starter SDR Plan">Starter Partner</option>
                     <option value="Professional SDR">Professional SDR</option>
@@ -1610,42 +1608,42 @@ export function SuperAdminDashboard({
                   </select>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-[9px] font-bold uppercase tracking-widest">Rate (USD)</label>
+                <div >
+                  <label >Rate (USD)</label>
                   <input 
                     type="number" 
                     value={newOrgPrice}
                     onChange={(e) => setNewOrgPrice(e.target.value)}
-                    className="w-full px-4 py-3 border border-border/60 rounded-xl text-xs text-text focus:outline-none focus:border-brand"
+                    
                   />
                 </div>
               </div>
 
-              <div className="border-t border-border/40 pt-4 mt-2 space-y-3">
-                <div className="text-[10px] uppercase font-extrabold text-brand tracking-widest">
+              <div >
+                <div >
                   Primary Administrator Invitation
                 </div>
                 
-                <div className="space-y-1.5">
-                  <label className="text-[9px] font-bold uppercase tracking-widest">Admin Representative Name</label>
+                <div >
+                  <label >Admin Representative Name</label>
                   <input 
                     type="text" 
                     placeholder="e.g. Harvey Specter"
                     value={newOrgAdminName}
                     onChange={(e) => setNewOrgAdminName(e.target.value)}
-                    className="w-full px-4 py-3 border border-border/60 rounded-xl text-xs text-text placeholder-slate-600 focus:outline-none focus:border-brand"
+                    
                     disabled={isSavingOrg}
                   />
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-[9px] font-bold uppercase tracking-widest">Admin Representative Email</label>
+                <div >
+                  <label >Admin Representative Email</label>
                   <input 
                     type="email" 
                     placeholder="e.g. harvey@pearsonhardman.com"
                     value={newOrgAdminEmail}
                     onChange={(e) => setNewOrgAdminEmail(e.target.value)}
-                    className="w-full px-4 py-3 border border-border/60 rounded-xl text-xs text-text placeholder-slate-600 focus:outline-none focus:border-brand"
+                    
                     disabled={isSavingOrg}
                   />
                 </div>
@@ -1654,16 +1652,16 @@ export function SuperAdminDashboard({
               <button 
                 onClick={handleCreateOrg}
                 disabled={isSavingOrg}
-                className="w-full py-3.5 rounded-xl bg-brand hover:opacity-90 text-text text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                
               >
                 {isSavingOrg ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2  />
                     <span>Registering...</span>
                   </>
                 ) : (
                   <>
-                    <Plus className="w-4 h-4" />
+                    <Plus  />
                     <span>Deploy Organization</span>
                   </>
                 )}
@@ -1675,53 +1673,53 @@ export function SuperAdminDashboard({
 
       {/* 5. VIEW CONTENDER: Enterprise Suite Tab (Task 1, 3, 5 & 6) */}
       {activeTab === 'enterprise_suite' && (
-        <div className="space-y-6">
+        <div >
           
           {/* Header Overview stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="border border-border/80 rounded-xl p-4 flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-purple-500/10 text-purple-400">
-                <Building className="w-5 h-5" />
+          <div >
+            <div >
+              <div >
+                <Building  />
               </div>
               <div>
-                <span className="text-[10px] text-text-muted uppercase block">Total Tenants</span>
-                <span className="text-lg font-bold text-text font-syne">
+                <span >Total Tenants</span>
+                <span >
                   {analyticsData?.overview?.totalTenants || organizationsExt.length || orgs.length}
                 </span>
               </div>
             </div>
 
-            <div className="border border-border/80 rounded-xl p-4 flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-400">
-                <Users className="w-5 h-5" />
+            <div >
+              <div >
+                <Users  />
               </div>
               <div>
-                <span className="text-[10px] text-text-muted uppercase block">Enterprise Users</span>
-                <span className="text-lg font-bold text-text font-syne">
+                <span >Enterprise Users</span>
+                <span >
                   {analyticsData?.overview?.totalUsers || users.length}
                 </span>
               </div>
             </div>
 
-            <div className="border border-border/80 rounded-xl p-4 flex items-center gap-3">
-              <div className="p-2.5 rounded-xl">
-                <Target className="w-5 h-5" />
+            <div >
+              <div >
+                <Target  />
               </div>
               <div>
-                <span className="text-[10px] text-text-muted uppercase block">Platform Leads</span>
-                <span className="text-lg font-bold text-text font-syne">
+                <span >Platform Leads</span>
+                <span >
                   {analyticsData?.overview?.platformLeads || globalLeads.length}
                 </span>
               </div>
             </div>
 
-            <div className="border border-border/80 rounded-xl p-4 flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-500">
-                <Zap className="w-5 h-5" />
+            <div >
+              <div >
+                <Zap  />
               </div>
               <div>
-                <span className="text-[10px] text-text-muted uppercase block">AI Usage Counter</span>
-                <span className="text-lg font-bold text-text font-syne">
+                <span >AI Usage Counter</span>
+                <span >
                   {analyticsData?.overview?.orgAiCreditsUsed || 0} hits
                 </span>
               </div>
@@ -1730,90 +1728,88 @@ export function SuperAdminDashboard({
 
           {/* Copyable Onboarding credential highlight card */}
           {recentMagicLink && (
-            <div className="bg-emerald-950/30 border border-emerald-500/40 rounded-xl p-5 space-y-3 relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-8 bg-emerald-500/5 rounded-full filter"></div>
-              <div className="flex items-start gap-3">
-                <ShieldCheck className="w-5 h-5 text-emerald-400 mt-0.5 shrink-0" />
-                <div className="space-y-1">
-                  <h4 className="text-xs font-bold text-emerald-300 uppercase tracking-widest font-syne">Single-Use Magic Link Generated</h4>
-                  <p className="text-[11px] text-emerald-400/80">Copy and dispatch this onboarding endpoint link to the prospective member. It is valid for exactly 48 hours.</p>
+            <div >
+              <div ></div>
+              <div >
+                <ShieldCheck  />
+                <div >
+                  <h4 >Single-Use Magic Link Generated</h4>
+                  <p >Copy and dispatch this onboarding endpoint link to the prospective member. It is valid for exactly 48 hours.</p>
                 </div>
               </div>
-              <div className="flex gap-2 items-center">
+              <div >
                 <input 
                   type="text" 
                   readOnly 
                   value={recentMagicLink}
-                  className="w-full border border-emerald-500/20 rounded-xl px-3.5 py-2.5 text-xs text-emerald-300 font-mono outline-none"
+                  
                 />
                 <button 
                   onClick={() => {
                     navigator.clipboard.writeText(recentMagicLink);
                     if (showToast) showToast('Magic Onboarding Link copied to clipboard!', 'success');
                   }}
-                  className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-slate-950 text-xs font-bold rounded-xl transition-all shrink-0 cursor-pointer"
+                  
                 >
                   Copy Link
                 </button>
                 <button 
                   onClick={() => setRecentMagicLink('')}
-                  className="p-2.5 text-zinc-500 hover:text-white"
+                  
                 >
-                  <X className="w-4 h-4" />
+                  <X  />
                 </button>
               </div>
             </div>
           )}
 
           {/* Main Suite Split Columns */}
-          <div className="grid lg:grid-cols-12 gap-6">
+          <div >
 
             {/* Left Col: Invite Workflows & Organizations breakdown (Task 5 & 6) */}
-            <div className="lg:col-span-8 space-y-6">
+            <div >
               
               {/* Task 5: Agent Onboarding invite requests verification list */}
-              <div className="bg-surface border border-border rounded-xl p-6 space-y-4">
-                <div className="space-y-1">
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-text">Pending Invite Requests Verification</h3>
-                  <p className="text-[10px] text-text-muted">Review, approve, or reject user invite requests created by organization team managers.</p>
+              <div >
+                <div >
+                  <h3 >Pending Invite Requests Verification</h3>
+                  <p >Review, approve, or reject user invite requests created by organization team managers.</p>
                 </div>
 
                 {inviteReqs.length === 0 ? (
-                  <div className="py-8 text-center text-zinc-600 text-xs rounded-xl border border-dashed border-border/40">
+                  <div >
                     No pending onboarding invitations requiring admin verification.
                   </div>
                 ) : (
-                  <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
+                  <div >
                     {inviteReqs.map((req) => (
-                      <div key={req.id} className="border border-border/80 rounded-xl p-4 flex flex-col sm:flex-row justify-between sm:items-center gap-3">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-xs text-text uppercase">{req.invitee_name}</span>
-                            <span className="text-[9px] font-mono uppercase px-2 py-0.5 rounded-full">SDR Agent Invitation</span>
+                      <div key={req.id} >
+                        <div >
+                          <div >
+                            <span >{req.invitee_name}</span>
+                            <span >SDR Agent Invitation</span>
                           </div>
-                          <p className="text-[11px] text-zinc-400 font-mono">{req.invitee_email}</p>
-                          <p className="text-[10px] text-zinc-500 italic">Requested on organization context: <span className="text-zinc-400 font-bold">{req.org_id}</span></p>
+                          <p >{req.invitee_email}</p>
+                          <p >Requested on organization context: <span >{req.org_id}</span></p>
                         </div>
 
                         {req.status === 'pending' ? (
-                          <div className="flex gap-2 shrink-0">
+                          <div >
                             <button 
                               onClick={() => handleResolveInviteRequest(req.id, 'approved')}
-                              className="px-3 py-1.5 bg-emerald-500 hover:opacity-90 text-slate-950 text-[10px] font-bold rounded-xl transition-all cursor-pointer"
+                              
                             >
                               Approve & Tokenize
                             </button>
                             <button 
                               onClick={() => handleResolveInviteRequest(req.id, 'rejected')}
-                              className="px-3 py-1.5 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 text-[10px] font-bold rounded-xl transition-all cursor-pointer"
+                              
                             >
                               Reject Request
                             </button>
                           </div>
                         ) : (
-                          <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg ${
-                            req.status === 'approved' ? 'text-emerald-400 bg-emerald-500/10' : 'text-zinc-500 bg-zinc-800'
-                          }`}>
+                          <span >
                             {req.status}
                           </span>
                         )}
@@ -1824,24 +1820,24 @@ export function SuperAdminDashboard({
               </div>
 
               {/* Task 6: Comprehensive Organizations statistics units */}
-              <div className="bg-surface border border-border rounded-xl p-6 space-y-4">
-                <div className="space-y-1">
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-text">Active Operational Workspaces Unit</h3>
-                  <p className="text-[10px] text-text-muted">Analyze detailed CRM settings sync health, active importer catalogs, and tenant activation lockups.</p>
+              <div >
+                <div >
+                  <h3 >Active Operational Workspaces Unit</h3>
+                  <p >Analyze detailed CRM settings sync health, active importer catalogs, and tenant activation lockups.</p>
                 </div>
 
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs border-collapse">
+                <div >
+                  <table >
                     <thead>
-                      <tr className="border-b border-border/80 text-text-muted text-[10px] uppercase font-bold">
-                        <th className="py-2.5">Workspace Node</th>
-                        <th className="py-2.5">Credentials Health</th>
-                        <th className="py-2.5">Core KB Status</th>
-                        <th className="py-2.5">Import Audit Count</th>
-                        <th className="py-2.5 text-right">Administrative Actions</th>
+                      <tr >
+                        <th >Workspace Node</th>
+                        <th >Credentials Health</th>
+                        <th >Core KB Status</th>
+                        <th >Import Audit Count</th>
+                        <th >Administrative Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-border/40">
+                    <tbody >
                       {organizationsExt.map((org) => {
                         // CRM health simulation fallback
                         const syncHealthy = org.id !== 'org-zane'; 
@@ -1849,60 +1845,58 @@ export function SuperAdminDashboard({
                         const importCount = org.id === 'org-default' ? 2 : 1; // simulation fallback
 
                         return (
-                          <tr key={org.id} className="hover:bg-surface-alt/40 transition-all">
-                            <td className="py-3">
-                              <div className="space-y-0.5">
-                                <div className="font-bold text-text uppercase">{org.name}</div>
-                                <div className="text-[9px] text-zinc-500 font-mono flex items-center gap-1">
+                          <tr key={org.id} >
+                            <td >
+                              <div >
+                                <div >{org.name}</div>
+                                <div >
                                   <span>{org.id}</span>
                                   <span>•</span>
-                                  <span className="capitalize">{org.plan}</span>
+                                  <span >{org.plan}</span>
                                 </div>
                               </div>
                             </td>
                             
-                            <td className="py-3">
+                            <td >
                               {syncHealthy ? (
-                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 font-mono text-[9px] font-bold">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                                <span >
+                                  <span ></span>
                                   Sync Healthy
                                 </span>
                               ) : (
-                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-500/10 text-rose-400 font-mono text-[9px] font-bold">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                                <span >
+                                  <span ></span>
                                   Credentials Missing
                                 </span>
                               )}
                             </td>
 
-                            <td className="py-3">
-                              <div className="relative group cursor-help inline-block">
-                                <span className={`text-[10px] font-bold uppercase${org.kbStatus === 'Ready' || kbSummariesMap[org.id] ? 'text-blue-400 bg-blue-500/10' : 'text-zinc-500 bg-zinc-800'}px-2 py-0.5 rounded-xl`}>
+                            <td >
+                              <div >
+                                <span >
                                   {kbSummariesMap[org.id] ? "Loaded Summary" : "Empty"}
                                 </span>
-                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block border border-border p-3.5 rounded-xl text-[10px] text-zinc-300 w-64 z-50 pointer-events-none transition-all">
-                                  <span className="block font-bold text-text mb-1 uppercase tracking-wider">Enterprise Summary</span>
-                                  <p className="line-clamp-4 leading-relaxed font-sans">{kbSummary?.summary_text || kbSummary}</p>
+                                <div >
+                                  <span >Enterprise Summary</span>
+                                  <p >{kbSummary?.summary_text || kbSummary}</p>
                                 </div>
                               </div>
                             </td>
 
-                            <td className="py-3 text-zinc-400 font-mono font-bold text-center pl-6">
+                            <td >
                               {importCount} logs
                             </td>
 
-                            <td className="py-3 text-right space-x-1.5 whitespace-nowrap">
+                            <td >
                               <button 
                                 onClick={() => handleTriggerImpersonateContext(org.id, org.name)}
-                                className="px-2.5 py-1 bg-surface hover:bg-zinc-700 text-text rounded-xl text-[10px] transition-all cursor-pointer"
+                                
                               >
                                 Impersonate
                               </button>
                               <button 
                                 onClick={() => handleToggleOrgStatus(org.id, org.status)}
-                                className={`px-2.5 py-1 rounded-lg text-[10px] transition-all cursor-pointer font-bold ${
-                                  org.status === 'active' ? 'bg-amber-500/10 text-amber-400 hover:bg-amber-500/20' : 'bg-emerald-500/15 text-emerald-400'
-                                }`}
+                                
                               >
                                 {org.status === 'active' ? 'Suspend' : 'Activate'}
                               </button>
@@ -1917,21 +1911,21 @@ export function SuperAdminDashboard({
             </div>
 
             {/* Right Col: Instant Onboarding link generator and operational Audit Trail logs list */}
-            <div className="lg:col-span-4 space-y-6">
+            <div >
               
               {/* Manager Onboarding instant credential link generator */}
-              <div className="bg-surface border border-border rounded-xl p-6 space-y-4">
-                <div className="space-y-1">
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-text">Issue Manager Token</h3>
-                  <p className="text-[10px] text-text-muted">Instantly bypass approvals to generate a single-use corporate Manager Onboarding token.</p>
+              <div >
+                <div >
+                  <h3 >Issue Manager Token</h3>
+                  <p >Instantly bypass approvals to generate a single-use corporate Manager Onboarding token.</p>
                 </div>
 
-                <div className="space-y-3.5">
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-bold uppercase text-text-muted">Target Workplace Name</label>
+                <div >
+                  <div >
+                    <label >Target Workplace Name</label>
                     <select 
                       id="direct-org-select-token"
-                      className="w-full px-3 py-2 border border-border rounded-xl text-xs text-text focus:outline-none focus:border-brand cursor-pointer"
+                      
                     >
                       {organizationsExt.map(o => (
                         <option key={o.id} value={o.id}>{o.name}</option>
@@ -1939,25 +1933,25 @@ export function SuperAdminDashboard({
                     </select>
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-bold uppercase text-text-muted">Manager Work Email</label>
+                  <div >
+                    <label >Manager Work Email</label>
                     <input 
                       type="email" 
                       placeholder="e.g. harvey@specterco.com"
                       value={newInviteEmail}
                       onChange={(e) => setNewInviteEmail(e.target.value)}
-                      className="w-full px-3.5 py-2.5 border border-border rounded-xl text-xs text-text placeholder-slate-700 focus:outline-none focus:border-brand"
+                      
                     />
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-bold uppercase text-text-muted">Manager Full Name</label>
+                  <div >
+                    <label >Manager Full Name</label>
                     <input 
                       type="text" 
                       placeholder="e.g. Harvey Specter"
                       value={newInviteName}
                       onChange={(e) => setNewInviteName(e.target.value)}
-                      className="w-full px-3.5 py-2.5 border border-border rounded-xl text-xs text-text placeholder-slate-700 focus:outline-none focus:border-brand"
+                      
                     />
                   </div>
 
@@ -1966,7 +1960,7 @@ export function SuperAdminDashboard({
                       const sel = document.getElementById('direct-org-select-token') as HTMLSelectElement;
                       if (sel) handleGenerateManagerInvite(sel.value);
                     }}
-                    className="w-full py-2.5 bg-brand hover:opacity-95 text-text font-bold text-xs rounded-xl transition-all cursor-pointer"
+                    
                   >
                     Generate Magic Manager Invite
                   </button>
@@ -1974,28 +1968,28 @@ export function SuperAdminDashboard({
               </div>
 
               {/* Real-time Scrolling Enterprise Audit Trail (Task 6) */}
-              <div className="bg-surface border border-border rounded-xl p-6 space-y-4">
-                <div className="space-y-1">
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-text">Live Enterprise Audit Trail</h3>
-                  <p className="text-[10px] text-text-muted">Review cryptographic activity updates and tenant mutation hooks logged instantaneously.</p>
+              <div >
+                <div >
+                  <h3 >Live Enterprise Audit Trail</h3>
+                  <p >Review cryptographic activity updates and tenant mutation hooks logged instantaneously.</p>
                 </div>
 
-                <div className="max-h-[350px] overflow-y-auto pr-1 space-y-2.5 font-mono">
+                <div >
                   {(analyticsData?.auditTrail || []).length === 0 ? (
-                    <div className="py-6 text-center text-[10px] text-zinc-600">No events audited in this window.</div>
+                    <div >No events audited in this window.</div>
                   ) : (
                     analyticsData?.auditTrail.map((log: any, i: number) => (
-                      <div key={log.id || i} className="border border-border/40 hover:border-border/80 transition-all rounded-xl p-3 space-y-1.5 text-[10px]">
-                        <div className="flex items-center justify-between">
-                          <span className="font-bold uppercase font-syne text-[9px] px-2 py-0.5 rounded-xl">
+                      <div key={log.id || i} >
+                        <div >
+                          <span >
                             {log.action}
                           </span>
-                          <span className="text-[9px]">
+                          <span >
                             {log.orgId}
                           </span>
                         </div>
-                        <p className="text-zinc-300 leading-normal font-sans">{log.details}</p>
-                        <div className="flex items-center justify-between text-[9px]">
+                        <p >{log.details}</p>
+                        <div >
                           <span>User: {log.userName || log.userId}</span>
                           <span>{new Date(log.timestamp).toLocaleTimeString()}</span>
                         </div>
@@ -2014,120 +2008,120 @@ export function SuperAdminDashboard({
 
       {/* 6. VIEW CONTENDER: LLM Config & Failover Tab (Section 3.2 System Architecture) */}
       {activeTab === 'llm_config' && (
-        <div id="llm-config-wrapper" className="space-y-6">
+        <div id="llm-config-wrapper" >
           {/* Top Four Columns KPIs Row */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div >
             
             {/* Card 1: Active Live LLM */}
-            <div className="border border-zinc-800/80 rounded-xl p-5 relative overflow-hidden flex flex-col justify-between hover:border-zinc-700/80 transition-all min-h-[140px]">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full pointer-events-none" />
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">Active Live LLM</span>
-                <div className="w-5 h-5 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <div >
+              <div  />
+              <div >
+                <span >Active Live LLM</span>
+                <div >
+                  <span  />
                 </div>
               </div>
-              <div className="mt-4 space-y-1">
-                <div className="text-lg md:text-xl font-syne font-extrabold truncate">
+              <div >
+                <div >
                   {activeLlm.name}
                 </div>
-                <p className="text-[10px] text-zinc-400 font-mono tracking-tight">
+                <p >
                   {activeLlm.isFallback ? 'Active fallback request router' : 'Active primary request router'} ({activeLlm.selected})
                 </p>
               </div>
             </div>
 
             {/* Card 2: Total Queries / Success */}
-            <div className="border border-zinc-800/80 rounded-xl p-5 relative overflow-hidden flex flex-col justify-between hover:border-zinc-700/80 transition-all min-h-[140px]">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full pointer-events-none" />
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">Total Queries / Success</span>
-                <div className="w-7 h-7 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
-                  <Activity className="w-3.5 h-3.5 text-blue-400" />
+            <div >
+              <div  />
+              <div >
+                <span >Total Queries / Success</span>
+                <div >
+                  <Activity  />
                 </div>
               </div>
-              <div className="mt-4 space-y-2">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-xl md:text-2xl font-syne font-bold text-text">16</span>
-                  <span className="text-[11px] font-bold">38% success</span>
+              <div >
+                <div >
+                  <span >16</span>
+                  <span >38% success</span>
                 </div>
                 {/* Custom progress bar */}
-                <div className="w-full bg-surface h-1 rounded-full overflow-hidden">
-                  <div className="h-full rounded-full" style={{ width: '38%' }} />
+                <div >
+                  <div  style={{ width: '38%' }} />
                 </div>
               </div>
             </div>
 
             {/* Card 3: Accrued API Costs */}
-            <div className="border border-zinc-800/80 rounded-xl p-5 relative overflow-hidden flex flex-col justify-between hover:border-zinc-700/80 transition-all min-h-[140px]">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full pointer-events-none" />
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">Accrued API Costs</span>
-                <div className="w-7 h-7 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500">
-                  <DollarSign className="w-4 h-4" />
+            <div >
+              <div  />
+              <div >
+                <span >Accrued API Costs</span>
+                <div >
+                  <DollarSign  />
                 </div>
               </div>
-              <div className="mt-4 space-y-1">
-                <div className="text-xl md:text-2xl font-mono font-bold text-text">$0.01684</div>
-                <p className="text-[10px] text-zinc-500 font-sans tracking-tight">Consolidated fallback ledger cost</p>
+              <div >
+                <div >$0.01684</div>
+                <p >Consolidated fallback ledger cost</p>
               </div>
             </div>
 
             {/* Card 4: Avg Response Time */}
-            <div className="border border-zinc-800/80 rounded-xl p-5 relative overflow-hidden flex flex-col justify-between hover:border-zinc-700/80 transition-all min-h-[140px]">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/5 rounded-full pointer-events-none" />
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">Avg Response Time</span>
-                <div className="w-7 h-7 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
-                  <RotateCw className="w-3.5 h-3.5 text-purple-400" />
+            <div >
+              <div  />
+              <div >
+                <span >Avg Response Time</span>
+                <div >
+                  <RotateCw  />
                 </div>
               </div>
-              <div className="mt-4 space-y-1">
-                <div className="text-xl md:text-2xl font-mono font-bold text-text">26.88s</div>
-                <p className="text-[10px] text-zinc-500 font-sans tracking-tight">26878 ms latency baseline</p>
+              <div >
+                <div >26.88s</div>
+                <p >26878 ms latency baseline</p>
               </div>
             </div>
 
           </div>
 
           {/* Centralized LLM Config Manager Table Card */}
-          <div className="border border-zinc-800 rounded-xl p-6 space-y-6">
-            <div className="border-b border-zinc-800/60 pb-4">
-              <h3 className="text-sm font-extrabold uppercase tracking-widest text-text font-syne">Centralized LLM Config Manager</h3>
-              <p className="text-[10px] text-zinc-400 mt-1">Manage fallback prioritization, live toggling status, and private client credentials securely.</p>
+          <div >
+            <div >
+              <h3 >Centralized LLM Config Manager</h3>
+              <p >Manage fallback prioritization, live toggling status, and private client credentials securely.</p>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse min-w-[850px]">
+            <div >
+              <table >
                 <thead>
-                  <tr className="border-b border-zinc-800/85 text-[10px] uppercase font-bold tracking-widest">
-                    <th className="pb-3 font-extrabold font-sans">Model Vertical</th>
-                    <th className="pb-3 font-extrabold font-sans">Fallback Priority</th>
-                    <th className="pb-3 font-extrabold font-sans">API Key Credentials</th>
-                    <th className="pb-3 font-extrabold font-sans">Health Status</th>
-                    <th className="pb-3 font-extrabold font-sans">Baselines</th>
-                    <th className="pb-3 font-extrabold font-sans text-right">Ping Connection</th>
+                  <tr >
+                    <th >Model Vertical</th>
+                    <th >Fallback Priority</th>
+                    <th >API Key Credentials</th>
+                    <th >Health Status</th>
+                    <th >Baselines</th>
+                    <th >Ping Connection</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-zinc-800/40 text-xs text-zinc-300">
+                <tbody >
                   {llmConfigsState.map((cfg) => {
                     const isPinging = !!pingingStates[cfg.id];
                     return (
-                      <tr key={cfg.id} className="hover:bg-white/[0.01] transition-colors">
+                      <tr key={cfg.id} >
                         
                         {/* 1. Model Vertical */}
-                        <td className="py-4 pr-2">
-                          <div className="flex items-center gap-3">
-                            <div className={`w-9 h-9 rounded-xl border flex items-center justify-center shrink-0${cfg.iconColor}`}>
-                              <Cpu className="w-4 h-4" />
+                        <td >
+                          <div >
+                            <div >
+                              <Cpu  />
                             </div>
-                            <div className="space-y-1 min-w-0">
-                              <span className="text-text font-bold block truncate">{cfg.name}</span>
-                              <div className="flex items-center gap-1.5">
+                            <div >
+                              <span >{cfg.name}</span>
+                              <div >
                                 <select
                                   value={cfg.selectedModel}
                                   onChange={(e) => handleChangeSubModel(cfg.id, e.target.value)}
-                                  className="border border-zinc-800/85 text-[10px] font-semibold text-zinc-300 rounded-xl px-2 py-0.5 outline-none cursor-pointer"
+                                  
                                 >
                                   {cfg.modelOptions.map(opt => (
                                     <option key={opt} value={opt}>{opt}</option>
@@ -2139,9 +2133,9 @@ export function SuperAdminDashboard({
                                       showToast?.('Rotated model index to preferred fast path.', 'success');
                                     }}
                                     title="Rotate Multi-LLM provider stack"
-                                    className="text-emerald-400 hover:text-emerald-300 cursor-pointer transition-colors"
+                                    
                                   >
-                                    <RefreshCw className="w-3" />
+                                    <RefreshCw  />
                                   </button>
                                 )}
                               </div>
@@ -2150,11 +2144,11 @@ export function SuperAdminDashboard({
                         </td>
 
                         {/* 2. Fallback Priority */}
-                        <td className="py-4 pr-2">
+                        <td >
                           <select
                             value={cfg.priority}
                             onChange={(e) => handleChangePriority(cfg.id, e.target.value)}
-                            className="border border-zinc-800/85 text-xs font-bold text-text rounded-xl px-2.5 py-1.5 outline-none cursor-pointer"
+                            
                           >
                             <option value="1st (Primary)">1st (Primary)</option>
                             <option value="1st Fallback">1st Fallback</option>
@@ -2166,41 +2160,41 @@ export function SuperAdminDashboard({
                         </td>
 
                         {/* 3. API Key Credentials */}
-                        <td className="py-4 pr-2">
-                          <div className="relative flex items-center max-w-[190px]">
-                            <span className="absolute left-2.5 text-zinc-500">
-                              <Lock className="w-3.5 h-3.5 text-zinc-500" />
+                        <td >
+                          <div >
+                            <span >
+                              <Lock  />
                             </span>
                             <input
                               type={cfg.showKey ? "text" : "password"}
                               value={cfg.apiKey}
                               onChange={(e) => handleChangeApiKey(cfg.id, e.target.value)}
                               placeholder="Enter custom secret key"
-                              className="w-full border border-zinc-800/85 text-[11px] font-mono rounded-xl pl-8 pr-8 py-1.5 outline-none text-zinc-350 border-border transition-all font-semibold"
+                              
                             />
                             <button
                               type="button"
                               onClick={() => handleToggleKeyVisibility(cfg.id)}
-                              className="absolute right-2 text-zinc-500 hover:text-white transition-colors cursor-pointer text-zinc-400"
+                              
                             >
-                              {cfg.showKey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                              {cfg.showKey ? <EyeOff  /> : <Eye  />}
                             </button>
                           </div>
                         </td>
 
                         {/* 4. Health Status Badge + Toggle */}
-                        <td className="py-4 pr-2">
-                          <div className="flex items-center gap-2">
+                        <td >
+                          <div >
                             {cfg.healthStatus === 'ONLINE' ? (
-                              <span className="px-2.5 py-0.5 rounded-xl text-[9px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 tracking-wider">
+                              <span >
                                 ONLINE
                               </span>
                             ) : cfg.healthStatus === 'OFFLINE' ? (
-                              <span className="px-2.5 py-0.5 rounded-xl text-[9px] font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20 tracking-wider">
+                              <span >
                                   OFFLINE
                               </span>
                             ) : (
-                              <span className="px-2.5 py-0.5 rounded-xl text-[9px] font-bold bg-surface text-zinc-500 border border-zinc-700/50 tracking-wider">
+                              <span >
                                 DISABLED
                               </span>
                             )}
@@ -2208,51 +2202,43 @@ export function SuperAdminDashboard({
                             {/* Sliding Toggle switch */}
                             <button
                               onClick={() => handleToggleEnableLocal(cfg.id)}
-                              className={`w-9 h-5 rounded-full relative transition border-0 outline-none cursor-pointer ${
-                                cfg.enabled ? 'bg-emerald-500' : 'bg-zinc-800'
-                              }`}
+                              
                             >
                               <span 
-                                className={`absolute top-0.5 left-0.5 bg-white w-4 h-4 rounded-full transition-transform ${
-                                  cfg.enabled ? 'transform translate-x-4' : ''
-                                }`} 
+                                 
                               />
                             </button>
                           </div>
                         </td>
 
                         {/* 5. Baselines */}
-                        <td className="py-4 pr-2">
-                          <div className="space-y-0.5 font-mono text-[10px]">
-                            <span className="text-text block font-bold">
+                        <td >
+                          <div >
+                            <span >
                               {cfg.latency > 0 ? `${cfg.latency} ms` : '0 ms'}{' '}
-                              <span className="text-zinc-500 font-sans font-normal">latency</span>
+                              <span >latency</span>
                             </span>
-                            <span className="text-zinc-500 block">
-                              {cfg.uptime} <span className="font-sans">uptime</span>
+                            <span >
+                              {cfg.uptime} <span >uptime</span>
                             </span>
                           </div>
                         </td>
 
                         {/* 6. Test Ping Trigger */}
-                        <td className="py-4 text-right">
+                        <td >
                           <button
                             disabled={isPinging || !cfg.enabled}
                             onClick={() => handleTestPing(cfg.id)}
-                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-semibold tracking-wide transition-all border ${
-                              !cfg.enabled
-                                ? 'border-zinc-800 bg-zinc-950 text-zinc-600 cursor-not-allowed opacity-50'
-                                : 'border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/10 text-emerald-400 cursor-pointer active:scale-95'
-                            }`}
+                            
                           >
                             {isPinging ? (
                               <>
-                                <Loader2 className="w-3 h-3 animate-spin" />
+                                <Loader2  />
                                 <span>Pinging</span>
                               </>
                             ) : (
                               <>
-                                <Play className="w-3 h-3" />
+                                <Play  />
                                 <span>Test ping</span>
                               </>
                             )}
@@ -2268,60 +2254,60 @@ export function SuperAdminDashboard({
           </div>
 
           {/* LIVE FAILOVER & CALL AUDIT STREAM */}
-          <div className="border border-zinc-800 rounded-xl p-6 space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-zinc-800/60 pb-4">
-              <div className="space-y-1">
-                <h3 className="text-sm font-extrabold uppercase tracking-widest font-syne flex items-center gap-2">
-                  <Activity className="w-4 h-4 text-emerald-400" />
+          <div >
+            <div >
+              <div >
+                <h3 >
+                  <Activity  />
                   Live Failover & Call Audit Stream
                 </h3>
-                <p className="text-[10px] text-zinc-400">Real-time scrolling console monitoring LLM fallback sweeps, exception throws, and token costs.</p>
+                <p >Real-time scrolling console monitoring LLM fallback sweeps, exception throws, and token costs.</p>
               </div>
               <button
                 onClick={() => {
                   setAuditLogsState([]);
                   showToast?.('Console logs cleared successfully.', 'success');
                 }}
-                className="px-3.5 py-1.5 bg-surface hover:bg-zinc-800 text-text font-bold font-mono tracking-tight text-[10px] rounded-xl self-start sm:self-center cursor-pointer transition-colors"
+                
               >
                 Clear console log backlog
               </button>
             </div>
 
             {/* Console log cards box */}
-            <div className="space-y-4.5 max-h-[480px] overflow-y-auto pr-1">
+            <div >
               {auditLogsState.length === 0 ? (
-                <div className="text-center py-10 border border-dashed border-zinc-800 rounded-xl">
-                  <p className="text-xs text-zinc-500 font-mono">--- Console buffer empty. Click 'Test ping' above to register new platform events ---</p>
+                <div >
+                  <p >--- Console buffer empty. Click 'Test ping' above to register new platform events ---</p>
                 </div>
               ) : (
                 auditLogsState.map((log) => {
                   // Success Card
                   if (log.status === 'success') {
                     return (
-                      <div key={log.id} className="bg-surface border border-zinc-800 rounded-xl p-4 space-y-2">
-                        <div className="flex items-center justify-between flex-wrap gap-2">
-                          <div className="flex items-center gap-2">
-                            <span className="px-2 py-0.5 bg-surface rounded-xl text-[8px] font-mono uppercase font-black font-sans leading-none tracking-wide">
+                      <div key={log.id} >
+                        <div >
+                          <div >
+                            <span >
                               {log.provider}
                             </span>
                             {log.action && (
-                              <span className="px-2 py-0.5 bg-surface rounded-xl text-[8px] font-mono uppercase font-black font-sans leading-none tracking-wide">
+                              <span >
                                 {log.action}
                               </span>
                             )}
                           </div>
-                          <span className="text-[9px] font-mono text-zinc-500">{log.timestamp}</span>
+                          <span >{log.timestamp}</span>
                         </div>
 
-                        <span className="text-xs font-mono font-bold text-zinc-100 block">
+                        <span >
                           {log.message}
                         </span>
 
                         {(log.tokens || log.cost) && (
-                          <div className="flex justify-end gap-4 text-[9px] font-mono text-zinc-500 uppercase mt-2 pt-1 border-t border-zinc-800/30">
-                            <span>Tokens: <strong className="text-zinc-300">{log.tokens}</strong></span>
-                            <span>Cost: <strong className="">${log.cost?.toFixed(6)}</strong></span>
+                          <div >
+                            <span>Tokens: <strong >{log.tokens}</strong></span>
+                            <span>Cost: <strong >${log.cost?.toFixed(6)}</strong></span>
                           </div>
                         )}
                       </div>
@@ -2331,16 +2317,16 @@ export function SuperAdminDashboard({
                   // Warning Card (Automatic Failover Sweep)
                   if (log.status === 'warning') {
                     return (
-                      <div key={log.id} className="bg-amber-950/10 border border-amber-500/30 rounded-xl p-4 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="px-2 py-0.5 bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded-xl text-[8px] font-mono uppercase font-black leading-none tracking-wide flex items-center gap-1">
-                            <AlertTriangle className="w-2.5 h-2.5 shrink-0" />
+                      <div key={log.id} >
+                        <div >
+                          <span >
+                            <AlertTriangle  />
                             {log.provider}
                           </span>
-                          <span className="text-[9px] font-mono text-zinc-500">{log.timestamp}</span>
+                          <span >{log.timestamp}</span>
                         </div>
                         
-                        <span className="text-xs font-semibold text-amber-300/95 block leading-normal">
+                        <span >
                           {log.message}
                         </span>
                       </div>
@@ -2349,27 +2335,27 @@ export function SuperAdminDashboard({
 
                   // Error Card
                   return (
-                    <div key={log.id} className="bg-red-950/10 border border-rose-500/30 rounded-xl p-4 space-y-2">
-                      <div className="flex items-center justify-between flex-wrap gap-2">
-                        <div className="flex items-center gap-2">
-                          <span className="px-2 py-0.5 bg-rose-500/10 text-rose-400 border border-rose-500/20 rounded-xl text-[8px] font-mono uppercase font-black leading-none tracking-wide">
+                    <div key={log.id} >
+                      <div >
+                        <div >
+                          <span >
                             {log.provider}
                           </span>
                           {log.action && (
-                            <span className="px-2 py-0.5 bg-surface rounded-xl text-[8px] font-mono uppercase font-black tracking-wide">
+                            <span >
                               {log.action}
                             </span>
                           )}
                         </div>
-                        <span className="text-[9px] font-mono text-zinc-500">{log.timestamp}</span>
+                        <span >{log.timestamp}</span>
                       </div>
 
-                      <span className="text-xs font-mono font-bold text-rose-400 block pb-1">
+                      <span >
                         {log.message}
                       </span>
 
                       {log.errorDetail && (
-                        <div className="bg-black/40 border border-rose-500/20 rounded-xl p-3 text-[10px] text-rose-300/90 font-mono leading-relaxed whitespace-pre-wrap overflow-x-auto">
+                        <div >
                           {log.errorDetail}
                         </div>
                       )}

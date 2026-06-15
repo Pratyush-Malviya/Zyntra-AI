@@ -162,15 +162,15 @@ export function AeWorkspacePanel({
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8">
+    <div >
       {/* Header Tabs */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="space-y-1">
-          <h1 className="text-xl md:text-2xl font-bold tracking-tight font-syne">AE Deal Workspace</h1>
-          <p className="text-text-muted text-xs md:text-sm">Manage enterprise opportunities, review explainable deal scoring, and preparation dossiers.</p>
+      <div >
+        <div >
+          <h1 >AE Deal Workspace</h1>
+          <p >Manage enterprise opportunities, review explainable deal scoring, and preparation dossiers.</p>
         </div>
 
-        <div className="flex items-center gap-1.5 p-1 border border-border rounded-xl">
+        <div >
           {[
             { id: 'pipeline', label: 'Deal Pipeline Kanban', icon: Kanban },
             { id: 'copilot', label: 'AI Copilot CRM Assistant', icon: Sparkles },
@@ -179,13 +179,9 @@ export function AeWorkspacePanel({
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                activeTab === tab.id 
-                  ? 'bg-blue-500/10 text-blue-400 border border-blue-500/25' 
-                  : 'text-text-muted hover:text-text border border-transparent'
-              }`}
+              
             >
-              <tab.icon className="w-4 h-4" />
+              <tab.icon  />
               {tab.label}
             </button>
           ))}
@@ -194,9 +190,9 @@ export function AeWorkspacePanel({
 
       {/* DEAL PIPELINE KANBAN VIEW */}
       {activeTab === 'pipeline' && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div >
           {/* Board columns */}
-          <div className="md:col-span-3 grid grid-cols-1 sm:grid-cols-4 gap-4">
+          <div >
             {['qualification', 'demo', 'proposal', 'negotiation'].map(col => {
               const colDeals = deals.filter(d => d.stage === col);
               return (
@@ -204,42 +200,34 @@ export function AeWorkspacePanel({
                   key={col} 
                   onDragOver={handleDragOver}
                   onDrop={(e) => handleDrop(e, col)}
-                  className="rounded-xl border border-border p-4 min-h-[460px] flex flex-col gap-3"
+                  
                 >
-                  <div className="flex items-center justify-between border-b border-border/60 pb-2 mb-2">
-                    <span className="font-bold text-[10px] uppercase text-text-muted tracking-wider">
+                  <div >
+                    <span >
                       {col === 'qualification' ? 'Qualify' : col === 'demo' ? 'Demo Scheduled' : col === 'proposal' ? 'Proposal' : 'Negotiate'}
                     </span>
-                    <span className="border border-border text-[9px] px-1.5 py-0.5 rounded-xl font-bold text-text-muted">
+                    <span >
                       {colDeals.length}
                     </span>
                   </div>
 
-                  <div className="flex-1 flex flex-col gap-3">
+                  <div >
                     {colDeals.map(d => (
                       <div
                         key={d.id}
                         draggable
                         onDragStart={(e) => handleDragStart(e, d.id)}
                         onClick={() => setSelectedDealId(d.id)}
-                        className={`p-4 rounded-xl border text-left transition-all cursor-pointer ${
-                          selectedDealId === d.id 
-                            ? 'bg-blue-500/10 border-blue-500/50 shadow-lg' 
-                            : 'bg-surface border-border hover:bg-surface-alt'
-                        }`}
+                        
                       >
-                        <div className="flex justify-between items-start">
-                          <h4 className="text-xs font-bold text-text leading-snug line-clamp-2">{d.title}</h4>
-                          <span className={`text-[8px] font-bold px-1 py-0.5 rounded ${
-                            d.status === 'hot' ? 'bg-orange-500/10 text-orange-400' : d.status === 'warm' ? 'bg-amber-500/10 text-amber-500' : 'bg-red-500/10 text-red-500'
-                          }`}>{d.status.toUpperCase()}</span>
+                        <div >
+                          <h4 >{d.title}</h4>
+                          <span >{d.status.toUpperCase()}</span>
                         </div>
-                        <div className="text-[10px] text-text-muted font-medium mt-1">{d.company}</div>
-                        <div className="flex items-center justify-between mt-3">
-                          <span className="text-xs font-semibold text-text">${d.value.toLocaleString()}</span>
-                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#0c0d12] border border-border ${
-                            d.score >= 70 ? 'text-emerald-400' : 'text-rose-400'
-                          }`}>Score: {d.score}</span>
+                        <div >{d.company}</div>
+                        <div >
+                          <span >${d.value.toLocaleString()}</span>
+                          <span >Score: {d.score}</span>
                         </div>
                       </div>
                     ))}
@@ -250,35 +238,35 @@ export function AeWorkspacePanel({
           </div>
 
           {/* Sidebar drawer details */}
-          <div className="md:col-span-1 bg-surface border border-border rounded-xl p-6 space-y-6">
-            <h3 className="text-xs font-bold uppercase tracking-widest border-b border-border/80 pb-2.5">AI Deal Health Analyzer</h3>
+          <div >
+            <h3 >AI Deal Health Analyzer</h3>
             
-            <div className="space-y-4">
+            <div >
               <div>
-                <div className="text-[10px] text-text-muted uppercase tracking-wider font-semibold">Selected Opportunity</div>
-                <div className="text-sm font-bold text-text mt-1">{activeDeal.title}</div>
-                <div className="text-xs text-text-muted">{activeDeal.company}</div>
+                <div >Selected Opportunity</div>
+                <div >{activeDeal.title}</div>
+                <div >{activeDeal.company}</div>
               </div>
 
-              <div className="border border-border rounded-xl p-4 text-center space-y-1">
-                <div className="text-2xl font-syne font-bold text-text">{activeDeal.score} / 100</div>
-                <div className="text-[9px] font-extrabold uppercase tracking-wide">Explainable Deal Health Rating</div>
+              <div >
+                <div >{activeDeal.score} / 100</div>
+                <div >Explainable Deal Health Rating</div>
               </div>
 
-              <div className="space-y-2">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-rose-400 flex items-center gap-1">
-                  <Cpu className="w-3.5 h-3.5" />
+              <div >
+                <div >
+                  <Cpu  />
                   AI Rationale & Risk Signals
                 </div>
-                <p className="text-[10.5px] text-text-muted leading-relaxed font-semibold italic">
+                <p >
                   "{activeDeal.reason}"
                 </p>
               </div>
 
-              <div className="pt-3 border-t border-border/60">
+              <div >
                 <button
                   onClick={() => showToast('Connecting to CRM synchronizer node...', 'info')}
-                  className="w-full bg-blue-500 hover:bg-blue-600 text-text font-bold py-3 rounded-xl text-xs transition-colors"
+                  
                 >
                   Push Deal to HubSpot
                 </button>
@@ -290,42 +278,40 @@ export function AeWorkspacePanel({
 
       {/* AI COPILOT CRM CHAT VIEW */}
       {activeTab === 'copilot' && (
-        <div className="bg-surface border border-border rounded-xl overflow-hidden min-h-[500px] flex flex-col">
-          <div className="p-4 border-b border-border flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-blue-400" />
-              <span className="text-xs font-bold text-text font-syne uppercase">Natural Query CRM AI Co-pilot</span>
+        <div >
+          <div >
+            <div >
+              <Sparkles  />
+              <span >Natural Query CRM AI Co-pilot</span>
             </div>
-            <span className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[8px] font-extrabold px-2 py-0.5 rounded-xl">CONNECTED TO HUB</span>
+            <span >CONNECTED TO HUB</span>
           </div>
 
           {/* Chat message streams */}
-          <div className="flex-1 p-6 space-y-4 max-h-[350px] overflow-y-auto scrollbar-thin">
+          <div >
             {copilotChat.map((msg, idx) => {
               const isAi = msg.sender === 'AI Copilot';
               return (
-                <div key={idx} className={`flex${isAi ? 'justify-start' : 'justify-end'}`}>
-                  <div className={`max-w-md p-4 rounded-2xl text-xs leading-relaxed ${
-                    isAi ? 'bg-surface-alt text-gray-300 border border-border' : 'bg-blue-500 text-white'
-                  }`}>
-                    <div className="text-[9px] font-extrabold uppercase tracking-wide opacity-60 mb-1">{msg.sender}</div>
-                    <p className="font-semibold">{msg.text}</p>
+                <div key={idx} >
+                  <div >
+                    <div >{msg.sender}</div>
+                    <p >{msg.text}</p>
                   </div>
                 </div>
               );
             })}
             {isCopilotLoading && (
-              <div className="flex justify-start">
-                <div className="text-gray-300 border border-border p-4 rounded-xl flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
-                  <span className="text-[10px] font-bold text-text-muted">Querying synchronized databases...</span>
+              <div >
+                <div >
+                  <Loader2  />
+                  <span >Querying synchronized databases...</span>
                 </div>
               </div>
             )}
           </div>
 
           {/* Suggestion tags */}
-          <div className="p-4 bg-surface border-t border-border/80 flex flex-wrap gap-2">
+          <div >
             {[
               'Show deal health analyzer metrics',
               'Summarize pipeline values for Caret',
@@ -334,7 +320,7 @@ export function AeWorkspacePanel({
               <button
                 key={idx}
                 onClick={() => setCopilotMessage(tag)}
-                className="hover:bg-[#12131a] border border-border/80 text-[10px] text-text-muted hover:text-white px-3 py-1.5 rounded-xl transition-colors cursor-pointer"
+                
               >
                 {tag}
               </button>
@@ -342,19 +328,19 @@ export function AeWorkspacePanel({
           </div>
 
           {/* Message input */}
-          <form onSubmit={handleSendCopilot} className="p-4 border-t border-border flex gap-3">
+          <form onSubmit={handleSendCopilot} >
             <input
               type="text"
               value={copilotMessage}
               onChange={e => setCopilotMessage(e.target.value)}
               placeholder="e.g., Query deals for TERAWORK or high-value pipeline metrics..."
-              className="flex-1 border border-border focus:border-blue-500/50 rounded-xl px-4 text-xs text-text outline-none"
+              
             />
             <button
               type="submit"
-              className="bg-blue-500 hover:bg-blue-600 px-4 rounded-xl transition-colors cursor-pointer flex items-center justify-center text-text"
+              
             >
-              <Send className="w-4.5 h-4.5" />
+              <Send  />
             </button>
           </form>
         </div>
@@ -362,14 +348,14 @@ export function AeWorkspacePanel({
 
       {/* PRE-CALL BRIEFINGS VIEW */}
       {activeTab === 'briefs' && (
-        <div className="bg-surface border border-border rounded-xl p-6 md:p-8 space-y-6">
-          <div className="flex flex-col sm:flex-row items-end justify-between gap-4 pb-4 border-b border-border/60">
-            <div className="space-y-1.5 flex-1 w-full sm:w-auto">
-              <label className="text-[9px] font-bold text-text-muted uppercase tracking-widestblock">Target Prospect Briefing Dossier</label>
+        <div >
+          <div >
+            <div >
+              <label >Target Prospect Briefing Dossier</label>
               <select
                 value={briefTarget}
                 onChange={e => setBriefTarget(e.target.value)}
-                className="w-full border border-border rounded-xl p-3 text-xs text-text"
+                
               >
                 <option value="TERAWORK (Femi Taiwo)">TERAWORK — Femi Taiwo (CEO)</option>
                 <option value="Caret (Oluwaseyi Agunbiade)">Caret — Oluwaseyi Agunbiade (Director)</option>
@@ -377,32 +363,32 @@ export function AeWorkspacePanel({
             </div>
             <button
               onClick={handleGenerateBrief}
-              className="w-full sm:w-auto bg-blue-500 hover:bg-blue-600 text-text font-bold h-11 px-6 rounded-xl text-xs flex items-center justify-center gap-2 cursor-pointer"
+              
             >
-              <Sparkles className="w-4.5 h-4.5" />
+              <Sparkles  />
               Compile Briefing Dossier
             </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <div className="border border-border rounded-xl p-6 space-y-2">
-              <div className="text-[10px] font-extrabold text-blue-400 uppercase tracking-widest">Meeting Target Objectives</div>
-              <p className="text-xs text-gray-300 leading-relaxed font-semibold italic">"{preCallBrief.objectives}"</p>
+          <div >
+            <div >
+              <div >Meeting Target Objectives</div>
+              <p >"{preCallBrief.objectives}"</p>
             </div>
 
-            <div className="border border-border rounded-xl p-6 space-y-2">
-              <div className="text-[10px] font-extrabold text-amber-500 uppercase tracking-widest">Company Intelligence & context</div>
-              <p className="text-xs text-gray-300 leading-relaxed font-semibold italic">"{preCallBrief.companyIntel}"</p>
+            <div >
+              <div >Company Intelligence & context</div>
+              <p >"{preCallBrief.companyIntel}"</p>
             </div>
 
-            <div className="border border-border rounded-xl p-6 space-y-2">
-              <div className="text-[10px] font-extrabold text-teal-400 uppercase tracking-widest">Pre-Call Talking point blueprints</div>
-              <p className="text-xs text-gray-300 leading-relaxed font-semibold italic">"{preCallBrief.talkingPoints}"</p>
+            <div >
+              <div >Pre-Call Talking point blueprints</div>
+              <p >"{preCallBrief.talkingPoints}"</p>
             </div>
 
-            <div className="border border-border rounded-xl p-6 space-y-2">
-              <div className="text-[10px] font-extrabold text-rose-400 uppercase tracking-widest">Expected Objections & playbooks</div>
-              <p className="text-xs text-gray-300 leading-relaxed font-semibold italic">"{preCallBrief.objections}"</p>
+            <div >
+              <div >Expected Objections & playbooks</div>
+              <p >"{preCallBrief.objections}"</p>
             </div>
           </div>
         </div>

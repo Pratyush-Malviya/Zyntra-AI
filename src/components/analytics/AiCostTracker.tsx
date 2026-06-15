@@ -80,63 +80,63 @@ export function AiCostTracker({ orgId }: AiCostTrackerProps) {
   const usagePercent = (totalCost / budget) * 100;
 
   return (
-    <div className="space-y-6">
+    <div >
       {/* KPI Row */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div >
         {[
           { label: '14-Day Cost',       value: `$${totalCost.toFixed(2)}`,        icon: DollarSign, color: '#10b981' },
           { label: 'Total Tokens',      value: `${(totalTokens/1000).toFixed(0)}K`,icon: Zap,        color: '#6366f1' },
           { label: 'AI Calls',          value: totalCalls.toString(),              icon: Activity,   color: '#3b82f6' },
           { label: 'Cost / Lead',       value: `$${avgCostPerLead.toFixed(3)}`,   icon: TrendingUp, color: '#f59e0b' },
         ].map(({ label, value, icon: Icon, color }) => (
-          <div key={label} className="card p-4">
-            <div className="flex items-center justify-between mb-2">
-              <div className="p-1.5 rounded-xl" style={{ background: color + '15' }}>
-                <Icon className="w-4 h-4" style={{ color }} />
+          <div key={label} >
+            <div >
+              <div  style={{ background: color + '15' }}>
+                <Icon  style={{ color }} />
               </div>
             </div>
-            <div className="text-xl font-bold text-text">{value}</div>
-            <div className="text-xs text-text-secondary">{label}</div>
+            <div >{value}</div>
+            <div >{label}</div>
           </div>
         ))}
       </div>
 
       {/* Budget gauge */}
-      <div className="card p-5 space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="text-sm font-bold text-text">Monthly AI Budget</div>
-          <div className="flex items-center gap-2">
-            {usagePercent > 80 && <AlertTriangle className="w-4 h-4 text-amber-400" />}
-            <span className="text-sm font-bold" style={{ color: usagePercent > 80 ? '#f59e0b' : '#10b981' }}>
+      <div >
+        <div >
+          <div >Monthly AI Budget</div>
+          <div >
+            {usagePercent > 80 && <AlertTriangle  />}
+            <span  style={{ color: usagePercent > 80 ? '#f59e0b' : '#10b981' }}>
               ${totalCost.toFixed(2)} / ${budget}
             </span>
           </div>
         </div>
-        <div className="h-3 bg-surface-elevated rounded-full overflow-hidden">
+        <div >
           <motion.div
-            className="h-full rounded-full"
+            
             initial={{ width: 0 }}
             animate={{ width: `${Math.min(100, usagePercent)}%` }}
             transition={{ duration: 0.8 }}
             style={{ background: usagePercent > 80 ? '#f59e0b' : 'linear-gradient(to right, #6366f1, #10b981)' }}
           />
         </div>
-        <div className="flex justify-between text-xs text-text-secondary">
+        <div >
           <span>{usagePercent.toFixed(1)}% of budget used</span>
           <span>${(budget - totalCost).toFixed(2)} remaining</span>
         </div>
       </div>
 
       {/* Cost over time chart */}
-      <div className="card p-5 space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="text-sm font-bold text-text">AI Usage — 14 Days</div>
-          <div className="flex gap-1 p-1 bg-surface-elevated rounded-xl">
+      <div >
+        <div >
+          <div >AI Usage — 14 Days</div>
+          <div >
             {(['cost', 'tokens', 'perLead'] as const).map(v => (
               <button
                 key={v}
                 onClick={() => setActiveView(v)}
-                className="px-2 py-1 rounded-xl text-[11px] font-semibold transition-all"
+                
                 style={{
                   background: activeView === v ? 'var(--color-primary)' : 'transparent',
                   color: activeView === v ? 'white' : 'var(--text-secondary)',
@@ -176,28 +176,28 @@ export function AiCostTracker({ orgId }: AiCostTrackerProps) {
       </div>
 
       {/* Model breakdown */}
-      <div className="card p-5 space-y-4">
-        <div className="text-sm font-bold text-text">Model Usage Breakdown</div>
-        <div className="space-y-3">
+      <div >
+        <div >Model Usage Breakdown</div>
+        <div >
           {modelBreakdown
             .sort((a, b) => b.cost - a.cost)
             .map(model => {
               const pct = (model.cost / modelBreakdown.reduce((s: number, m: any) => s + m.cost, 0)) * 100;
               return (
-                <div key={model.model} className="space-y-1">
-                  <div className="flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full" style={{ background: model.color }} />
-                      <span className="font-mono text-text">{model.model}</span>
+                <div key={model.model} >
+                  <div >
+                    <div >
+                      <div  style={{ background: model.color }} />
+                      <span >{model.model}</span>
                     </div>
-                    <div className="flex items-center gap-3 text-text-secondary">
+                    <div >
                       <span>{model.calls} calls</span>
-                      <span className="font-semibold text-text">${model.cost.toFixed(4)}</span>
+                      <span >${model.cost.toFixed(4)}</span>
                     </div>
                   </div>
-                  <div className="h-1.5 bg-surface-elevated rounded-full overflow-hidden">
+                  <div >
                     <motion.div
-                      className="h-full rounded-full"
+                      
                       initial={{ width: 0 }}
                       animate={{ width: `${pct}%` }}
                       transition={{ duration: 0.6 }}
@@ -208,8 +208,8 @@ export function AiCostTracker({ orgId }: AiCostTrackerProps) {
               );
             })}
         </div>
-        <div className="p-3 rounded-xl bg-primary/10 border border-primary/20 text-xs text-text-secondary">
-          <span className="text-primary font-bold">Cost optimisation tip:</span> Use Gemini Flash for research tasks, save GPT-4o for final outreach generation. Estimated savings: 40%.
+        <div >
+          <span >Cost optimisation tip:</span> Use Gemini Flash for research tasks, save GPT-4o for final outreach generation. Estimated savings: 40%.
         </div>
       </div>
     </div>

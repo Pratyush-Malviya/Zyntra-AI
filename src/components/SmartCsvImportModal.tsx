@@ -561,33 +561,33 @@ export const SmartCsvImportModal: React.FC<SmartCsvImportModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div >
       <div 
         id="crm-field-mapping-panel" 
-        className="w-full max-w-4xl bg-surface border border-border rounded-xl overflow-hidden flex flex-col max-h-[90vh] text-xs"
+        
       >
         {/* Header bar */}
-        <div className="p-6 border-b border-border/80 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-brand/10 flex items-center justify-center text-brand">
-              <FileSpreadsheet className="w-5 h-5" />
+        <div >
+          <div >
+            <div >
+              <FileSpreadsheet  />
             </div>
             <div>
-              <h3 className="text-sm font-extrabold text-text uppercase tracking-wider">AI Schema-Aware Lead Importer</h3>
-              <p className="text-[10px] text-text-muted">Directly import leads catalog and auto-build campaign pipeline</p>
+              <h3 >AI Schema-Aware Lead Importer</h3>
+              <p >Directly import leads catalog and auto-build campaign pipeline</p>
             </div>
           </div>
           
           <button 
             onClick={onClose}
-            className="w-8 h-8 rounded-xl hover:bg-surface-alt/80 border border-border flex items-center justify-center text-text-muted hover:text-white transition-colors cursor-pointer"
+            
           >
             &times;
           </button>
         </div>
 
         {/* Wizard progress rail */}
-        <div className="px-6 py-3.5 border-b border-border/50 flex items-center gap-1.5 md:gap-4 overflow-x-auto">
+        <div >
           {[
             { nr: 1, name: "Upload Data" },
             { nr: 2, name: "Resolve Properties" },
@@ -597,72 +597,68 @@ export const SmartCsvImportModal: React.FC<SmartCsvImportModalProps> = ({
             const active = step === st.nr || (st.nr === 4 && step === 4);
             const finished = step > st.nr;
             return (
-              <div key={st.nr} className="flex items-center gap-2 shrink-0">
-                <span className={`w-5 h-5 rounded-full flex items-center justify-center font-mono font-bold text-[9px] border transition-all ${
-                  finished ? "bg-brand text-[#090a0f] border-brand" : active ? "border-brand text-brand" : "border-border text-text-muted"
-                }`}>
+              <div key={st.nr} >
+                <span >
                   {finished ? "✓" : st.nr}
                 </span>
-                <span className={`font-mono text-[9px] font-bold uppercase tracking-widest ${
-                  active ? "text-brand" : finished ? "text-text" : "text-text-muted"
-                }`}>
+                <span >
                   {st.name}
                 </span>
-                {st.nr < 4 && <ChevronRight className="w-3.5 h-3.5 opacity-40 text-text-muted hidden sm:block" />}
+                {st.nr < 4 && <ChevronRight  />}
               </div>
             );
           })}
         </div>
 
         {/* Dynamic Wizard Steps */}
-        <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-6 custom-scrollbar min-h-[40vh]">
+        <div >
           
           {/* STEP 1: Drag and Drop upload (Task 2 Step 1) */}
           {step === 1 && (
-            <div className="space-y-6">
+            <div >
               <div 
                 onDragOver={handleDragOver}
                 onDrop={handleDrop}
-                className="border-2 border-dashed border-border hover:bg-[#090a0f]/85 rounded-xl p-10 text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-3 group"
+                
               >
-                <div className="w-12 h-12 rounded-full bg-brand/10 group-hover:bg-brand/20 flex items-center justify-center text-brand transition-colors">
-                  <Upload className="w-6 h-6 animate-pulse" />
+                <div >
+                  <Upload  />
                 </div>
-                <div className="space-y-1">
-                  <p className="text-xs font-bold text-text">Drag & Drop Leads Spreadsheet here</p>
-                  <p className="text-[10px] text-text-muted">Accepts standard .csv or MS Excel .xlsx file formats</p>
+                <div >
+                  <p >Drag & Drop Leads Spreadsheet here</p>
+                  <p >Accepts standard .csv or MS Excel .xlsx file formats</p>
                 </div>
                 
-                <label className="px-4 py-2 border border-border hover:bg-border bg-surface rounded-xl text-[10px] font-bold transition-all cursor-pointer mt-2">
+                <label >
                   Browse Files
                   <input 
                     type="file" 
                     onChange={handleFileUpload} 
                     accept=".csv, .xlsx, .xls" 
-                    className="hidden" 
+                     
                   />
                 </label>
               </div>
 
               {savedTemplates.length > 0 && (
-                <div className="space-y-3 border border-border p-5 rounded-xl">
-                  <h4 className="text-[10px] font-bold uppercase tracking-wider text-brand flex items-center gap-1.5">
-                    <Database className="w-3.5 h-3.5" />
+                <div >
+                  <h4 >
+                    <Database  />
                     Available Directory Mapping Presets
                   </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1.5">
+                  <div >
                     {savedTemplates.map((tmpl) => (
                       <div 
                         key={tmpl.id} 
-                        className="p-3 bg-surface border border-border rounded-xl flex items-center justify-between group transition-all"
+                        
                       >
-                        <div className="truncate pr-2">
-                          <span className="font-bold text-text block truncate">{tmpl.name}</span>
-                          <span className="text-[9px] text-text-muted font-mono">Created: {new Date(tmpl.createdAt).toLocaleDateString()}</span>
+                        <div >
+                          <span >{tmpl.name}</span>
+                          <span >Created: {new Date(tmpl.createdAt).toLocaleDateString()}</span>
                         </div>
                         <button
                           onClick={() => handleApplyTemplate(tmpl)}
-                          className="px-2.5 py-1 text-[9px] border border-border hover:bg-border hover:text-brand bg-surface rounded-xl font-bold transition-all shrink-0 cursor-pointer"
+                          
                         >
                           Select Preset
                         </button>
@@ -676,44 +672,44 @@ export const SmartCsvImportModal: React.FC<SmartCsvImportModalProps> = ({
 
           {/* STEP 2: Fuzzy Suggested Map or Custom field mapper (Task 2 Steps 2 & 3) */}
           {step === 2 && (
-            <div className="space-y-6">
+            <div >
               {/* AI Auto-Map & Clean Clutter Banner */}
-              <div id="ai-import-autoclean-banner" className="border border-border p-5 rounded-xl flex flex-col md:flex-row items-center justify-between gap-4">
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-brand/10 border border-border flex items-center justify-center text-brand shrink-0">
-                    <Database className="w-5 h-5 text-brand animate-pulse" />
+              <div id="ai-import-autoclean-banner" >
+                <div >
+                  <div >
+                    <Database  />
                   </div>
-                  <div className="space-y-1">
-                    <h4 className="text-text font-extrabold text-[11px] uppercase tracking-wider flex items-center gap-2">
+                  <div >
+                    <h4 >
                       Zyntra AI Intelligent Clean & Auto-Map
-                      {isAiAligning && <span className="text-[8px] bg-brand/20 text-brand px-1.5 py-0.5 rounded-xl font-mono animate-pulse">CLEANSING ACTIVE</span>}
-                      {aiRunSuccess && <span className="text-[8px] px-1.5 py-0.5 rounded-xl font-sans font-bold">Healed & Column-Mapped</span>}
+                      {isAiAligning && <span >CLEANSING ACTIVE</span>}
+                      {aiRunSuccess && <span >Healed & Column-Mapped</span>}
                     </h4>
-                    <p className="text-[10px] text-text-muted leading-relaxed max-w-2xl">
+                    <p >
                       Advanced neural alignment analyzes incoming cells, auto-matches target fields, and automatically repairs cluttered data (e.g., swapped phone numbers in email column and email addresses in phone column).
                     </p>
                     {aiClutterReport && (
-                      <div className="mt-2 text-[10px] font-mono border p-2.5 rounded-xl">
+                      <div >
                         <strong>AI Alignment Report:</strong> {aiClutterReport}
                       </div>
                     )}
                   </div>
                 </div>
 
-                <div className="shrink-0 ml-auto md:ml-0">
+                <div >
                   <button
                     onClick={() => triggerAiAlignment(fileHeaders, rawRows)}
                     disabled={isAiAligning}
-                    className="px-4 py-2 hover:opacity-90 disabled:opacity-50 text-text font-bold text-[10px] uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center gap-1.5 hover:scale-[1.02]"
+                    
                   >
                     {isAiAligning ? (
                       <>
-                        <Loader2 className="w-3.5 h-3.5 animate-spin text-text" />
+                        <Loader2  />
                         Analyzing...
                       </>
                     ) : (
                       <>
-                        <Database className="w-3.5 h-3.5" />
+                        <Database  />
                         Inspect & De-Clutter rows
                       </>
                     )}
@@ -721,24 +717,24 @@ export const SmartCsvImportModal: React.FC<SmartCsvImportModalProps> = ({
                 </div>
               </div>
 
-              <div className="flex items-center justify-between text-[11px] bg-brand/5 border border-border p-4 rounded-xl text-brand font-semibold">
-                <span className="flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4 text-brand" />
+              <div >
+                <span >
+                  <CheckCircle2  />
                   Auto-Detected {fileHeaders.length} Columns from '{fileName}'. Mapping suggested below.
                 </span>
-                <span className="text-text-muted font-mono">{rawRows.length} total rows parsed</span>
+                <span >{rawRows.length} total rows parsed</span>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div >
                 
                 {/* Left side: CSV Field Match table */}
-                <div className="space-y-3.5">
-                  <h4 className="text-[10px] font-bold uppercase tracking-wider text-text-muted">
+                <div >
+                  <h4 >
                     Establish Mappings (Spreadsheet → CRM Properties)
                   </h4>
                   
-                  <div className="border border-border rounded-xl overflow-hidden divide-y divide-border/60">
-                    <div className="grid grid-cols-2 p-3 font-bold text-[9px] uppercase text-text-muted">
+                  <div >
+                    <div >
                       <span>Source Column</span>
                       <span>Target CRM Field Mapping</span>
                     </div>
@@ -746,15 +742,15 @@ export const SmartCsvImportModal: React.FC<SmartCsvImportModalProps> = ({
                     {fileHeaders.map((header) => {
                       const currentMappedKey = mapping[header];
                       return (
-                        <div key={header} className="grid grid-cols-2 items-center p-3 gap-4">
-                          <span className="font-mono text-[10px] font-semibold text-text truncate" title={header}>
+                        <div key={header} >
+                          <span  title={header}>
                             {header}
                           </span>
                           
                           <select
                             value={currentMappedKey}
                             onChange={(e) => setMapping({ ...mapping, [header]: e.target.value })}
-                            className="w-full px-2 py-1.5 bg-surface border border-border rounded-xl font-medium text-[10px] text-text hover:border-brand cursor-pointer focus:outline-none"
+                            
                           >
                             <option value="">-- Ignored / Skip Column --</option>
                             <option disabled>----------- Standard Fields -----------</option>
@@ -779,20 +775,20 @@ export const SmartCsvImportModal: React.FC<SmartCsvImportModalProps> = ({
                 </div>
 
                 {/* Right side: dynamic field and preset naming section */}
-                <div className="space-y-6">
+                <div >
                   {/* Dynamic field creator (Task 2 Step 3 option) */}
-                  <div className="border border-border p-5 rounded-xl space-y-4">
-                    <div className="space-y-1">
-                      <h4 className="text-[10px] font-bold uppercase tracking-widest">Custom Target Properties</h4>
-                      <p className="text-[10px] text-text-muted">
+                  <div >
+                    <div >
+                      <h4 >Custom Target Properties</h4>
+                      <p >
                         Need dynamic custom CRM filters that are not prebuilt? Provision custom fields right now!
                       </p>
                     </div>
 
                     {customFields.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5">
+                      <div >
                         {customFields.map(cf => (
-                          <span key={cf} className="px-2 py-0.5 rounded-xl bg-brand/10 border border-border text-brand text-[9px] font-mono font-semibold">
+                          <span key={cf} >
                             {cf}
                           </span>
                         ))}
@@ -802,30 +798,30 @@ export const SmartCsvImportModal: React.FC<SmartCsvImportModalProps> = ({
                     {!showCustomFieldInput ? (
                       <button
                         onClick={() => setShowCustomFieldInput(true)}
-                        className="px-3 py-1.5 border border-border hover:bg-border rounded-xl text-[10px] font-bold flex items-center gap-1.5 cursor-pointer text-text"
+                        
                       >
-                        <Plus className="w-3.5 h-3.5" />
+                        <Plus  />
                         Create CRM custom field...
                       </button>
                     ) : (
-                      <div className="space-y-3 pt-2">
+                      <div >
                         <input
                           type="text"
                           placeholder="e.g. Sales_Territory, LinkedIn_Inbound"
                           value={newFieldName}
                           onChange={(e) => setNewFieldName(e.target.value.replace(/[^a-zA-Z0-9_]/g, ""))}
-                          className="w-full px-3 py-2 bg-surface border border-border hover:border-brand rounded-xl font-mono text-[10px] text-text focus:outline-none focus:border-brand"
+                          
                         />
-                        <div className="flex items-center gap-2">
+                        <div >
                           <button
                             onClick={handleCreateCustomField}
-                            className="px-3 py-1.5 bg-brand rounded-xl text-[9px] font-bold cursor-pointer"
+                            
                           >
                             Provision Field
                           </button>
                           <button
                             onClick={() => setShowCustomFieldInput(false)}
-                            className="px-3 py-1.5 border border-border text-text-muted hover:text-white rounded-xl text-[9px] font-bold cursor-pointer"
+                            
                           >
                             Cancel
                           </button>
@@ -835,20 +831,20 @@ export const SmartCsvImportModal: React.FC<SmartCsvImportModalProps> = ({
                   </div>
 
                   {/* Reusable template checklist (Task 2 named reusable templates) */}
-                  <div className="border border-border p-5 rounded-xl space-y-4">
-                    <div className="space-y-1">
-                      <h4 className="text-[10px] font-bold uppercase tracking-widest text-text">Save as Reusable Template</h4>
-                      <p className="text-[10px] text-text-muted">Save mappings to avoid reproducing these steps on similar lists later.</p>
+                  <div >
+                    <div >
+                      <h4 >Save as Reusable Template</h4>
+                      <p >Save mappings to avoid reproducing these steps on similar lists later.</p>
                     </div>
 
-                    <label className="flex items-center gap-2.5 cursor-pointer py-1">
+                    <label >
                       <input
                         type="checkbox"
                         checked={saveAsTemplate}
                         onChange={(e) => setSaveAsTemplate(e.target.checked)}
-                        className="rounded-xl border-border text-brand focus:ring-opacity-0 h-4.5 w-4.5"
+                        
                       />
-                      <span className="font-medium text-text">Save mapping as Named Template Preset</span>
+                      <span >Save mapping as Named Template Preset</span>
                     </label>
 
                     {saveAsTemplate && (
@@ -857,26 +853,26 @@ export const SmartCsvImportModal: React.FC<SmartCsvImportModalProps> = ({
                         placeholder="e.g. Apollo CSV Mappings, Inbound_SDR_List_Preset"
                         value={templateName}
                         onChange={(e) => setTemplateName(e.target.value)}
-                        className="w-full px-3 py-2 bg-surface border border-border rounded-xl font-bold text-[10px] focus:outline-none focus:border-brand"
+                        
                       />
                     )}
                   </div>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between border-t border-border/40 pt-5">
+              <div >
                 <button
                   onClick={() => setStep(1)}
-                  className="px-4 py-2 border border-border hover:bg-border text-text-muted hover:text-text rounded-xl font-bold transition-all cursor-pointer"
+                  
                 >
                   Back Upload
                 </button>
                 <button
                   onClick={processValidationAndDuplicates}
-                  className="px-5 py-2 bg-brand hover:bg-brand/90 hover:scale-[1.01] rounded-xl font-extrabold flex items-center gap-1.5 transition-all cursor-pointer"
+                  
                 >
                   Run Validation & Conflicts
-                  <ArrowRight className="w-4 h-4" />
+                  <ArrowRight  />
                 </button>
               </div>
             </div>
@@ -884,36 +880,32 @@ export const SmartCsvImportModal: React.FC<SmartCsvImportModalProps> = ({
 
           {/* STEP 3: Preview, Validation, and Duplicates check (Task 2 Steps 4 & 5) */}
           {step === 3 && (
-            <div className="space-y-6">
+            <div >
               
               {/* Conflicts and validations summary cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div >
                 {/* Outbound Warnings */}
-                <div className={`p-4 rounded-xl border text-[11px] ${
-                  validationErrors.length > 0 
-                  ? "bg-rose-500/5 border-rose-500/20 text-rose-400" 
-                  : "bg-emerald-500/5 border-emerald-500/20 text-emerald-400"
-                }`}>
-                  <h4 className="font-bold flex items-center gap-1.5 mb-1.5">
-                    <AlertTriangle className="w-4 h-4" />
+                <div >
+                  <h4 >
+                    <AlertTriangle  />
                     Bulk Format & Mismatch Validation Results ({validationErrors.length} Flags)
                   </h4>
-                  <p className="text-[10px] text-text-muted mb-2">
+                  <p >
                     {validationErrors.length === 0 
                     ? "✓ Excellent! All parsed lead work emails, names, and intent score numeric values align correctly."
                     : "Some rows hold incomplete emails, empty required names, or numeric type contradictions:"}
                   </p>
                   {validationErrors.length > 0 && (
-                    <div className="max-h-24 overflow-y-auto space-y-1 custom-scrollbar text-[9px] font-mono">
+                    <div >
                       {validationErrors.slice(0, 10).map((err, i) => (
-                        <div key={i} className="flex gap-1.5 p-1 border border-border rounded-xl">
-                          <span className="font-bold text-rose-500 shrink-0">Row {err.row}:</span>
-                          <span className="text-text shrink-0">[{err.field}]</span>
-                          <span className="text-text-muted truncate">{err.reason}</span>
+                        <div key={i} >
+                          <span >Row {err.row}:</span>
+                          <span >[{err.field}]</span>
+                          <span >{err.reason}</span>
                         </div>
                       ))}
                       {validationErrors.length > 10 && (
-                        <div className="text-center text-[8px] text-text-muted italic pt-1">
+                        <div >
                           + {validationErrors.length - 10} additional format warnings logged.
                         </div>
                       )}
@@ -922,31 +914,27 @@ export const SmartCsvImportModal: React.FC<SmartCsvImportModalProps> = ({
                 </div>
 
                 {/* Duplication conflicts */}
-                <div className={`p-4 rounded-xl border text-[11px] ${
-                  duplicateConflicts.length > 0 
-                  ? "bg-[#f59e0b]/5 border-[#f59e0b]/20 text-[#f59e0b]" 
-                  : "bg-emerald-500/5 border-emerald-500/20 text-emerald-400"
-                }`}>
-                  <h4 className="font-bold flex items-center gap-1.5 mb-1.5">
-                    <Database className="w-4 h-4 shrink-0" />
+                <div >
+                  <h4 >
+                    <Database  />
                     Duplicate Record Conflicts Isolator ({duplicateConflicts.length} Matches)
                   </h4>
-                  <p className="text-[10px] text-text-muted mb-2">
+                  <p >
                     {duplicateConflicts.length === 0 
                     ? "✓ No conflicts! No email or phone/company duplicates were detected inside active CRM databases."
                     : "Duplicate matches found based on matching emails or phone-company combinations:"}
                   </p>
                   {duplicateConflicts.length > 0 && (
-                    <div className="max-h-24 overflow-y-auto space-y-1 custom-scrollbar text-[9px] font-mono">
+                    <div >
                       {duplicateConflicts.slice(0, 10).map((dup, i) => (
-                        <div key={i} className="flex gap-1.5 p-1 border border-border rounded-xl">
-                          <span className="font-bold shrink-0">Row {dup.row}:</span>
-                          <span className="text-text shrink-0">{dup.name}</span>
-                          <span className="text-text-muted truncate">({dup.email || dup.phone}) exists in pipeline</span>
+                        <div key={i} >
+                          <span >Row {dup.row}:</span>
+                          <span >{dup.name}</span>
+                          <span >({dup.email || dup.phone}) exists in pipeline</span>
                         </div>
                       ))}
                       {duplicateConflicts.length > 10 && (
-                        <div className="text-center text-[8px] text-text-muted italic pt-1">
+                        <div >
                           + {duplicateConflicts.length - 10} further duplicates isolated for safe skipping.
                         </div>
                       )}
@@ -956,28 +944,28 @@ export const SmartCsvImportModal: React.FC<SmartCsvImportModalProps> = ({
               </div>
 
               {/* Mapped values preview (Task 2 Step 4 - First 10 rows preview) */}
-              <div className="space-y-3.5">
-                <h4 className="text-[10px] font-bold uppercase tracking-wider text-text-muted">
+              <div >
+                <h4 >
                   Import Preview (First 10 Data Rows with suggested CRM Field Alignment)
                 </h4>
 
-                <div className="border border-border rounded-xl overflow-x-auto">
-                  <table className="w-full text-left border-collapse text-[11px]">
+                <div >
+                  <table >
                     <thead>
-                      <tr className="border-b border-border text-[9px] font-bold uppercase tracking-widest text-text-muted">
-                        <th className="py-2.5 px-3">Row No.</th>
-                        <th className="py-2.5 px-3">Full Name *</th>
-                        <th className="py-2.5 px-3">Work Email *</th>
-                        <th className="py-2.5 px-3">Direct Phone</th>
-                        <th className="py-2.5 px-3">Company</th>
-                        <th className="py-2.5 px-3">Job Title</th>
-                        <th className="py-2.5 px-3">Intent Score</th>
+                      <tr >
+                        <th >Row No.</th>
+                        <th >Full Name *</th>
+                        <th >Work Email *</th>
+                        <th >Direct Phone</th>
+                        <th >Company</th>
+                        <th >Job Title</th>
+                        <th >Intent Score</th>
                         {customFields.map(cf => (
-                          <th key={cf} className="py-2.5 px-3">{cf}</th>
+                          <th key={cf} >{cf}</th>
                         ))}
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-border/60">
+                    <tbody >
                       {mappedRows.slice(0, 10).map((row, i) => {
                         const hasErrors = validationErrors.some(err => err.row === i + 1);
                         const isDupe = duplicateConflicts.some(err => err.row === i + 1);
@@ -985,27 +973,25 @@ export const SmartCsvImportModal: React.FC<SmartCsvImportModalProps> = ({
                         return (
                           <tr 
                             key={i} 
-                            className={`hover:bg-surface-alt/70 transition-colors ${
-                              isDupe ? "bg-[#f59e0b]/5" : hasErrors ? "bg-rose-500/5" : ""
-                            }`}
+                            
                           >
-                            <td className="py-3 px-3 font-mono text-[9px] font-bold text-text-muted">
+                            <td >
                               {i + 1}
-                              {isDupe && <span className="ml-1 text-[8px] font-bold">[Dupe]</span>}
-                              {hasErrors && <span className="ml-1 text-[8px] text-rose-400 font-bold">[Error]</span>}
+                              {isDupe && <span >[Dupe]</span>}
+                              {hasErrors && <span >[Error]</span>}
                             </td>
-                            <td className={`py-3 px-3 font-semibold${!row.name ? "text-rose-400 italic" : "text-white"}`}>
+                            <td >
                               {row.name || "Missing!"}
                             </td>
-                            <td className={`py-3 px-3 font-mono text-[10px]${!row.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email) ? "text-rose-400 font-bold" : "text-text-muted"}`}>
+                            <td >
                               {row.email || "Missing!"}
                             </td>
-                            <td className="py-3 px-3 text-text-muted font-mono">{row.phone || "—"}</td>
-                            <td className="py-3 px-3 text-text-muted font-medium">{row.company || "—"}</td>
-                            <td className="py-3 px-3 text-text-muted font-medium">{row.role || "—"}</td>
-                            <td className="py-3 px-3 text-text-muted font-mono">{row.score || "60"}</td>
+                            <td >{row.phone || "—"}</td>
+                            <td >{row.company || "—"}</td>
+                            <td >{row.role || "—"}</td>
+                            <td >{row.score || "60"}</td>
                             {customFields.map(cf => (
-                              <td key={cf} className="py-3 px-3 font-medium italic">{row[cf] || "—"}</td>
+                              <td key={cf} >{row[cf] || "—"}</td>
                             ))}
                           </tr>
                         );
@@ -1015,24 +1001,24 @@ export const SmartCsvImportModal: React.FC<SmartCsvImportModalProps> = ({
                 </div>
               </div>
 
-              <div className="flex items-center justify-between border-t border-border/40 pt-5">
+              <div >
                 <button
                   onClick={() => setStep(2)}
-                  className="px-4 py-2 border border-border hover:bg-border text-text-muted hover:text-text rounded-xl font-bold transition-all cursor-pointer"
+                  
                 >
                   Adjust Properties Mapping
                 </button>
-                <div className="flex gap-3">
+                <div >
                   {duplicateConflicts.length > 0 && (
-                    <div className="text-[10px] text-text-muted flex items-center pr-2 font-medium italic">
+                    <div >
                       ⚠ Conflicts will be safely filtered in background.
                     </div>
                   )}
                   <button
                     onClick={handleConfirmImport}
-                    className="px-6 py-2.5 hover:scale-[1.01] rounded-xl font-extrabold flex items-center gap-2 transition-all cursor-pointer"
+                    
                   >
-                    <Play className="w-4.5 h-4.5 fill-current" />
+                    <Play  />
                     Confirm Bulk Sync
                   </button>
                 </div>
@@ -1043,44 +1029,40 @@ export const SmartCsvImportModal: React.FC<SmartCsvImportModalProps> = ({
 
           {/* STEP 4: Live progress stream and log readout (Task 2 Step 6) */}
           {step === 4 && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h4 className="text-[10px] font-bold uppercase tracking-widest text-brand flex items-center gap-1.5">
+            <div >
+              <div >
+                <h4 >
                   {isImporting ? (
                     <>
-                      <Loader2 className="w-4 h-4 text-brand animate-spin" />
+                      <Loader2  />
                       Streaming Transactions Thread
                     </>
                   ) : (
                     <>
-                      <CheckCircle2 className="w-4.5 h-4.5" />
+                      <CheckCircle2  />
                       Prospect Importation Completed Successfully
                     </>
                   )}
                 </h4>
-                <span className="font-mono text-xs font-bold text-brand">{progress}%</span>
+                <span >{progress}%</span>
               </div>
 
               {/* Progress Bar */}
-              <div className="w-full h-2.5 rounded-full overflow-hidden border border-border">
+              <div >
                 <div 
-                  className="h-full transition-all duration-300"
+                  
                   style={{ width: `${progress}%` }}
                 />
               </div>
 
               {/* Import Logs live terminal feed (Task 2 Step 6 terminal) */}
-              <div className="border border-border/85 rounded-xl p-5 h-56 overflow-y-auto font-mono text-[10px] text-text-muted space-y-1.5 custom-scrollbar">
+              <div >
                 {importLogs.map((log, i) => (
                   <div 
                     key={i} 
-                    className={`flex items-start gap-1.5 ${
-                      log.includes('[SUCCESS]') || log.includes('[FINISHED]') ? "text-brand font-bold" :
-                      log.includes('[SYNC]') ? "text-text-muted" :
-                      log.includes('[TEMPLATE]') ? "text-brand-alt" : ""
-                    }`}
+                    
                   >
-                    <span className="opacity-35 leading-none">[{new Date().toLocaleTimeString()}]</span>
+                    <span >[{new Date().toLocaleTimeString()}]</span>
                     <span>{log}</span>
                   </div>
                 ))}
@@ -1088,61 +1070,61 @@ export const SmartCsvImportModal: React.FC<SmartCsvImportModalProps> = ({
 
               {/* Summary metadata statistics inside panel */}
               {importSummary && (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-5 bg-surface border border-border rounded-xl">
+                <div >
                   <div>
-                    <span className="text-[9px] font-bold uppercase tracking-widest block">Import Transaction ID</span>
-                    <span className="font-mono text-[10px] text-text select-all">{importSummary.import_id}</span>
+                    <span >Import Transaction ID</span>
+                    <span >{importSummary.import_id}</span>
                   </div>
                   <div>
-                    <span className="text-[9px] text-text-muted font-bold uppercase tracking-widest block">Total Scanned Rows</span>
-                    <span className="font-mono text-xs font-extrabold text-text">{importSummary.total_rows}</span>
+                    <span >Total Scanned Rows</span>
+                    <span >{importSummary.total_rows}</span>
                   </div>
                   <div>
-                    <span className="text-[9px] text-brand font-bold uppercase tracking-widest block">Success Enrolled</span>
-                    <span className="font-mono text-xs font-extrabold text-brand">{importSummary.success_count} profiles</span>
+                    <span >Success Enrolled</span>
+                    <span >{importSummary.success_count} profiles</span>
                   </div>
                   <div>
-                    <span className="text-[9px] text-rose-400 font-bold uppercase tracking-widest block">Duplicates Skipped</span>
-                    <span className="font-mono text-xs font-extrabold text-rose-400">{importSummary.failed_count} skipped_logs</span>
+                    <span >Duplicates Skipped</span>
+                    <span >{importSummary.failed_count} skipped_logs</span>
                   </div>
                 </div>
               )}
 
               {/* Successfully Uploaded Prospects List (Visible when completed) */}
               {importSummary && finalImportedLeads.length > 0 && (
-                <div className="space-y-3 border border-border/80 rounded-xl p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5 font-bold text-[10px] text-text uppercase tracking-wider">
-                      <span className="w-1.5 h-1.5 rounded-full animate-pulse" />
+                <div >
+                  <div >
+                    <div >
+                      <span  />
                       Uploaded Lead Database List ({finalImportedLeads.length})
                     </div>
-                    <span className="text-[9px] text-text-muted font-bold">Targeted B2B Directory Rows Saved</span>
+                    <span >Targeted B2B Directory Rows Saved</span>
                   </div>
 
-                  <div className="max-h-56 overflow-y-auto border border-border/40 rounded-xl overflow-hidden custom-scrollbar">
-                    <table className="w-full text-left text-[10px] border-collapse">
+                  <div >
+                    <table >
                       <thead>
-                        <tr className="bg-surface border-b border-border/60 text-text-muted font-bold uppercase tracking-wider text-[9px]">
-                          <th className="py-2 px-3">#</th>
-                          <th className="py-2 px-3">Lead Name</th>
-                          <th className="py-2 px-3">Work Email</th>
-                          <th className="py-2 px-3">Phone Number</th>
-                          <th className="py-2 px-3">Company & Role</th>
-                          <th className="py-2 px-3">Score</th>
+                        <tr >
+                          <th >#</th>
+                          <th >Lead Name</th>
+                          <th >Work Email</th>
+                          <th >Phone Number</th>
+                          <th >Company & Role</th>
+                          <th >Score</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-border/20">
+                      <tbody >
                         {finalImportedLeads.map((row, idx) => (
-                          <tr key={idx} className="hover:bg-white/[0.01] transition-colors">
-                            <td className="py-1.5 px-3 text-text-muted font-mono">{idx + 1}</td>
-                            <td className="py-1.5 px-3 font-semibold text-text">{row.name || "—"}</td>
-                            <td className="py-1.5 px-3 font-mono text-[9px] text-brand-alt">{row.email || "—"}</td>
-                            <td className="py-1.5 px-3 text-text-muted font-mono">{row.phone || "—"}</td>
-                            <td className="py-1.5 px-3 text-text-muted">
-                              <span className="text-text font-medium">{row.company || "—"}</span>
-                              {row.role && <span className="block text-[8px] opacity-60 font-semibold">{row.role}</span>}
+                          <tr key={idx} >
+                            <td >{idx + 1}</td>
+                            <td >{row.name || "—"}</td>
+                            <td >{row.email || "—"}</td>
+                            <td >{row.phone || "—"}</td>
+                            <td >
+                              <span >{row.company || "—"}</span>
+                              {row.role && <span >{row.role}</span>}
                             </td>
-                            <td className="py-1.5 px-3 font-mono font-bold text-brand">{row.score || 60}</td>
+                            <td >{row.score || 60}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -1152,10 +1134,10 @@ export const SmartCsvImportModal: React.FC<SmartCsvImportModalProps> = ({
               )}
 
               {!isImporting && (
-                <div className="flex justify-end pt-3">
+                <div >
                   <button
                     onClick={onClose}
-                    className="px-6 py-2.5 bg-brand hover:scale-[1.01] rounded-xl font-extrabold transition-all cursor-pointer"
+                    
                   >
                     Dismiss Wizard & Load Dashboard
                   </button>

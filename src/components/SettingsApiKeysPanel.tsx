@@ -257,41 +257,41 @@ export const SettingsApiKeysPanel: React.FC<SettingsApiKeysPanelProps> = ({ show
   };
 
   return (
-    <div className="space-y-10 text-xs">
+    <div >
       
       {/* 1. Developer API Credentials */}
-      <div className="bg-surface border border-border rounded-xl p-6 md:p-8 space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="space-y-1">
-            <h3 className="text-sm font-extrabold text-text flex items-center gap-2">
-              <Key className="w-4.5 h-4.5 text-brand" />
+      <div >
+        <div >
+          <div >
+            <h3 >
+              <Key  />
               REST API keys Credential Store
             </h3>
-            <p className="text-[10px] text-text-muted">
+            <p >
               Spawn secret access credentials to query leads catalog, sync campaigns, or triggers from exterior clients.
             </p>
           </div>
         </div>
 
         {/* Create Form */}
-        <form onSubmit={handleGenerateApiKey} className="flex flex-col sm:flex-row gap-4 p-5 border border-border/70 rounded-xl">
-          <div className="flex-1 space-y-1.5">
-            <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted">API Client Label Name</label>
+        <form onSubmit={handleGenerateApiKey} >
+          <div >
+            <label >API Client Label Name</label>
             <input 
               type="text"
               placeholder="e.g. Zentra Zapier Integration, Dev-Client Outpost"
               value={newKeyName}
               onChange={(e) => setNewKeyName(e.target.value)}
-              className="w-full px-3.5 py-3 border border-border hover:border-brand rounded-xl font-bold font-sans text-xs focus:outline-none focus:border-brand"
+              
             />
           </div>
-          <div className="flex items-end shrink-0">
+          <div >
             <button
               type="submit"
               disabled={isGenerating || !newKeyName.trim()}
-              className="w-full sm:w-auto px-5 py-3.5 bg-brand hover:bg-brand/90 font-extrabold rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+              
             >
-              <Plus className="w-4 h-4 stroke-[3]" />
+              <Plus  />
               Generate API Key
             </button>
           </div>
@@ -299,46 +299,46 @@ export const SettingsApiKeysPanel: React.FC<SettingsApiKeysPanelProps> = ({ show
 
         {/* Copy Area for new plain text key */}
         {createdKeyPlain && (
-          <div className="p-5 bg-emerald-500/5 border border-emerald-500/20 text-emerald-400 rounded-xl space-y-3">
-            <div className="flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-              <span className="font-bold text-[10px] uppercase tracking-widest">Backup your raw credentials secret:</span>
+          <div >
+            <div >
+              <span  />
+              <span >Backup your raw credentials secret:</span>
             </div>
-            <p className="text-[10px] text-text-muted font-medium leading-relaxed">
+            <p >
               This API token is stored securely after hashing. For safety, this plain secret token **will not be accessible again**.
             </p>
-            <div className="flex items-center justify-between p-3.5 border border-border rounded-xl">
-              <span className="font-mono text-xs select-all text-text font-extrabold tracking-wide">{createdKeyPlain}</span>
-              <span className="text-[9px] text-brand border border-border bg-brand/5 px-2 py-0.5 rounded-xl ml-3">Copied to Clipboard</span>
+            <div >
+              <span >{createdKeyPlain}</span>
+              <span >Copied to Clipboard</span>
             </div>
           </div>
         )}
 
         {/* Existing keys list */}
-        <div className="space-y-3">
-          <h4 className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Currently Active Credentials</h4>
-          <div className="border border-border rounded-xl overflow-hidden divide-y divide-border/40">
+        <div >
+          <h4 >Currently Active Credentials</h4>
+          <div >
             {apiKeys.length === 0 ? (
-              <div className="p-6 text-center text-text-muted italic">
+              <div >
                 No active external developer tokens generated. Standard sandbox operates in OAuth browser modes.
               </div>
             ) : (
               apiKeys.map((k) => (
-                <div key={k.id} className="p-4 flex items-center justify-between hover:bg-surface-alt/25 transition-all">
-                  <div className="space-y-1">
-                    <span className="font-bold text-text text-xs block">{k.name}</span>
-                    <div className="flex items-center gap-4 text-[9px] text-text-muted font-mono uppercase">
-                      <span>Prefix: <span className="text-brand font-semibold select-all">{k.keyPrefix}</span></span>
+                <div key={k.id} >
+                  <div >
+                    <span >{k.name}</span>
+                    <div >
+                      <span>Prefix: <span >{k.keyPrefix}</span></span>
                       <span>•</span>
                       <span>Created: {new Date(k.createdAt).toLocaleDateString()}</span>
                     </div>
                   </div>
                   <button
                     onClick={() => handleDeleteApiKey(k.id, k.name)}
-                    className="w-8 h-8 rounded-xl border border-rose-500/35 hover:bg-rose-500/10 text-rose-400 flex items-center justify-center transition-all cursor-pointer"
+                    
                     title="Revoke Token Keys"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2  />
                   </button>
                 </div>
               ))
@@ -348,38 +348,38 @@ export const SettingsApiKeysPanel: React.FC<SettingsApiKeysPanelProps> = ({ show
       </div>
 
       {/* 2. Webhooks Configuration and deliveries */}
-      <div className="bg-surface border border-border rounded-xl p-6 md:p-8 space-y-6">
-        <div className="space-y-1">
-          <h3 className="text-sm font-extrabold text-text flex items-center gap-2">
-            <Globe className="w-4.5 h-4.5" />
+      <div >
+        <div >
+          <h3 >
+            <Globe  />
             Outbound Real-Time Webhook Subscriptions
           </h3>
-          <p className="text-[10px] text-text-muted">
+          <p >
             Configure target webhook endpoints to listen dynamically for platform events: created target leads, scoring stage deals updates, or failed CRM integrations syncs.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div >
           
           {/* Create webhook panel */}
-          <form onSubmit={handleCreateWebhook} className="lg:col-span-5 space-y-4 p-5 border border-border/70 rounded-xl h-fit">
-            <h4 className="text-[10px] font-bold uppercase tracking-widest border-b border-border/40 pb-2 mb-2">Register Endpoint</h4>
+          <form onSubmit={handleCreateWebhook} >
+            <h4 >Register Endpoint</h4>
             
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted block">Destination Url</label>
+            <div >
+              <label >Destination Url</label>
               <input
                 type="url"
                 placeholder="https://your-crm.inbound-webhooks/leads"
                 required
                 value={targetUrl}
                 onChange={(e) => setTargetUrl(e.target.value)}
-                className="w-full px-3 py-2 border border-border hover:border-brand rounded-xl font-mono text-[10px] text-text focus:outline-none"
+                
               />
             </div>
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted block">Select Subscription Triggers</label>
-              <div className="space-y-2">
+            <div >
+              <label >Select Subscription Triggers</label>
+              <div >
                 {[
                   { key: "lead.created", label: "Lead created", desc: "Triggers on manual REST or mapped excel import leads additions" },
                   { key: "lead.updated", label: "Lead parameters modified", desc: "Triggers on campaign updates, ratings changes" },
@@ -388,16 +388,16 @@ export const SettingsApiKeysPanel: React.FC<SettingsApiKeysPanelProps> = ({ show
                 ].map((ev) => {
                   const checked = selectedEvents.includes(ev.key);
                   return (
-                    <label key={ev.key} className="flex items-start gap-2.5 p-2 border border-border/40 hover:border-border rounded-xl cursor-pointer transition-colors block">
+                    <label key={ev.key} >
                       <input
                         type="checkbox"
                         checked={checked}
                         onChange={() => handleToggleEvent(ev.key)}
-                        className="rounded-xl border-border text-brand focus:ring-0 mt-0.5 h-4.5 w-4.5 shrink-0"
+                        
                       />
                       <div>
-                        <span className="font-bold text-text block text-[10px]">{ev.label}</span>
-                        <span className="text-[9px] text-text-muted leading-relaxed font-mono block">{ev.key}</span>
+                        <span >{ev.label}</span>
+                        <span >{ev.key}</span>
                       </div>
                     </label>
                   );
@@ -408,31 +408,31 @@ export const SettingsApiKeysPanel: React.FC<SettingsApiKeysPanelProps> = ({ show
             <button
               type="submit"
               disabled={isCreatingWebhook || !targetUrl.trim()}
-              className="w-full py-2.5 font-extrabold rounded-xl transition-all cursor-pointer disabled:opacity-40"
+              
             >
               Add Outbound Gateway
             </button>
           </form>
 
           {/* Connected Webhooks and dynamic logs */}
-          <div className="lg:col-span-7 space-y-6">
-            <div className="space-y-3.5">
-              <h4 className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Registered Webhook Targets</h4>
-              <div className="border border-border rounded-xl overflow-hidden divide-y divide-border/40">
+          <div >
+            <div >
+              <h4 >Registered Webhook Targets</h4>
+              <div >
                 {webhooks.length === 0 ? (
-                  <div className="p-5 text-center text-text-muted italic">
+                  <div >
                     No outbound webhook endpoints connected. Outbound CRM events are skipped.
                   </div>
                 ) : (
                   webhooks.map((w) => (
-                    <div key={w.id} className="p-4 flex items-center justify-between gap-4">
-                      <div className="space-y-1.5 truncate">
-                        <span className="font-mono text-[10px] text-text truncate block" title={w.url}>
+                    <div key={w.id} >
+                      <div >
+                        <span  title={w.url}>
                           {w.url}
                         </span>
-                        <div className="flex flex-wrap gap-1">
+                        <div >
                           {w.events.map(ev => (
-                            <span key={ev} className="px-1.5 py-0.5 border text-[8px] font-mono rounded-xl">
+                            <span key={ev} >
                               {ev}
                             </span>
                           ))}
@@ -440,9 +440,9 @@ export const SettingsApiKeysPanel: React.FC<SettingsApiKeysPanelProps> = ({ show
                       </div>
                       <button
                         onClick={() => handleDeleteWebhook(w.id)}
-                        className="w-8 h-8 rounded-xl hover:bg-rose-500/10 text-rose-400 flex items-center justify-center transition-all cursor-pointer hover:border-red-500 border border-border"
+                        
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Trash2  />
                       </button>
                     </div>
                   ))
@@ -452,25 +452,25 @@ export const SettingsApiKeysPanel: React.FC<SettingsApiKeysPanelProps> = ({ show
 
             {/* Simulated payload dispatcher triggers tests */}
             {webhooks.length > 0 && (
-              <div className="p-4 border border-border/80 rounded-xl space-y-3">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-brand block">Webhook Delivery Testing Suite</span>
-                <p className="text-[9px] text-text-muted">Click triggers below to dispatch mock events instantly over live webhook queues.</p>
-                <div className="flex flex-wrap gap-2.5">
+              <div >
+                <span >Webhook Delivery Testing Suite</span>
+                <p >Click triggers below to dispatch mock events instantly over live webhook queues.</p>
+                <div >
                   <button 
                     onClick={() => handleTriggerMockWebhookEvent("lead.created")}
-                    className="px-2.5 py-1.5 bg-surface font-semibold border border-border hover:border-[#00d4aa] rounded-xl text-[9px] transition-all cursor-pointer text-text"
+                    
                   >
                     🚀 Trigger Lead Created Event
                   </button>
                   <button 
                     onClick={() => handleTriggerMockWebhookEvent("deal.stage_changed")}
-                    className="px-2.5 py-1.5 bg-surface font-semibold border border-border hover:border-[#00d4aa] rounded-xl text-[9px] transition-all cursor-pointer text-text"
+                    
                   >
                     🤝 Trigger Deal Changed Event
                   </button>
                   <button 
                     onClick={() => handleTriggerMockWebhookEvent("crm.sync_failed")}
-                    className="px-2.5 py-1.5 bg-surface font-semibold border border-border hover:border-rose-500/40 rounded-xl text-[9px] transition-all cursor-pointer text-text"
+                    
                   >
                     🚨 Trigger CRM Sync Failed Event
                   </button>
@@ -481,24 +481,24 @@ export const SettingsApiKeysPanel: React.FC<SettingsApiKeysPanelProps> = ({ show
         </div>
 
         {/* 3. Delivery Logs Panel with live retry checks */}
-        <div className="space-y-3 border-t border-border/40 pt-6">
-          <div className="flex items-center justify-between">
-            <h4 className="text-[10px] font-bold uppercase tracking-widest text-text-muted">
+        <div >
+          <div >
+            <h4 >
               Webhook Delivery Logs Feed (Exponential retry logs - max 3 attempts)
             </h4>
             <button
               onClick={fetchWebhookLogs}
               disabled={isRefreshingLogs}
-              className="text-[9px] font-bold text-brand hover:underline flex items-center gap-1 cursor-pointer bg-transparent border-none"
+              
             >
-              <RefreshCw className={`w-3 h-3${isRefreshingLogs ? "animate-spin" : ""}`} />
+              <RefreshCw  />
               Reload Logs feed
             </button>
           </div>
 
-          <div className="border border-border rounded-xl overflow-hidden overflow-y-auto max-h-56 divide-y divide-border/50 font-mono text-[10px] custom-scrollbar">
+          <div >
             {webhookLogs.length === 0 ? (
-              <div className="p-6 text-center text-text-muted italic font-sans">
+              <div >
                 No outbound events dispatched. Trigger catalog events to output execution logs.
               </div>
             ) : (
@@ -507,38 +507,38 @@ export const SettingsApiKeysPanel: React.FC<SettingsApiKeysPanelProps> = ({ show
                 const dateText = new Date(log.lastAttemptAt).toLocaleTimeString();
                 
                 return (
-                  <div key={log.id} className="p-3 bg-surface-alt/10 hover:bg-surface-alt/45 transition-all flex flex-col md:flex-row md:items-center justify-between gap-3 text-[10px]">
-                    <div className="space-y-1.5 max-w-xl">
-                      <div className="flex items-center gap-2">
+                  <div key={log.id} >
+                    <div >
+                      <div >
                         {isSuccess ? (
-                          <span className="inline-flex items-center gap-1 text-emerald-400 font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded-xl text-[8px] uppercase">
-                            <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                          <span >
+                            <CheckCircle2  />
                             Success (200 OK)
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 text-rose-400 font-bold bg-rose-500/10 px-1.5 py-0.5 rounded-xl text-[8px] uppercase">
-                            <XCircle className="w-3 h-3 text-rose-400" />
+                          <span >
+                            <XCircle  />
                             Dispatch Failed
                           </span>
                         )}
-                        <span className="text-text font-bold">{log.event}</span>
-                        <span className="text-text-muted shrink-0 text-[8px]">ID: {log.eventId}</span>
+                        <span >{log.event}</span>
+                        <span >ID: {log.eventId}</span>
                       </div>
                       
-                      <div className="text-[9px] text-text-muted leading-relaxed truncate max-w-md">
-                        Payload: <span className="text-text select-all">{log.payload}</span>
+                      <div >
+                        Payload: <span >{log.payload}</span>
                       </div>
 
                       {log.responseBody && (
-                        <div className="text-[9px] text-text-muted p-1.5 rounded-xl border border-border/40 font-mono leading-relaxed mt-1">
-                          Response: <span className="text-brand-alt">{log.responseBody}</span>
+                        <div >
+                          Response: <span >{log.responseBody}</span>
                         </div>
                       )}
                     </div>
 
-                    <div className="flex md:flex-col items-end shrink-0 gap-3 text-right">
-                      <span className="text-[9px] text-text-muted">Last Try: {dateText}</span>
-                      <span className="text-[8px] px-1.5 py-0.5 bg-surface border border-border rounded-xl font-bold text-text uppercase tracking-wider block">
+                    <div >
+                      <span >Last Try: {dateText}</span>
+                      <span >
                         Attempts: {log.attempts} / 3 {log.attempts >= 3 && !isSuccess ? " [EXPIRED]" : ""}
                       </span>
                     </div>
@@ -552,44 +552,44 @@ export const SettingsApiKeysPanel: React.FC<SettingsApiKeysPanelProps> = ({ show
       </div>
 
       {/* 3. Integration Service Settings */}
-      <div className="bg-surface border border-border rounded-xl p-6 md:p-8 space-y-6">
-        <div className="space-y-1">
-          <h3 className="text-sm font-extrabold text-text flex items-center gap-2 font-sans">
-            <Settings className="w-4.5 h-4.5 text-brand" />
+      <div >
+        <div >
+          <h3 >
+            <Settings  />
             External Services & Docker Integration Config
           </h3>
-          <p className="text-[10px] text-text-muted">
+          <p >
             Configure local URLs and security keys for Listmonk email outreach, Whisper audio transcriptions, n8n orchestrations, and Meilisearch engine.
           </p>
         </div>
 
-        <form onSubmit={handleSaveServiceSettings} className="space-y-6 p-5 border border-border/70 rounded-xl">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 font-sans">
+        <form onSubmit={handleSaveServiceSettings} >
+          <div >
             
             {/* Listmonk Config */}
-            <div className="space-y-3 p-4 border border-border/50 rounded-xl">
-              <h4 className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5">
-                <Mail className="w-3.5 h-3.5" />
+            <div >
+              <h4 >
+                <Mail  />
                 Listmonk (Email)
               </h4>
-              <div className="space-y-2">
+              <div >
                 <div>
-                  <label className="text-[9px] font-bold uppercase tracking-widest text-text-muted block mb-1">Service URL</label>
+                  <label >Service URL</label>
                   <input
                     type="url"
                     value={listmonkUrl}
                     onChange={(e) => setListmonkUrl(e.target.value)}
-                    className="w-full px-3 py-2 bg-surface border border-border hover:border-brand rounded-xl font-mono text-[10px] text-text focus:outline-none"
+                    
                     placeholder="http://localhost:9000"
                   />
                 </div>
                 <div>
-                  <label className="text-[9px] font-bold uppercase tracking-widest text-text-muted block mb-1">API Key / Token</label>
+                  <label >API Key / Token</label>
                   <input
                     type="password"
                     value={listmonkApiKey}
                     onChange={(e) => setListmonkApiKey(e.target.value)}
-                    className="w-full px-3 py-2 bg-surface border border-border hover:border-brand rounded-xl font-mono text-[10px] text-text focus:outline-none"
+                    
                     placeholder="••••••••••••••••"
                   />
                 </div>
@@ -597,19 +597,19 @@ export const SettingsApiKeysPanel: React.FC<SettingsApiKeysPanelProps> = ({ show
             </div>
 
             {/* Whisper Config */}
-            <div className="space-y-3 p-4 border border-border/50 rounded-xl">
-              <h4 className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5">
-                <Mic className="w-3.5 h-3.5" />
+            <div >
+              <h4 >
+                <Mic  />
                 Whisper.cpp (Transcription)
               </h4>
-              <div className="space-y-2">
+              <div >
                 <div>
-                  <label className="text-[9px] font-bold uppercase tracking-widest text-text-muted block mb-1">Service URL</label>
+                  <label >Service URL</label>
                   <input
                     type="url"
                     value={whisperUrl}
                     onChange={(e) => setWhisperUrl(e.target.value)}
-                    className="w-full px-3 py-2 bg-surface border border-border hover:border-brand rounded-xl font-mono text-[10px] text-text focus:outline-none"
+                    
                     placeholder="http://localhost:8178"
                   />
                 </div>
@@ -617,19 +617,19 @@ export const SettingsApiKeysPanel: React.FC<SettingsApiKeysPanelProps> = ({ show
             </div>
 
             {/* n8n Workflows Config */}
-            <div className="space-y-3 p-4 border border-border/50 rounded-xl">
-              <h4 className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5">
-                <Webhook className="w-3.5 h-3.5" />
+            <div >
+              <h4 >
+                <Webhook  />
                 n8n Webhook
               </h4>
-              <div className="space-y-2">
+              <div >
                 <div>
-                  <label className="text-[9px] font-bold uppercase tracking-widest text-text-muted block mb-1">Webhook URL</label>
+                  <label >Webhook URL</label>
                   <input
                     type="url"
                     value={n8nWebhookUrl}
                     onChange={(e) => setN8nWebhookUrl(e.target.value)}
-                    className="w-full px-3 py-2 bg-surface border border-border hover:border-brand rounded-xl font-mono text-[10px] text-text focus:outline-none"
+                    
                     placeholder="http://localhost:5678"
                   />
                 </div>
@@ -637,29 +637,29 @@ export const SettingsApiKeysPanel: React.FC<SettingsApiKeysPanelProps> = ({ show
             </div>
 
             {/* Meilisearch Config */}
-            <div className="space-y-3 p-4 border border-border/50 rounded-xl">
-              <h4 className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5">
-                <Search className="w-3.5 h-3.5" />
+            <div >
+              <h4 >
+                <Search  />
                 Meilisearch (Search Index)
               </h4>
-              <div className="space-y-2">
+              <div >
                 <div>
-                  <label className="text-[9px] font-bold uppercase tracking-widest text-text-muted block mb-1">Service URL</label>
+                  <label >Service URL</label>
                   <input
                     type="url"
                     value={meilisearchUrl}
                     onChange={(e) => setMeilisearchUrl(e.target.value)}
-                    className="w-full px-3 py-2 bg-surface border border-border hover:border-brand rounded-xl font-mono text-[10px] text-text focus:outline-none"
+                    
                     placeholder="http://localhost:7700"
                   />
                 </div>
                 <div>
-                  <label className="text-[9px] font-bold uppercase tracking-widest text-text-muted block mb-1">Master Key</label>
+                  <label >Master Key</label>
                   <input
                     type="password"
                     value={meilisearchKey}
                     onChange={(e) => setMeilisearchKey(e.target.value)}
-                    className="w-full px-3 py-2 bg-surface border border-border hover:border-brand rounded-xl font-mono text-[10px] text-text focus:outline-none"
+                    
                     placeholder="••••••••••••••••"
                   />
                 </div>
@@ -668,12 +668,12 @@ export const SettingsApiKeysPanel: React.FC<SettingsApiKeysPanelProps> = ({ show
 
           </div>
 
-          <div className="flex justify-end border-t border-border/40 pt-4">
+          <div >
             <button
               type="submit"
-              className="px-5 py-2.5 bg-brand hover:bg-brand/90 font-extrabold rounded-xl transition-all cursor-pointer flex items-center gap-1.5 text-xs"
+              
             >
-              <Check className="w-4 h-4 stroke-[3]" />
+              <Check  />
               Save Integration Overrides
             </button>
           </div>

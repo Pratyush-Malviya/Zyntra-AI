@@ -39,27 +39,27 @@ export default function TranscriptViewer({ meeting, onToggleActionItem }: Transc
   const totalActions = meeting.actionItems?.length || 0;
 
   return (
-    <div className="space-y-4">
+    <div >
 
       {/* Summary Card */}
       <Section
         title="AI Meeting Summary"
-        icon={<Brain className="w-4 h-4 text-violet-400" />}
+        icon={<Brain  />}
         open={sections.summary}
         onToggle={() => toggle('summary')}
         badge={meeting.processingStatus === 'complete' ? '✓ Complete' : undefined}
         badgeColor="#10b981"
       >
         {meeting.summary ? (
-          <p className="text-sm text-text-secondary leading-relaxed">{meeting.summary}</p>
+          <p >{meeting.summary}</p>
         ) : (
-          <p className="text-sm text-text-secondary italic">Upload a recording and run AI analysis to generate a summary.</p>
+          <p >Upload a recording and run AI analysis to generate a summary.</p>
         )}
 
         {meeting.nextStep && (
-          <div className="mt-3 p-3 rounded-xl bg-primary/10 border border-primary/20">
-            <div className="text-xs font-bold text-primary uppercase tracking-wider mb-1">Recommended Next Step</div>
-            <div className="text-sm text-text">{meeting.nextStep}</div>
+          <div >
+            <div >Recommended Next Step</div>
+            <div >{meeting.nextStep}</div>
           </div>
         )}
       </Section>
@@ -68,27 +68,27 @@ export default function TranscriptViewer({ meeting, onToggleActionItem }: Transc
       {meeting.bantScore && meeting.bantSignals && (
         <Section
           title="BANT Qualification Signals"
-          icon={<TrendingUp className="w-4 h-4 text-emerald-400" />}
+          icon={<TrendingUp  />}
           open={sections.bant}
           onToggle={() => toggle('bant')}
           badge={`Score: ${meeting.bantScore}`}
           badgeColor={BANT_SCORE_CONFIG[meeting.bantScore].color}
         >
-          <div className="grid grid-cols-2 gap-3">
+          <div >
             {[
               { key: 'Budget', icon: '💰', data: meeting.bantSignals.budget, signalKey: 'signal' },
               { key: 'Authority', icon: '👑', data: meeting.bantSignals.authority, signalKey: 'influencerLevel' },
               { key: 'Need', icon: '🎯', data: meeting.bantSignals.need, signalKey: 'urgency' },
               { key: 'Timeline', icon: '⏰', data: meeting.bantSignals.timeline, signalKey: 'timeframe' },
             ].map(({ key, icon, data, signalKey }) => (
-              <div key={key} className="p-3 rounded-xl bg-surface-elevated border border-border">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-bold text-text-secondary uppercase tracking-wider">{icon} {key}</span>
-                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">
+              <div key={key} >
+                <div >
+                  <span >{icon} {key}</span>
+                  <span >
                     {(data as any)[signalKey] || 'unknown'}
                   </span>
                 </div>
-                <p className="text-xs text-text-secondary leading-relaxed">
+                <p >
                   {(data as any).evidence || (data as any).notes || 'Signal extracted from call'}
                 </p>
               </div>
@@ -96,14 +96,14 @@ export default function TranscriptViewer({ meeting, onToggleActionItem }: Transc
           </div>
 
           {meeting.bantSignals.authority.otherStakeholders?.length > 0 && (
-            <div className="mt-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
-              <div className="flex items-center gap-2 mb-1">
-                <Users className="w-3.5 h-3.5 text-amber-400" />
-                <span className="text-xs font-bold text-amber-400">Other Stakeholders Involved</span>
+            <div >
+              <div >
+                <Users  />
+                <span >Other Stakeholders Involved</span>
               </div>
-              <div className="flex flex-wrap gap-1">
+              <div >
                 {meeting.bantSignals.authority.otherStakeholders.map((s, i) => (
-                  <span key={i} className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">{s}</span>
+                  <span key={i} >{s}</span>
                 ))}
               </div>
             </div>
@@ -115,18 +115,18 @@ export default function TranscriptViewer({ meeting, onToggleActionItem }: Transc
       {meeting.actionItems && meeting.actionItems.length > 0 && (
         <Section
           title="Action Items"
-          icon={<CheckCircle2 className="w-4 h-4 text-emerald-400" />}
+          icon={<CheckCircle2  />}
           open={sections.actions}
           onToggle={() => toggle('actions')}
           badge={`${completedActions}/${totalActions}`}
           badgeColor={completedActions === totalActions ? '#10b981' : '#6366f1'}
         >
-          <div className="space-y-2">
+          <div >
             {/* Progress bar */}
             {totalActions > 0 && (
-              <div className="h-1.5 bg-surface-elevated rounded-full overflow-hidden mb-3">
+              <div >
                 <motion.div
-                  className="h-full rounded-full bg-emerald-500"
+                  
                   initial={{ width: 0 }}
                   animate={{ width: `${(completedActions / totalActions) * 100}%` }}
                 />
@@ -135,27 +135,21 @@ export default function TranscriptViewer({ meeting, onToggleActionItem }: Transc
             {meeting.actionItems.map((item, idx) => (
               <div
                 key={idx}
-                className={`flex items-start gap-3 p-3 rounded-xl border transition-colors cursor-pointer ${
-                  item.completed
-                    ? 'bg-emerald-500/5 border-emerald-500/20 opacity-60'
-                    : 'bg-surface-elevated border-border hover:border-primary/40'
-                }`}
+                
                 onClick={() => onToggleActionItem(idx)}
               >
-                <div className={`mt-0.5 w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors ${
-                  item.completed ? 'border-emerald-500 bg-emerald-500' : 'border-border'
-                }`}>
-                  {item.completed && <CheckCircle2 className="w-3 h-3 text-text" />}
+                <div >
+                  {item.completed && <CheckCircle2  />}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className={`text-sm${item.completed ? 'line-through text-text-secondary' : 'text-text'}`}>
+                <div >
+                  <div >
                     {item.task}
                   </div>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-[10px] text-text-secondary">{item.owner}</span>
+                  <div >
+                    <span >{item.owner}</span>
                     {item.dueDate && (
-                      <span className="flex items-center gap-0.5 text-[10px] text-text-secondary">
-                        <Calendar className="w-3 h-3" />
+                      <span >
+                        <Calendar  />
                         {item.dueDate}
                       </span>
                     )}
@@ -171,23 +165,23 @@ export default function TranscriptViewer({ meeting, onToggleActionItem }: Transc
       {meeting.painConfirmed && meeting.painConfirmed.length > 0 && (
         <Section
           title="Pain Points Confirmed"
-          icon={<Tag className="w-4 h-4 text-rose-400" />}
+          icon={<Tag  />}
           open={sections.objections}
           onToggle={() => toggle('objections')}
         >
-          <div className="flex flex-wrap gap-2">
+          <div >
             {meeting.painConfirmed.map((pain, i) => (
-              <span key={i} className="text-xs px-3 py-1.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20">
+              <span key={i} >
                 {pain}
               </span>
             ))}
           </div>
           {meeting.objectionsRaised && meeting.objectionsRaised.length > 0 && (
             <>
-              <div className="text-xs font-bold text-text-secondary uppercase tracking-wider mt-3 mb-2">Objections Raised</div>
-              <div className="flex flex-wrap gap-2">
+              <div >Objections Raised</div>
+              <div >
                 {meeting.objectionsRaised.map((obj, i) => (
-                  <span key={i} className="text-xs px-3 py-1.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                  <span key={i} >
                     ⚠️ {obj}
                   </span>
                 ))}
@@ -201,14 +195,14 @@ export default function TranscriptViewer({ meeting, onToggleActionItem }: Transc
       {meeting.followUpEmailDraft && (
         <Section
           title="AI-Drafted Follow-Up Email"
-          icon={<Mail className="w-4 h-4 text-blue-400" />}
+          icon={<Mail  />}
           open={sections.email}
           onToggle={() => toggle('email')}
           badge={copied ? '✓ Copied!' : 'Copy'}
           badgeColor={copied ? '#10b981' : '#6366f1'}
           onBadgeClick={copyEmail}
         >
-          <pre className="text-sm text-text-secondary whitespace-pre-wrap font-sans leading-relaxed bg-surface-elevated p-4 rounded-xl border border-border">
+          <pre >
             {meeting.followUpEmailDraft}
           </pre>
         </Section>
@@ -218,14 +212,14 @@ export default function TranscriptViewer({ meeting, onToggleActionItem }: Transc
       {meeting.transcript && (
         <Section
           title="Full Transcript"
-          icon={<FileText className="w-4 h-4 text-text-secondary" />}
+          icon={<FileText  />}
           open={sections.transcript}
           onToggle={() => toggle('transcript')}
           badge={`${Math.round(meeting.transcript.length / 5)} words`}
           badgeColor="#64748b"
         >
-          <div className="bg-surface-elevated rounded-xl p-4 border border-border max-h-96 overflow-y-auto">
-            <p className="text-sm text-text-secondary leading-relaxed whitespace-pre-wrap font-mono text-xs">
+          <div >
+            <p >
               {meeting.transcript}
             </p>
           </div>
@@ -250,33 +244,33 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <div className="card overflow-hidden">
+    <div >
       <button
         onClick={onToggle}
-        className="w-full flex items-center justify-between p-4 hover:bg-surface-elevated transition-colors"
+        
       >
-        <div className="flex items-center gap-2.5">
+        <div >
           {icon}
-          <span className="text-sm font-semibold text-text">{title}</span>
+          <span >{title}</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div >
           {badge && (
             <span
-              className="text-[10px] font-bold px-2 py-0.5 rounded-full cursor-pointer hover:opacity-80 transition-opacity"
+              
               style={{ background: badgeColor + '20', color: badgeColor }}
               onClick={e => { if (onBadgeClick) { e.stopPropagation(); onBadgeClick(); } }}
             >
               {badge}
             </span>
           )}
-          {open ? <ChevronUp className="w-4 h-4 text-text-secondary" /> : <ChevronDown className="w-4 h-4 text-text-secondary" />}
+          {open ? <ChevronUp  /> : <ChevronDown  />}
         </div>
       </button>
       {open && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="px-4 pb-4"
+          
         >
           {children}
         </motion.div>

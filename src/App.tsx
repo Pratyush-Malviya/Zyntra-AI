@@ -254,7 +254,7 @@ const PanelWrapper = ({ children, index, activePanel }: { children: React.ReactN
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2 }}
-      className="space-y-6"
+      
     >
       {children}
     </motion.div>
@@ -290,62 +290,62 @@ const ReviewCard: React.FC<{
   };
 
   return (
-    <div className="bg-surface border border-border rounded-xl overflow-hidden mb-4">
-      <div className="p-4 flex justify-between items-start border-b border-border">
+    <div >
+      <div >
         <div>
-          <div className="font-bold text-[14px]">{lead.name}</div>
-          <div className="text-[11px] text-text-muted mt-0.5">{lead.role}{lead.company ? ` @ ${lead.company}` : ''}</div>
+          <div >{lead.name}</div>
+          <div >{lead.role}{lead.company ? ` @ ${lead.company}` : ''}</div>
         </div>
-        <div className="flex gap-1 shrink-0 ml-2">
-          <span className="px-2 py-0.5 rounded-full bg-whatsapp/15 text-whatsapp text-[10px] font-bold uppercase">WA</span>
-          <span className="px-2 py-0.5 rounded-full bg-linkedin/15 text-linkedin text-[10px] font-bold uppercase">LI</span>
-          <span className="px-2 py-0.5 rounded-full bg-email/15 text-email text-[10px] font-bold uppercase">EM</span>
+        <div >
+          <span >WA</span>
+          <span >LI</span>
+          <span >EM</span>
         </div>
       </div>
       
-      <div className="flex border-b border-border">
-        <button onClick={() => setActiveTab('wa')} className={`flex-1 py-2.5 text-center text-[12px] font-semibold transition-all border-b-2${activeTab === 'wa' ? 'text-whatsapp border-whatsapp' : 'text-text-muted border-transparent'}`}>📱 WA</button>
-        <button onClick={() => setActiveTab('li')} className={`flex-1 py-2.5 text-center text-[12px] font-semibold transition-all border-b-2${activeTab === 'li' ? 'text-linkedin border-linkedin' : 'text-text-muted border-transparent'}`}>💼 LI</button>
-        <button onClick={() => setActiveTab('em')} className={`flex-1 py-2.5 text-center text-[12px] font-semibold transition-all border-b-2${activeTab === 'em' ? 'text-email border-email' : 'text-text-muted border-transparent'}`}>✉️ EM</button>
+      <div >
+        <button onClick={() => setActiveTab('wa')} >📱 WA</button>
+        <button onClick={() => setActiveTab('li')} >💼 LI</button>
+        <button onClick={() => setActiveTab('em')} >✉️ EM</button>
       </div>
 
-      <div className="p-4">
+      <div >
         {activeTab === 'wa' && (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="text-[10px] font-bold text-whatsapp uppercase tracking-wider">WhatsApp · Day 6</div>
-              <button onClick={handleSendWhatsApp} className="p-2 rounded-xl bg-whatsapp/10 text-whatsapp hover:bg-whatsapp hover:text-white transition-all"><Send className="w-3.5 h-3.5" /></button>
+          <div >
+            <div >
+              <div >WhatsApp · Day 6</div>
+              <button onClick={handleSendWhatsApp} ><Send  /></button>
             </div>
             <div 
               contentEditable 
               onBlur={e => onUpdate('whatsapp', e.currentTarget.innerText)}
-              className="border-l-4 border-whatsapp rounded-xl p-3 text-sm leading-relaxed outline-none min-h-[60px]"
+              
               dangerouslySetInnerHTML={{ __html: msg.whatsapp }}
             />
-            <div className="text-[10px] text-text-muted leading-relaxed">Max 100 words · No links · Tap to edit</div>
+            <div >Max 100 words · No links · Tap to edit</div>
           </div>
         )}
 
         {activeTab === 'li' && (
-          <div className="space-y-4">
+          <div >
             <div>
-              <div className="flex items-center justify-between mb-2">
-                <div className="text-[10px] font-bold text-linkedin uppercase tracking-wider">LinkedIn Connect · Day 1</div>
-                <button onClick={handleOpenLinkedIn} className="p-2 rounded-xl bg-linkedin/10 text-linkedin hover:bg-linkedin hover:text-white transition-all"><ExternalLink className="w-3.5 h-3.5" /></button>
+              <div >
+                <div >LinkedIn Connect · Day 1</div>
+                <button onClick={handleOpenLinkedIn} ><ExternalLink  /></button>
               </div>
               <div 
                 contentEditable 
                 onBlur={e => onUpdate('linkedin_connect', e.currentTarget.innerText)}
-                className="border-l-4 border-linkedin rounded-xl p-3 text-sm leading-relaxed outline-none min-h-[60px]"
+                
                 dangerouslySetInnerHTML={{ __html: msg.linkedin_connect }}
               />
             </div>
             <div>
-              <div className="text-[10px] font-bold text-linkedin uppercase tracking-wider mb-2">LinkedIn DM · Day 4</div>
+              <div >LinkedIn DM · Day 4</div>
               <div 
                 contentEditable 
                 onBlur={e => onUpdate('linkedin_dm', e.currentTarget.innerText)}
-                className="border-l-4 border-linkedin rounded-xl p-3 text-sm leading-relaxed outline-none min-h-[60px]"
+                
                 dangerouslySetInnerHTML={{ __html: msg.linkedin_dm }}
               />
             </div>
@@ -353,34 +353,34 @@ const ReviewCard: React.FC<{
         )}
 
         {activeTab === 'em' && (
-          <div className="space-y-4">
+          <div >
             <div>
-              <div className="flex items-center justify-between mb-2">
-                <div className="text-[10px] font-bold text-email uppercase tracking-wider">Subject Line</div>
-                <button onClick={handleSendEmail} className="p-2 rounded-xl bg-email/10 text-email hover:bg-email hover:text-white transition-all"><Mail className="w-3.5 h-3.5" /></button>
+              <div >
+                <div >Subject Line</div>
+                <button onClick={handleSendEmail} ><Mail  /></button>
               </div>
               <div 
                 contentEditable 
                 onBlur={e => onUpdate('email_subject', e.currentTarget.innerText)}
-                className="border-l-4 border-email rounded-xl p-3 text-sm font-bold outline-none"
+                
                 dangerouslySetInnerHTML={{ __html: msg.email_subject }}
               />
             </div>
             <div>
-               <div className="text-[10px] font-bold text-email uppercase tracking-wider mb-2">Email Body · Day 2</div>
+               <div >Email Body · Day 2</div>
               <div 
                 contentEditable 
                 onBlur={e => onUpdate('email_body', e.currentTarget.innerText)}
-                className="border-l-4 border-email rounded-xl p-3 text-sm leading-relaxed outline-none min-h-[80px]"
+                
                 dangerouslySetInnerHTML={{ __html: (msg.email_body || '').replace(/\n/g, '<br>') }}
               />
             </div>
             <div>
-               <div className="text-[10px] font-bold text-email uppercase tracking-wider mb-2">Follow-up · Day 7</div>
+               <div >Follow-up · Day 7</div>
               <div 
                 contentEditable 
                 onBlur={e => onUpdate('email_followup', e.currentTarget.innerText)}
-                className="border-l-4 border-email rounded-xl p-3 text-sm leading-relaxed outline-none"
+                
                 dangerouslySetInnerHTML={{ __html: (msg.email_followup || '').replace(/\n/g, '<br>') }}
               />
             </div>
@@ -504,7 +504,7 @@ export default function App() {
     document.documentElement.classList.toggle('dark', effectiveTheme === 'dark');
   }, [effectiveTheme]);
 
-  if (loading) return <div className="min-h-screen bg-bg flex items-center justify-center"><Loader2 className="w-8 h-8 text-brand animate-spin" /></div>;
+  if (loading) return <div ><Loader2  /></div>;
 
   const handleDemoLogin = async (demo: { uid: string, email: string, displayName: string, role: string, orgId: string, orgName: string, tierLimit?: string }) => {
     setLoading(true);
@@ -658,13 +658,13 @@ function LoginView({
 
   const getRoleIcon = (role: string) => {
     switch (role) {
-      case 'super_admin': return <Zap className="w-4 h-4 text-amber-400" />;
-      case 'org_admin': return <Building className="w-4 h-4 text-emerald-400" />;
-      case 'sdr': return <Target className="w-4 h-4 text-blue-400" />;
-      case 'manager': return <TrendingUp className="w-4 h-4 text-purple-400" />;
-      case 'ae': return <Briefcase className="w-4 h-4 text-rose-400" />;
-      case 'viewer': return <Eye className="w-4 h-4 text-text" />;
-      default: return <UserCheck className="w-4 h-4 text-brand" />;
+      case 'super_admin': return <Zap  />;
+      case 'org_admin': return <Building  />;
+      case 'sdr': return <Target  />;
+      case 'manager': return <TrendingUp  />;
+      case 'ae': return <Briefcase  />;
+      case 'viewer': return <Eye  />;
+      default: return <UserCheck  />;
     }
   };
 
@@ -681,32 +681,24 @@ function LoginView({
   };
 
   return (
-    <div className={`min-h-screen${theme === 'dark' ? 'bg-[#090a0f] text-slate-100' : 'bg-slate-50 text-slate-900'}flex items-center justify-center p-6 relative overflow-hidden transition-colors duration-300`}>
-      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-brand rounded-full opacity-20" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-brand-alt rounded-full opacity-20" />
-      <div className="absolute top-6 left-6 flex items-center gap-3">
+    <div >
+      <div  />
+      <div  />
+      <div >
         <button 
           onClick={onBack}
-          className={`px-4 py-2 text-xs font-semibold rounded-xl border flex items-center gap-1.5 transition-all cursor-pointer ${
-            theme === 'dark' 
-              ? 'bg-slate-900/60 border-white/[0.05] hover:bg-white/5 text-slate-300' 
-              : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700'
-          }`}
+          
         >
-          <ChevronLeft className="w-4 h-4" />
+          <ChevronLeft  />
           <span>Back to Home</span>
         </button>
       </div>
 
       {true && (
-        <div className="absolute top-6 right-6">
+        <div >
           <button 
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            className={`px-3 py-2 text-xs font-mono rounded-lg border cursor-pointer transition-colors ${
-              theme === 'dark' 
-                ? 'bg-slate-900 border-white/[0.05] text-amber-400 hover:bg-slate-800' 
-                : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
-            }`}
+            
           >
             {theme === 'dark' ? '☀️ Light' : '🌙 Dark'}
           </button>
@@ -716,80 +708,78 @@ function LoginView({
       <motion.div 
         initial={{ opacity: 0, y: 20 }} 
         animate={{ opacity: 1, y: 0 }} 
-        className={`max-w-5xl w-full p-8 md:p-12 rounded-[40px] border relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-12 text-left ${
-          theme === 'dark' ? 'bg-[#12131a] border-white/[0.05]' : 'bg-white border-slate-200'
-        }`}
+        
       >
         {/* Left Side: Brand and Google Login */}
-        <div className="lg:col-span-5 flex flex-col justify-between py-2 space-y-8 lg:border-r border-border lg:pr-10 text-center lg:text-left">
-          <div className="space-y-4">
-            <div className="w-16 h-16 rounded-xl flex items-center justify-center mx-auto lg:mx-0">
-              <Zap className="w-8 h-8 text-text fill-current" />
+        <div >
+          <div >
+            <div >
+              <Zap  />
             </div>
-            <div className="space-y-1">
-              <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight font-syne text-text">Zyntra AI</h1>
-              <p className="text-xs font-bold uppercase tracking-widest font-mono">Enterprise Outreach & CRM Suite</p>
+            <div >
+              <h1 >Zyntra AI</h1>
+              <p >Enterprise Outreach & CRM Suite</p>
             </div>
-            <p className="text-text-muted text-xs leading-relaxed max-w-sm mx-auto lg:mx-0">
+            <p >
               A high-precision, multi-tier outreach sandbox configured for high-performing sales development, organizational settings, and intelligent client pipelines.
             </p>
           </div>
 
-          <div className="space-y-4">
+          <div >
             <button 
               onClick={handleLogin} 
-              className="w-full py-3.5 rounded-xl bg-surface border border-border hover:bg-surface-hover text-text font-bold flex items-center justify-center gap-3 transition-all shadow-sm cursor-pointer text-xs"
+              
             >
-              <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-4 h-4" alt="Google" />
+              <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"  alt="Google" />
               Sign in with Google Account
             </button>
-            <p className="text-[10px] text-text-muted leading-normal">
+            <p >
               Corporate Single Sign-On handles primary credentials and security profiles seamlessly.
             </p>
           </div>
         </div>
 
         {/* Right Side: Demo Quick Seats */}
-        <div className="lg:col-span-7 space-y-6">
-          <div className="space-y-1">
-            <h3 className="text-sm font-extrabold uppercase tracking-widest">Instant Demo Presets</h3>
-            <p className="text-xs text-text-muted leading-relaxed">
+        <div >
+          <div >
+            <h3 >Instant Demo Presets</h3>
+            <p >
               Skip external OAuth credentials for your live product presentation. Enter any sandbox workspace in one click:
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[420px] overflow-y-auto pr-1 scrollbar-thin">
+          <div >
             {DEMO_USERS.map((demo) => (
               <button
                 key={demo.uid}
                 onClick={() => onDemoLogin(demo)}
-                className="group flex flex-col p-4 hover:bg-brand/10 border border-border/80 border-border rounded-xl text-left transition-all duration-300 relative overflow-hidden cursor-pointer"
+                
               >
-                <div className="flex items-center justify-between w-full mb-1.5">
-                  <div className="flex items-center gap-2">
-                    <div className="p-1.5 rounded-xl group-hover:bg-brand/20 transition-colors">
+                <div >
+                  <div >
+                    <div >
                       {getRoleIcon(demo.role)}
                     </div>
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-text-muted group-hover:text-brand transition-colors">
+                    <span >
                       {getRoleLabel(demo.role).split(' • ')[1]}
                     </span>
                   </div>
-                  <span className="text-[9px] font-mono text-zinc-600 group-hover:text-brand/80">{demo.uid}</span>
+                  <span >{demo.uid}</span>
                 </div>
                 
-                <div className="font-bold text-xs text-text group-hover:text-white transition-colors">
+                <div >
                   {demo.displayName}
                 </div>
-                <div className="text-[10px] font-mono mt-0.5 truncate w-full">
+                <div >
                   {demo.email}
                 </div>
                 
-                <p className="text-[10px] text-text-muted group-hover:text-slate-300 mt-2 leading-relaxed font-normal">
+                <p >
                   {demo.description}
                 </p>
                 
-                <div className="absolute right-3 bottom-3 opacity-0 group-hover:opacity-100 transition-opacity text-brand text-xs font-bold flex items-center gap-0.5">
-                  Enter <ChevronRight className="w-3.5 h-3.5" />
+                <div >
+                  Enter <ChevronRight  />
                 </div>
               </button>
             ))}
@@ -1972,145 +1962,139 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
             initial={{ opacity: 0, y: 50, x: '-50%' }}
             animate={{ opacity: 1, y: 0, x: '-50%' }}
             exit={{ opacity: 0, y: 20, x: '-50%' }}
-            className={`fixed bottom-8 left-1/2 z-[100] px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 font-bold text-sm border ${
-              toast.type === 'success' 
-                ? 'bg-surface border-brand-alt/30 text-brand-alt' 
-                : toast.type === 'info'
-                ? 'bg-[#090a0f] border-cyan-400/30 text-cyan-400 shadow-cyan-950/25'
-                : 'bg-surface border-red-500/30 text-red-500'
-            }`}
+            
           >
             {toast.type === 'success' ? (
-              <CheckCircle2 className="w-5 h-5 text-brand" />
+              <CheckCircle2  />
             ) : toast.type === 'info' ? (
-              <Loader2 className="w-5 h-5 text-cyan-400 animate-spin" />
+              <Loader2  />
             ) : (
-              <AlertCircle className="w-5 h-5 text-rose-400" />
+              <AlertCircle  />
             )}
             {toast.msg}
           </motion.div>
         )}
       </AnimatePresence>
 
-        <main className="flex-1 p-4 md:p-8 overflow-x-hidden">
+        <main >
           {activeView === 'SETTINGS' && (
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="max-w-4xl mx-auto space-y-10"
+              
             >
-              <div className="space-y-1">
-                <h1 className="text-xl md:text-2xl font-bold tracking-tight">Settings</h1>
-                <p className="text-text-muted text-xs md:text-sm">Manage your personal and system-wide configurations.</p>
+              <div >
+                <h1 >Settings</h1>
+                <p >Manage your personal and system-wide configurations.</p>
               </div>
 
-              <div className="grid md:grid-cols-2 gap-8">
+              <div >
                 {/* Email SMTP Section */}
-                <div id="settings-smtp-card" className="bg-surface/70 border border-border/50 rounded-xl p-8 space-y-6 transition-all">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3 text-sm font-bold">
-                      <div className="w-8 h-8 rounded-xl bg-email/10 flex items-center justify-center text-email">
-                        <Mail className="w-4 h-4" />
+                <div id="settings-smtp-card" >
+                  <div >
+                    <div >
+                      <div >
+                        <Mail  />
                       </div>
                       Email SMTP Setup
                     </div>
                     {emAccount?.connected && (
-                      <div className="px-3 py-1 rounded-full bg-brand-alt/10 text-brand-alt text-[9px] font-bold flex items-center gap-2">
-                        <div className="w-1.5 h-1.5 rounded-full bg-brand-alt animate-pulse" />
+                      <div >
+                        <div  />
                         ACTIVE
                       </div>
                     )}
                   </div>
 
                   {!emAccount?.connected ? (
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1">
-                          <label className="text-[9px] text-text-muted font-bold uppercase tracking-widest">SMTP Host</label>
+                    <div >
+                      <div >
+                        <div >
+                          <label >SMTP Host</label>
                           <input 
-                            className="w-full border border-border rounded-xl p-3 text-xs focus:border-brand outline-none transition-all"
+                            
                             placeholder="smtp.gmail.com"
                             value={smtpConfig.host}
                             onChange={e => setSmtpConfig(prev => ({ ...prev, host: e.target.value }))}
                           />
                         </div>
-                        <div className="space-y-1">
-                          <label className="text-[9px] text-text-muted font-bold uppercase tracking-widest">Port</label>
+                        <div >
+                          <label >Port</label>
                           <input 
-                            className="w-full border border-border rounded-xl p-3 text-xs focus:border-brand outline-none transition-all"
+                            
                             placeholder="587"
                             value={smtpConfig.port}
                             onChange={e => setSmtpConfig(prev => ({ ...prev, port: e.target.value }))}
                           />
                         </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1">
-                          <label className="text-[9px] text-text-muted font-bold uppercase tracking-widest">Username</label>
+                      <div >
+                        <div >
+                          <label >Username</label>
                           <input 
-                            className="w-full border border-border rounded-xl p-3 text-xs focus:border-brand outline-none transition-all"
+                            
                             placeholder="user@example.com"
                             value={smtpConfig.user}
                             onChange={e => setSmtpConfig(prev => ({ ...prev, user: e.target.value }))}
                           />
                         </div>
-                        <div className="space-y-1">
-                          <label className="text-[9px] text-text-muted font-bold uppercase tracking-widest">Password</label>
+                        <div >
+                          <label >Password</label>
                           <input 
                             type="password"
-                            className="w-full border border-border rounded-xl p-3 text-xs focus:border-brand outline-none transition-all"
+                            
                             placeholder="••••••••"
                             value={smtpConfig.pass}
                             onChange={e => setSmtpConfig(prev => ({ ...prev, pass: e.target.value }))}
                           />
                         </div>
                       </div>
-                      <div className="space-y-1">
-                        <label className="text-[9px] text-text-muted font-bold uppercase tracking-widest">From Email / Name</label>
+                      <div >
+                        <label >From Email / Name</label>
                         <input 
-                          className="w-full border border-border rounded-xl p-3 text-xs focus:border-brand outline-none transition-all"
+                          
                           placeholder='"Zyntra AI" <user@example.com>'
                           value={smtpConfig.from}
                           onChange={e => setSmtpConfig(prev => ({ ...prev, from: e.target.value }))}
                         />
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div >
                         <input 
                           type="checkbox"
                           id="smtp-secure-settings"
                           checked={smtpConfig.secure}
                           onChange={e => setSmtpConfig(prev => ({ ...prev, secure: e.target.checked }))}
-                          className="w-4 h-4 accent-brand"
+                          
                         />
-                        <label htmlFor="smtp-secure-settings" className="text-[10px] text-text-muted font-bold uppercase tracking-widest cursor-pointer">Use Secure (SSL/TLS)</label>
+                        <label htmlFor="smtp-secure-settings" >Use Secure (SSL/TLS)</label>
                       </div>
                       <button 
                         onClick={handleConnectEmail}
                         disabled={isConnectingEm}
-                        className="w-full bg-email hover:bg-email/90 text-text font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50"
+                        
                       >
-                        {isConnectingEm ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+                        {isConnectingEm ? <Loader2  /> : <Save  />}
                         Save SMTP Settings
                       </button>
                     </div>
                   ) : (
-                    <div className="space-y-6">
-                      <div className="border border-border rounded-xl p-4 flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-email/10 flex items-center justify-center text-email">
-                          <Mail className="w-6 h-6" />
+                    <div >
+                      <div >
+                        <div >
+                          <Mail  />
                         </div>
-                        <div className="flex-1">
-                          <div className="text-sm font-bold flex items-center gap-2">
+                        <div >
+                          <div >
                             {emAccount.email}
-                            <CheckCircle2 className="w-3.5 h-3.5 text-brand-alt" />
+                            <CheckCircle2  />
                           </div>
-                          <div className="text-[10px] text-text-muted font-medium">{emAccount.provider} Connected</div>
+                          <div >{emAccount.provider} Connected</div>
                         </div>
-                        <button onClick={handleDisconnectEmail} className="p-3 hover:bg-red-500/10 text-text-muted hover:text-red-500 rounded-xl transition-colors">
-                          <Unlink className="w-5 h-5" />
+                        <button onClick={handleDisconnectEmail} >
+                          <Unlink  />
                         </button>
                       </div>
-                      <p className="text-[10px] text-text-muted leading-relaxed italic">
+                      <p >
                         Your email is connected and ready for direct outreach. To change settings, disconnect first.
                       </p>
                     </div>
@@ -2118,54 +2102,54 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                 </div>
 
                 {/* LinkedIn Section */}
-                <div id="settings-linkedin-card" className="bg-surface border border-border rounded-xl p-8 space-y-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3 text-sm font-bold">
-                      <div className="w-8 h-8 rounded-xl bg-linkedin/10 flex items-center justify-center text-linkedin">
-                        <Linkedin className="w-4 h-4" />
+                <div id="settings-linkedin-card" >
+                  <div >
+                    <div >
+                      <div >
+                        <Linkedin  />
                       </div>
                       LinkedIn Bridge
                     </div>
                     {liAccount?.connected && (
-                      <div className="px-3 py-1 rounded-full bg-brand-alt/10 text-brand-alt text-[9px] font-bold flex items-center gap-2">
-                        <div className="w-1.5 h-1.5 rounded-full bg-brand-alt animate-pulse" />
+                      <div >
+                        <div  />
                         CONNECTED
                       </div>
                     )}
                   </div>
                   
                   {!liAccount?.connected ? (
-                    <div className="space-y-4">
-                      <p className="text-xs text-text-muted leading-relaxed">
+                    <div >
+                      <p >
                         Connect your profile to enable automated background sending through our secure bridge.
                       </p>
-                      <div className="p-3 rounded-xl bg-brand/5 border border-border flex items-start gap-3">
-                        <AlertCircle className="w-4 h-4 text-brand shrink-0 mt-0.5" />
-                        <div className="text-[10px] text-text-muted leading-tight">
-                          <strong>Setup Required:</strong> Ensure LinkedIn is enabled in your <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer" className="text-brand hover:underline">Firebase Console</a> under Authentication &gt; Sign-in method.
+                      <div >
+                        <AlertCircle  />
+                        <div >
+                          <strong>Setup Required:</strong> Ensure LinkedIn is enabled in your <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer" >Firebase Console</a> under Authentication &gt; Sign-in method.
                         </div>
                       </div>
                       <button 
                         onClick={handleConnectLinkedIn}
                         disabled={isConnectingLi}
-                        className="w-full bg-brand hover:bg-brand/90 text-text font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50"
+                        
                       >
-                        {isConnectingLi ? <Loader2 className="w-5 h-5 animate-spin" /> : <Link2 className="w-5 h-5" />}
+                        {isConnectingLi ? <Loader2  /> : <Link2  />}
                         Connect LinkedIn
                       </button>
                     </div>
                   ) : (
-                    <div className="border border-border rounded-xl p-4 flex items-center gap-4">
-                      <img src={liAccount.avatar} alt={liAccount.name} className="w-12 h-12 rounded-xl border border-border" referrerPolicy="no-referrer" />
-                      <div className="flex-1">
-                        <div className="text-sm font-bold flex items-center gap-2">
+                    <div >
+                      <img src={liAccount.avatar} alt={liAccount.name}  referrerPolicy="no-referrer" />
+                      <div >
+                        <div >
                           {liAccount.name}
-                          <CheckCircle2 className="w-3.5 h-3.5 text-brand-alt" />
+                          <CheckCircle2  />
                         </div>
-                        <div className="text-[10px] text-text-muted font-medium">Automation Bridge Active</div>
+                        <div >Automation Bridge Active</div>
                       </div>
-                      <button onClick={handleDisconnectLinkedIn} className="p-3 hover:bg-red-500/10 text-text-muted hover:text-red-500 rounded-xl transition-colors">
-                        <Unlink className="w-5 h-5" />
+                      <button onClick={handleDisconnectLinkedIn} >
+                        <Unlink  />
                       </button>
                     </div>
                   )}
@@ -2173,14 +2157,14 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
               </div>
 
               {/* System Defaults Info */}
-              <div className="bg-surface-alt/50 border border-border border-dashed rounded-xl p-8">
-                <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-brand/10 flex items-center justify-center text-brand shrink-0">
-                    <AlertCircle className="w-5 h-5" />
+              <div >
+                <div >
+                  <div >
+                    <AlertCircle  />
                   </div>
-                  <div className="space-y-2">
-                    <h3 className="text-sm font-bold">System Defaults</h3>
-                    <p className="text-xs text-text-muted leading-relaxed">
+                  <div >
+                    <h3 >System Defaults</h3>
+                    <p >
                       If you don't provide your own SMTP settings, the platform will use the system-wide default email service configured by the administrator. 
                       Personal SMTP settings are always prioritized for your outreach.
                     </p>
@@ -2189,21 +2173,21 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
               </div>
 
               {/* Project Documentation Export */}
-              <div id="settings-docs-card" className="bg-surface border border-border rounded-xl p-8 space-y-6">
-                <div className="flex items-center gap-3 text-sm font-bold">
-                  <div className="w-8 h-8 rounded-xl bg-brand/10 flex items-center justify-center text-brand">
-                    <FileText className="w-4 h-4" />
+              <div id="settings-docs-card" >
+                <div >
+                  <div >
+                    <FileText  />
                   </div>
                   Project Documentation
                 </div>
-                <p className="text-xs text-text-muted leading-relaxed">
+                <p >
                   Generate a complete PDF report of the project architecture, features, and technical specifications.
                 </p>
                 <button 
                   onClick={generateProjectPDF}
-                  className="w-full border border-border text-text font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2 text-sm"
+                  
                 >
-                  <Download className="w-5 h-5" />
+                  <Download  />
                   Download Project Report (PDF)
                 </button>
               </div>
@@ -2217,7 +2201,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
           )}
 
           {activeView === 'OUTREACH' && (
-            <div className="max-w-6xl mx-auto">
+            <div >
               {activePanel === -1 && (
                 <CampaignDashboard 
                   campaigns={campaigns} 
@@ -2229,26 +2213,26 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
               )}
 
               {activePanel !== -1 && (
-                <div className="mb-8 space-y-4">
+                <div >
                   {/* Back button and title */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div >
                     <button 
                       onClick={() => { setCurrentCampaign(null); setActivePanel(-1); }}
-                      className="inline-flex items-center gap-2 text-xs font-bold text-text-muted hover:text-white transition-colors cursor-pointer group"
+                      
                     >
-                      <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+                      <ChevronLeft  />
                       Back to Campaigns
                     </button>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-text-muted">Active Campaign:</span>
-                      <span className="text-xs font-mono font-bold bg-brand/10 text-brand px-3 py-1 rounded-full border border-border">
+                    <div >
+                      <span >Active Campaign:</span>
+                      <span >
                         {currentCampaign?.name.toUpperCase()}
                       </span>
                     </div>
                   </div>
 
                   {/* Sub-navigation Tabs */}
-                  <div className="bg-surface border border-border rounded-xl p-1.5 flex flex-wrap gap-1">
+                  <div >
                     {[
                       { idx: 0, label: "Configure", icon: Settings },
                       { idx: 1, label: "Import Leads", icon: UserPlus },
@@ -2262,13 +2246,9 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                         <button
                           key={tab.idx}
                           onClick={() => setActivePanel(tab.idx)}
-                          className={`flex-1 min-w-[120px] py-3.5 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 border transition-all cursor-pointer ${
-                            isActive
-                              ? "bg-brand/10 border-brand/30 text-brand shadow-sm font-extrabold"
-                              : "bg-transparent border-transparent text-text-muted hover:bg-white/[0.02] hover:text-text"
-                          }`}
+                          
                         >
-                          <Icon className="w-4 h-4 shrink-0" />
+                          <Icon  />
                           <span>{tab.label}</span>
                         </button>
                       );
@@ -2279,12 +2259,12 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
               {/* Panel 0: Configure */}
               <PanelWrapper index={0} activePanel={activePanel}>
                 {/* ... existing configure content ... */}
-          <div className="space-y-1 mb-8">
-            <h1 className="text-xl md:text-2xl font-bold tracking-tight">Configure</h1>
-            <p className="text-text-muted text-xs md:text-sm">Train your AI outreach agents with your product DNA.</p>
+          <div >
+            <h1 >Configure</h1>
+            <p >Train your AI outreach agents with your product DNA.</p>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <div >
             {[
               { 
                 label: 'Leads Loaded', 
@@ -2321,15 +2301,13 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                 key={i} 
                 whileHover={s.onClick ? { y: -5, scale: 1.02, border: '1px solid rgba(0, 212, 170, 0.4)' } : { y: -5 }}
                 onClick={s.onClick}
-                className={`bg-surface border border-border rounded-3xl p-6 glow-brand/5 group transition-all duration-200 ${
-                  s.onClick ? 'cursor-pointer hover:shadow-lg' : 'cursor-default'
-                }`}
+                
               >
-                <div className="text-3xl font-syne font-bold group-hover:text-brand transition-colors">{s.val}</div>
-                <div className="text-[10px] text-text-muted font-bold uppercase tracking-widest mt-1 flex items-center gap-1">
+                <div >{s.val}</div>
+                <div >
                   {s.label}
                   {s.onClick && (
-                    <span className="text-[9px] text-brand font-medium opacity-0 group-hover:opacity-100 transition-opacity ml-1 bg-brand/5 px-1.5 py-0.5 rounded-xl">
+                    <span >
                       View
                     </span>
                   )}
@@ -2338,54 +2316,54 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
             ))}
           </div>
 
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="bg-surface border border-border rounded-xl p-8 space-y-6">
-              <div className="flex items-center gap-3 text-sm font-bold">
-                <div className="w-8 h-8 rounded-xl bg-brand/10 flex items-center justify-center text-brand">
-                  <Briefcase className="w-4 h-4" />
+          <div >
+            <div >
+              <div >
+                <div >
+                  <Briefcase  />
                 </div>
                 Product DNA
               </div>
-              <div className="space-y-5">
-                <div className="space-y-2">
-                  <label className="text-[10px] text-text-muted font-bold uppercase tracking-widest">Company & Product</label>
-                  <div className="grid grid-cols-2 gap-3">
+              <div >
+                <div >
+                  <label >Company & Product</label>
+                  <div >
                     <input 
-                      className="w-full border border-border rounded-xl p-4 text-sm focus:border-brand outline-none transition-all"
+                      
                       placeholder="Company"
                       value={config.company}
                       onChange={e => setConfig(prev => ({ ...prev, company: e.target.value }))}
                     />
                     <input 
-                      className="w-full border border-border rounded-xl p-4 text-sm focus:border-brand outline-none transition-all"
+                      
                       placeholder="Product"
                       value={config.product}
                       onChange={e => setConfig(prev => ({ ...prev, product: e.target.value }))}
                     />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] text-text-muted font-bold uppercase tracking-widest">Value Proposition</label>
+                <div >
+                  <label >Value Proposition</label>
                   <textarea 
-                    className="w-full border border-border rounded-xl p-4 text-sm focus:border-brand outline-none transition-all min-h-[120px] resize-none"
+                    
                     placeholder="Describe how you help..."
                     value={config.vp}
                     onChange={e => setConfig(prev => ({ ...prev, vp: e.target.value }))}
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] text-text-muted font-bold uppercase tracking-widest">Sender Name</label>
+                <div >
+                  <div >
+                    <label >Sender Name</label>
                     <input 
-                      className="w-full border border-border rounded-xl p-4 text-sm focus:border-brand outline-none transition-all"
+                      
                       value={config.sender}
                       onChange={e => setConfig(prev => ({ ...prev, sender: e.target.value }))}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] text-text-muted font-bold uppercase tracking-widest">CTA Goal</label>
+                  <div >
+                    <label >CTA Goal</label>
                     <select 
-                      className="w-full border border-border rounded-xl p-4 text-sm focus:border-brand outline-none transition-all appearance-none cursor-pointer"
+                      
                       value={config.cta}
                       onChange={e => setConfig(prev => ({ ...prev, cta: e.target.value }))}
                     >
@@ -2406,45 +2384,45 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                       handleFirestoreError(err, OperationType.UPDATE, `campaigns/${currentCampaign.id}`);
                     }
                   }}
-                  className="w-full py-4 rounded-xl bg-brand/10 border border-border text-brand font-bold text-sm hover:bg-brand/20 transition-all flex items-center justify-center gap-2"
+                  
                 >
-                  <Save className="w-4 h-4" />
+                  <Save  />
                   Save Product DNA
                 </button>
               </div>
             </div>
 
-            <div className="space-y-6">
-              <div className="bg-surface border border-border rounded-xl p-8 space-y-6">
-                <div className="flex items-center gap-3 text-sm font-bold">
-                  <div className="w-8 h-8 rounded-xl bg-brand-alt/10 flex items-center justify-center text-brand-alt">
-                    <Settings className="w-4 h-4" />
+            <div >
+              <div >
+                <div >
+                  <div >
+                    <Settings  />
                   </div>
                   Outreach Channels
                 </div>
-                <div className="space-y-4">
-                  <p className="text-xs text-text-muted leading-relaxed">
-                    Configure your global email and LinkedIn settings in the <button onClick={() => setActiveView('SETTINGS')} className="text-brand font-bold hover:underline">Settings</button> tab to enable direct outreach.
+                <div >
+                  <p >
+                    Configure your global email and LinkedIn settings in the <button onClick={() => setActiveView('SETTINGS')} >Settings</button> tab to enable direct outreach.
                   </p>
-                  <div className="flex items-center gap-2 px-4 py-3 rounded-xl border border-border">
-                    <div className={`w-2 h-2 rounded-full${emAccount?.connected ? 'bg-brand-alt animate-pulse' : 'bg-text-muted/30'}`} />
-                    <span className="text-[10px] font-bold uppercase tracking-wider">Email: {emAccount?.connected ? 'Connected' : 'Not Configured'}</span>
+                  <div >
+                    <div  />
+                    <span >Email: {emAccount?.connected ? 'Connected' : 'Not Configured'}</span>
                   </div>
-                  <div className="flex items-center gap-2 px-4 py-3 rounded-xl border border-border">
-                    <div className={`w-2 h-2 rounded-full${liAccount?.connected ? 'bg-brand-alt animate-pulse' : 'bg-text-muted/30'}`} />
-                    <span className="text-[10px] font-bold uppercase tracking-wider">LinkedIn: {liAccount?.connected ? 'Connected' : 'Not Configured'}</span>
+                  <div >
+                    <div  />
+                    <span >LinkedIn: {liAccount?.connected ? 'Connected' : 'Not Configured'}</span>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-surface-alt/50 border border-border border-dashed rounded-xl p-8">
-                <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-brand/10 flex items-center justify-center text-brand shrink-0">
-                    <AlertCircle className="w-5 h-5" />
+              <div >
+                <div >
+                  <div >
+                    <AlertCircle  />
                   </div>
-                  <div className="space-y-2">
-                    <h3 className="text-sm font-bold">Campaign Scope</h3>
-                    <p className="text-xs text-text-muted leading-relaxed">
+                  <div >
+                    <h3 >Campaign Scope</h3>
+                    <p >
                       These settings apply specifically to the <strong>{currentCampaign?.name}</strong> campaign. 
                       Changes to Product DNA will affect future AI generations for this campaign.
                     </p>
@@ -2454,14 +2432,14 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
             </div>
           </div>
 
-          <div className="bg-surface border border-border rounded-xl p-8 space-y-6 mt-6">
-            <div className="flex items-center gap-3 text-sm font-bold">
-              <div className="w-8 h-8 rounded-xl bg-brand/10 flex items-center justify-center text-brand">
-                <Globe className="w-4 h-4" />
+          <div >
+            <div >
+              <div >
+                <Globe  />
               </div>
               Active Channels
             </div>
-            <div className="grid grid-cols-3 gap-4">
+            <div >
               {[
                 { id: 'wa' as const, icon: MessageSquare, label: 'WhatsApp', color: '#25d366' },
                 { id: 'li' as const, icon: Linkedin, label: 'LinkedIn', color: '#4da6ff' },
@@ -2470,16 +2448,12 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                 <button
                   key={ch.id}
                   onClick={() => handleToggleCh(ch.id)}
-                  className={`flex flex-col items-center gap-3 p-6 rounded-3xl border transition-all duration-300 ${
-                    chState[ch.id] 
-                      ? `bg-surface border-brand/50 shadow-lg shadow-brand/5` 
-                      : 'bg-surface-alt/30 border-border text-text-muted'
-                  }`}
+                  
                 >
-                  <ch.icon className="w-8 h-8" style={{ color: chState[ch.id] ? ch.color : undefined }} />
-                  <div className="text-center">
-                    <div className="text-xs font-bold" style={{ color: chState[ch.id] ? ch.color : undefined }}>{ch.label}</div>
-                    <div className="text-[8px] font-bold uppercase tracking-widest opacity-60 mt-1">{chState[ch.id] ? 'Active' : 'Disabled'}</div>
+                  <ch.icon  style={{ color: chState[ch.id] ? ch.color : undefined }} />
+                  <div >
+                    <div  style={{ color: chState[ch.id] ? ch.color : undefined }}>{ch.label}</div>
+                    <div >{chState[ch.id] ? 'Active' : 'Disabled'}</div>
                   </div>
                 </button>
               ))}
@@ -2490,36 +2464,36 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => setActivePanel(1)}
-            className="w-full text-text font-syne font-extrabold py-6 rounded-xl transition-all flex items-center justify-center gap-3 group mt-10 text-lg"
+            
           >
             Import Target Leads
-            <ChevronRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
+            <ChevronRight  />
           </motion.button>
         </PanelWrapper>
 
         {/* Panel 1: Import */}
         <PanelWrapper index={1} activePanel={activePanel}>
-          <div className="space-y-1 mb-8">
-            <h1 className="text-xl md:text-2xl font-bold tracking-tight">Import Leads</h1>
-            <p className="text-text-muted text-xs md:text-sm">Paste your target list or import manually.</p>
+          <div >
+            <h1 >Import Leads</h1>
+            <p >Paste your target list or import manually.</p>
           </div>
 
-          <div className="bg-brand/10 border border-border rounded-xl p-6 text-sm text-brand-muted leading-relaxed flex items-start gap-4 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-brand/20 flex items-center justify-center text-brand shrink-0">
-              <AlertCircle className="w-5 h-5" />
+          <div >
+            <div >
+              <AlertCircle  />
             </div>
             <div>
-              <div className="font-bold text-brand mb-1">CSV Format Guide</div>
-              Required columns: <span className="font-mono text-brand-alt">name, role, company, industry, country, phone, email, linkedin_url</span>. 
+              <div >CSV Format Guide</div>
+              Required columns: <span >name, role, company, industry, country, phone, email, linkedin_url</span>. 
               Ensure your data is clean for maximum AI personalization accuracy.
             </div>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="bg-surface border border-border rounded-xl p-8 space-y-6">
-              <div className="flex items-center gap-3 text-sm font-bold">
-                <div className="w-8 h-8 rounded-xl bg-brand/10 flex items-center justify-center text-brand">
-                  <UserPlus className="w-4 h-4" />
+          <div >
+            <div >
+              <div >
+                <div >
+                  <UserPlus  />
                 </div>
                 Add Single Lead
               </div>
@@ -2544,58 +2518,58 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                   await saveLeads([lead]);
                   e.currentTarget.reset();
                 }}
-                className="space-y-3"
+                
               >
-                <div className="grid grid-cols-2 gap-3">
-                  <input name="name" placeholder="Full Name" required className="w-full border border-border rounded-xl p-3 text-xs outline-none focus:border-brand" />
-                  <input name="company" placeholder="Company" required className="w-full border border-border rounded-xl p-3 text-xs outline-none focus:border-brand" />
+                <div >
+                  <input name="name" placeholder="Full Name" required  />
+                  <input name="company" placeholder="Company" required  />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <input name="role" placeholder="Role" className="w-full border border-border rounded-xl p-3 text-xs outline-none focus:border-brand" />
-                  <input name="industry" placeholder="Industry" className="w-full border border-border rounded-xl p-3 text-xs outline-none focus:border-brand" />
+                <div >
+                  <input name="role" placeholder="Role"  />
+                  <input name="industry" placeholder="Industry"  />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <input name="email" placeholder="Email" className="w-full border border-border rounded-xl p-3 text-xs outline-none focus:border-brand" />
-                  <input name="linkedin_url" placeholder="LinkedIn URL" className="w-full border border-border rounded-xl p-3 text-xs outline-none focus:border-brand" />
+                <div >
+                  <input name="email" placeholder="Email"  />
+                  <input name="linkedin_url" placeholder="LinkedIn URL"  />
                 </div>
-                <button type="submit" className="w-full py-3 rounded-xl bg-brand text-text font-bold text-xs hover:bg-brand/90 transition-all">
+                <button type="submit" >
                   Add Lead
                 </button>
               </form>
             </div>
 
-            <div className="bg-surface border border-border rounded-xl p-8 space-y-6">
-              <div className="flex items-center gap-3 text-sm font-bold">
-                <div className="w-8 h-8 rounded-xl bg-brand/10 flex items-center justify-center text-brand">
-                  <FileSpreadsheet className="w-4 h-4" />
+            <div >
+              <div >
+                <div >
+                  <FileSpreadsheet  />
                 </div>
                 Paste CSV Data
               </div>
-              <div className="space-y-4">
+              <div >
                 <textarea 
-                  className="w-full border border-border rounded-xl p-6 text-xs font-mono focus:border-brand outline-none transition-all min-h-[200px] resize-none"
+                  
                   placeholder="name,role,company,industry,country,phone,email,linkedin_url..."
                   value={rawLeads}
                   onChange={e => setRawLeads(e.target.value)}
                 />
                 <button 
                   onClick={() => parseLeads(rawLeads)}
-                  className="w-full bg-brand hover:bg-brand/90 text-text text-sm font-bold py-4 rounded-xl transition-all"
+                  
                 >
                   Parse Paste
                 </button>
               </div>
             </div>
 
-            <div className="bg-surface border border-border rounded-xl p-8 space-y-6 flex flex-col justify-between">
-              <div className="space-y-2">
-                <div className="flex items-center gap-3 text-sm font-bold">
-                  <div className="w-8 h-8 rounded-xl bg-brand-alt/10 flex items-center justify-center text-brand-alt">
-                    <Download className="w-4 h-4" />
+            <div >
+              <div >
+                <div >
+                  <div >
+                    <Download  />
                   </div>
                   Smart field mapping Importer
                 </div>
-                <p className="text-text-muted text-[11px] leading-relaxed">
+                <p >
                   Analyze CSV or Excel structure, discover Columns fuzzy matching suggest targets, resolve duplicates and save custom templates.
                 </p>
               </div>
@@ -2608,40 +2582,40 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                   }
                   setShowSmartImportModal(true);
                 }}
-                className="w-full bg-brand-alt/10 hover:bg-brand-alt hover:text-[#090a0f] font-extrabold py-5 rounded-xl border border-brand-alt/30 transition-all flex items-center justify-center gap-2 mt-4 cursor-pointer text-xs"
+                
               >
-                <Plus className="w-5 h-5" />
+                <Plus  />
                 Launch Smart Importer Wizard
               </button>
               
-              <div className="rounded-xl p-3 text-[9px] text-brand-alt font-mono leading-relaxed mt-2 border border-border/40">
-                <span className="font-bold">FEATURES:</span> Excel sheet columns detection • Preset templates saving • Custom CRM property creation • Format validations checklist.
+              <div >
+                <span >FEATURES:</span> Excel sheet columns detection • Preset templates saving • Custom CRM property creation • Format validations checklist.
               </div>
             </div>
 
-            <div className="bg-surface border border-border rounded-xl p-8 space-y-6 flex flex-col justify-between">
-              <div className="space-y-2">
-                <div className="flex items-center gap-3 text-sm font-bold">
-                  <div className="w-8 h-8 rounded-xl flex items-center justify-center">
-                    <Database className="w-4 h-4" />
+            <div >
+              <div >
+                <div >
+                  <div >
+                    <Database  />
                   </div>
                   Sync Provided B2B Target List
                 </div>
-                <p className="text-text-muted text-[11px] leading-relaxed">
+                <p >
                   Instantly load the {providedLeads.length} pre-validated B2B executive lead contacts provided by your campaign partners (TERAWORK, Caret, INGRYD Academy, and more) into this active campaign.
                 </p>
               </div>
               
               <button
                 onClick={handleImportProvidedLeads}
-                className="w-full hover:bg-[#00d4aa] hover:text-[#090a0f] font-extrabold py-5 rounded-xl border transition-all flex items-center justify-center gap-2 mt-4 cursor-pointer text-xs"
+                
               >
-                <CheckCircle2 className="w-5 h-5" />
+                <CheckCircle2  />
                 Sync {providedLeads.length} Pre-validated Contacts
               </button>
               
-              <div className="rounded-xl p-3 text-[9px] font-mono leading-relaxed mt-2 border border-border/40">
-                <span className="font-bold">SPECS:</span> {providedLeads.filter(l => l.email).length} Work Emails • {providedLeads.filter(l => l.linkedin_url).length} LinkedIn URLs • 100% Validated schema matching.
+              <div >
+                <span >SPECS:</span> {providedLeads.filter(l => l.email).length} Work Emails • {providedLeads.filter(l => l.linkedin_url).length} LinkedIn URLs • 100% Validated schema matching.
               </div>
             </div>
           </div>
@@ -2650,7 +2624,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="space-y-6 mt-10"
+              
             >
               {/* Campaign Lead Score Distribution Histogram */}
               <LeadScoreHistogram 
@@ -2662,12 +2636,12 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                 setHighlightElite={setHighlightElite}
               />
 
-              <div className="flex items-center justify-between">
-                <div className="text-lg font-syne font-bold flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-brand-alt/10 flex items-center justify-center text-brand-alt">
-                    <CheckCircle2 className="w-5 h-5" />
+              <div >
+                <div >
+                  <div >
+                    <CheckCircle2  />
                   </div>
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                  <div >
                     <span>
                       {scoreFilter ? `${leads.filter(l => {
                         const s = calculateLeadScore(l);
@@ -2675,11 +2649,11 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                       }).length} of ${leads.length}` : leads.length} Target Leads Identified
                     </span>
                     {scoreFilter && (
-                      <div className="flex items-center gap-1.5 bg-brand/15 text-brand border border-border px-2.5 py-1 rounded-full text-[10px] font-bold animate-pulse">
+                      <div >
                         <span>Score Space: {scoreFilter.rangeLabel}</span>
                         <button 
                           onClick={() => setScoreFilter(null)} 
-                          className="hover:text-red-400 font-extrabold cursor-pointer transition-colors p-0.5 ml-1 text-sm leading-none"
+                          
                         >
                           ✕
                         </button>
@@ -2687,40 +2661,30 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                     )}
                   </div>
                 </div>
-                <div className="flex items-center gap-4 flex-wrap">
+                <div >
                   <button 
                     onClick={() => setSortByScore(!sortByScore)}
-                    className={`px-4 py-2 rounded-xl text-[10px] font-bold transition-all flex items-center gap-2 ${
-                      sortByScore ? 'bg-brand text-white' : 'bg-surface border border-border text-text-muted'
-                    }`}
+                    
                   >
-                    <Target className="w-3.5 h-3.5" />
+                    <Target  />
                     {sortByScore ? 'Sorted by Score' : 'Sort by Score'}
                   </button>
 
-                  <div className="flex items-center gap-5 border-b border-border/20 pb-0.5">
+                  <div >
                     <button
                       onClick={() => setLeadsViewMode('pipeline')}
-                      className={`pb-1 px-1 text-[11px] font-bold transition-all flex items-center gap-1.5 cursor-pointer border-b-2 relative ${
-                        leadsViewMode === 'pipeline' 
-                          ? 'border-brand text-brand font-extrabold' 
-                          : 'border-transparent text-text-muted hover:text-text'
-                      }`}
+                      
                       title="Pipeline Board View"
                     >
-                      <Kanban className="w-3.5 h-3.5" />
+                      <Kanban  />
                       Pipeline Board
                     </button>
                     <button
                       onClick={() => setLeadsViewMode('list')}
-                      className={`pb-1 px-1 text-[11px] font-bold transition-all flex items-center gap-1.5 cursor-pointer border-b-2 relative ${
-                        leadsViewMode === 'list' 
-                          ? 'border-brand text-brand font-extrabold' 
-                          : 'border-transparent text-text-muted hover:text-text'
-                      }`}
+                      
                       title="List Feed View"
                     >
-                      <List className="w-3.5 h-3.5" />
+                      <List  />
                       List View
                     </button>
                   </div>
@@ -2768,9 +2732,9 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                 return (
                   <>
                     {/* Database Lead Search Engine bar */}
-                    <div className="flex flex-col md:flex-row items-center justify-between gap-4 border border-border/80 rounded-xl p-5 mb-4">
-                      <div className="relative w-full md:max-w-md bg-transparent">
-                        <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2" />
+                    <div >
+                      <div >
+                        <Search  />
                         <input
                           type="text"
                           value={leadsSearch}
@@ -2779,7 +2743,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                             setLeadsPage(1);
                           }}
                           placeholder="Search database leads (by name, email, company, job role, or industry)..."
-                          className="w-full bg-surface border border-border rounded-xl pl-11 pr-10 py-3 text-xs outline-none focus:border-brand text-text placeholder-text-muted transition-all"
+                          
                         />
                         {leadsSearch && (
                           <button
@@ -2787,52 +2751,52 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                               setLeadsSearch('');
                               setLeadsPage(1);
                             }}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-white font-extrabold text-xs p-1"
+                            
                           >
                             ✕
                           </button>
                         )}
                       </div>
-                      <div className="flex flex-wrap items-center gap-4 text-[10px] font-mono text-text-muted">
-                        <div className="flex items-center gap-1.5">
-                          <span className="w-2 h-2 rounded-full animate-pulse" />
+                      <div >
+                        <div >
+                          <span  />
                           <span>Elite &ge; 60 pts</span>
                         </div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="w-2 h-2 rounded-full" />
+                        <div >
+                          <span  />
                           <span>Standard &lt; 60 pts</span>
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-5 bg-surface border border-border rounded-xl">
-                      <div className="flex items-center gap-3">
+                    <div >
+                      <div >
                         <input 
                           type="checkbox"
                           id="bulk-select-all"
                           checked={allDisplayedSelected}
                           onChange={toggleSelectAll}
-                          className="w-4 h-4 rounded-xl border-border text-brand focus:ring-brand cursor-pointer bg-surface"
+                          
                         />
-                        <label htmlFor="bulk-select-all" className="text-xs font-bold text-text cursor-pointer select-none">
+                        <label htmlFor="bulk-select-all" >
                           {selectedLeadIds.length > 0 ? (
-                            <span className="text-brand-alt">{selectedLeadIds.length} Selected</span>
+                            <span >{selectedLeadIds.length} Selected</span>
                           ) : (
-                            <span className="text-text-muted">No Selection</span>
+                            <span >No Selection</span>
                           )}
-                          <span className="text-text-muted font-normal ml-1.5">
+                          <span >
                             • Showing {displayedLeads.length} lead{displayedLeads.length !== 1 ? 's' : ''} on feed
                           </span>
                         </label>
                       </div>
 
-                      <div className="flex flex-wrap items-center gap-2">
+                      <div >
                         <button
                           onClick={() => setShowBulkAddModal(true)}
-                          className="px-3.5 py-2 bg-brand-alt/10 hover:bg-brand-alt hover:text-[#090a0f] text-brand-alt border border-brand-alt/20 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                          
                           title="Bulk load additional leads manually or from list"
                         >
-                          <PlusCircle className="w-3.5 h-3.5" />
+                          <PlusCircle  />
                           Bulk Add Leads
                         </button>
 
@@ -2845,13 +2809,9 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                             setBulkEditFields({ role: '', company: '', industry: '', country: '', status: '' });
                             setShowBulkEditModal(true);
                           }}
-                          className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm border ${
-                            selectedLeadIds.length > 0 
-                              ? 'bg-brand text-white border-brand/20 hover:bg-brand/90' 
-                              : 'bg-surface-alt border-border text-text-muted cursor-not-allowed opacity-50'
-                          }`}
+                          
                         >
-                          <Settings className="w-3.5 h-3.5" />
+                          <Settings  />
                           Bulk Edit ({selectedLeadIds.length})
                         </button>
 
@@ -2863,43 +2823,39 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                             }
                             handleBulkDeleteLeads(selectedLeadIds);
                           }}
-                          className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm border ${
-                            selectedLeadIds.length > 0 
-                              ? 'bg-red-500/10 hover:bg-red-500 hover:text-white text-red-500 border-red-500/20' 
-                              : 'bg-surface-alt border-border text-text-muted cursor-not-allowed opacity-50'
-                          }`}
+                          
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <Trash2  />
                           Bulk Delete ({selectedLeadIds.length})
                         </button>
                       </div>
                     </div>
 
                     {leadsViewMode === 'list' ? (
-                      <div className="bg-surface border border-border rounded-xl overflow-hidden">
+                      <div >
                         {/* Table controls */}
-                        <div className="flex border-b border-border/80 p-4 justify-between items-center bg-surface-alt/20">
-                          <span className="text-[10px] text-text-muted font-bold uppercase tracking-wider">Tabular Workplace View</span>
-                          <div className="relative">
+                        <div >
+                          <span >Tabular Workplace View</span>
+                          <div >
                             <button 
                               onClick={() => setShowColumnDropdown(!showColumnDropdown)}
-                              className="px-3 py-1.5 rounded-xl border border-border text-[10px] font-bold text-text-muted hover:text-text flex items-center gap-1.5 transition-all cursor-pointer"
+                              
                             >
-                              <Filter className="w-3.5 h-3.5" />
+                              <Filter  />
                               Columns
                             </button>
                             {showColumnDropdown && (
-                              <div className="absolute right-0 mt-2 w-48 border border-border rounded-xl p-4 z-50 space-y-2.5">
-                                <div className="text-[10px] uppercase font-bold text-text-muted tracking-wider mb-2">Toggle Columns</div>
+                              <div >
+                                <div >Toggle Columns</div>
                                 {Object.keys(visibleColumns).map((col) => (
-                                  <label key={col} className="flex items-center gap-2.5 text-xs text-text hover:text-white cursor-pointer select-none">
+                                  <label key={col} >
                                     <input 
                                       type="checkbox"
-                                      className="w-3.5 h-3.5 rounded-xl border-border text-brand focus:ring-brand cursor-pointer"
+                                      
                                       checked={visibleColumns[col]}
                                       onChange={(e) => setVisibleColumns(prev => ({ ...prev, [col]: e.target.checked }))}
                                     />
-                                    <span className="capitalize">
+                                    <span >
                                       {col === 'nameCompany' ? 'Name & Company' : col}
                                     </span>
                                   </label>
@@ -2909,27 +2865,27 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                           </div>
                         </div>
 
-                        <div className="overflow-x-auto">
-                          <table className="w-full text-left border-collapse">
+                        <div >
+                          <table >
                             <thead>
-                              <tr className="border-b border-border/80 bg-surface-alt/50 text-[10px] font-bold text-text-muted uppercase tracking-wider">
-                                <th className="py-4 px-5 w-12 text-center">
+                              <tr >
+                                <th >
                                   <input 
                                     type="checkbox"
                                     id="bulk-select-list-header"
                                     checked={allDisplayedSelected}
                                     onChange={toggleSelectAll}
-                                    className="w-4 h-4 rounded-xl border border-border text-brand bg-surface cursor-pointer"
+                                    
                                   />
                                 </th>
-                                {visibleColumns.nameCompany && <th className="py-4 px-5">Lead / Company</th>}
-                                {visibleColumns.role && <th className="py-4 px-5">Position</th>}
-                                {visibleColumns.score && <th className="py-4 px-5">Score</th>}
-                                {visibleColumns.contact && <th className="py-4 px-5">Contact</th>}
-                                {visibleColumns.country && <th className="py-4 px-5">Location</th>}
-                                {visibleColumns.industry && <th className="py-4 px-5">Industry</th>}
-                                {visibleColumns.status && <th className="py-4 px-5">Status</th>}
-                                <th className="py-4 px-5 text-right">Actions</th>
+                                {visibleColumns.nameCompany && <th >Lead / Company</th>}
+                                {visibleColumns.role && <th >Position</th>}
+                                {visibleColumns.score && <th >Score</th>}
+                                {visibleColumns.contact && <th >Contact</th>}
+                                {visibleColumns.country && <th >Location</th>}
+                                {visibleColumns.industry && <th >Industry</th>}
+                                {visibleColumns.status && <th >Status</th>}
+                                <th >Actions</th>
                               </tr>
                             </thead>
                             <tbody>
@@ -2967,10 +2923,8 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
 
                                 return (
                                   <React.Fragment key={cid}>
-                                    <tr className={`border-b border-border/40 hover:bg-surface-alt/30 transition-all ${
-                                      shouldHighlight ? 'bg-emerald-500/5 hover:bg-emerald-500/10' : ''
-                                    }`}>
-                                      <td className="py-3 px-5 text-center">
+                                    <tr >
+                                      <td >
                                         <input 
                                           type="checkbox"
                                           checked={l.id ? selectedLeadIds.includes(l.id) : false}
@@ -2982,25 +2936,23 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                                               setSelectedLeadIds(prev => prev.filter(id => id !== l.id));
                                             }
                                           }}
-                                          className="w-4 h-4 rounded-xl border-border text-brand focus:ring-brand cursor-pointer bg-surface"
+                                          
                                         />
                                       </td>
                                       {visibleColumns.nameCompany && (
-                                        <td className="py-3 px-5">
-                                          <div className="flex items-center gap-3">
-                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs text-white shrink-0 ${
-                                              shouldHighlight ? 'bg-gradient-to-br from-emerald-400 to-emerald-600' : 'bg-gradient-to-br from-brand to-brand-alt'
-                                            }`}>
+                                        <td >
+                                          <div >
+                                            <div >
                                               {(l.name || '?')[0]}
                                             </div>
-                                            <div className="min-w-0">
-                                              <div className="font-bold text-xs text-text truncate max-w-[180px] flex items-center gap-1.5">
+                                            <div >
+                                              <div >
                                                 <span>{l.name}</span>
                                                 {shouldHighlight && (
-                                                  <span className="px-1 py-0.5 rounded-xl bg-amber-500/20 text-amber-500 border border-amber-500/30 text-[8px] font-bold">Elite</span>
+                                                  <span >Elite</span>
                                                 )}
                                               </div>
-                                              <div className="text-[10px] text-text-muted truncate max-w-[180px] font-semibold">
+                                              <div >
                                                 {l.company}
                                               </div>
                                             </div>
@@ -3008,72 +2960,70 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                                         </td>
                                       )}
                                       {visibleColumns.role && (
-                                        <td className="py-3 px-5 text-xs text-text truncate max-w-[140px]">
+                                        <td >
                                           {l.role || 'N/A'}
                                         </td>
                                       )}
                                       {visibleColumns.score && (
-                                        <td className="py-3 px-5">
-                                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                            isElite ? 'bg-emerald-500/15 text-emerald-400' : 'bg-brand/10 text-brand'
-                                          }`}>
+                                        <td >
+                                          <span >
                                             {lScore}
                                           </span>
                                         </td>
                                       )}
                                       {visibleColumns.contact && (
-                                        <td className="py-3 px-5">
-                                          <div className="flex items-center gap-1.5">
+                                        <td >
+                                          <div >
                                             {l.phone ? (
-                                              <a href={`tel:${l.phone}`} className="p-1 rounded-xl bg-surface border border-border text-text-muted hover:text-brand transition-colors" title={l.phone}>
-                                                <Smartphone className="w-3.5 h-3.5" />
+                                              <a href={`tel:${l.phone}`}  title={l.phone}>
+                                                <Smartphone  />
                                               </a>
                                             ) : (
-                                              <span className="p-1 rounded-xl text-text-muted/30"><Smartphone className="w-3.5 h-3.5" /></span>
+                                              <span ><Smartphone  /></span>
                                             )}
                                             {l.email ? (
-                                              <a href={`mailto:${l.email}`} className="p-1 rounded-xl bg-surface border border-border text-text-muted hover:text-brand transition-colors" title={l.email}>
-                                                <Mail className="w-3.5 h-3.5" />
+                                              <a href={`mailto:${l.email}`}  title={l.email}>
+                                                <Mail  />
                                               </a>
                                             ) : (
-                                              <span className="p-1 rounded-xl text-text-muted/30"><Mail className="w-3.5 h-3.5" /></span>
+                                              <span ><Mail  /></span>
                                             )}
                                             {l.linkedin_url ? (
-                                              <a href={l.linkedin_url.startsWith('http') ? l.linkedin_url : `https://${l.linkedin_url}`} target="_blank" rel="noreferrer" className="p-1 rounded-xl bg-surface border border-border text-text-muted hover:text-brand transition-colors" title="LinkedIn Profile">
-                                                <Linkedin className="w-3.5 h-3.5" />
+                                              <a href={l.linkedin_url.startsWith('http') ? l.linkedin_url : `https://${l.linkedin_url}`} target="_blank" rel="noreferrer"  title="LinkedIn Profile">
+                                                <Linkedin  />
                                               </a>
                                             ) : (
-                                              <span className="p-1 rounded-xl text-text-muted/30"><Linkedin className="w-3.5 h-3.5" /></span>
+                                              <span ><Linkedin  /></span>
                                             )}
                                           </div>
                                         </td>
                                       )}
                                       {visibleColumns.country && (
-                                        <td className="py-3 px-5 text-xs text-text-muted">
+                                        <td >
                                           {COUNTRY_FLAGS[l.country] || '🌍'} {l.country || 'Global'}
                                         </td>
                                       )}
                                       {visibleColumns.industry && (
-                                        <td className="py-3 px-5 text-xs text-text-muted truncate max-w-[120px]">
+                                        <td >
                                           {l.industry || 'N/A'}
                                         </td>
                                       )}
                                       {visibleColumns.status && (
-                                        <td className="py-3 px-5">
-                                          <span className={`px-2 py-0.5 rounded-xl border text-[9px] font-bold inline-flex items-center gap-1.5${stageColorClass}`}>
-                                            <span className={`w-1.5 h-1.5 rounded-full${dotColor}`} />
+                                        <td >
+                                          <span >
+                                            <span  />
                                             {stageName}
                                           </span>
                                         </td>
                                       )}
-                                      <td className="py-3 px-5 text-right">
-                                        <div className="flex items-center justify-end gap-1.5">
+                                      <td >
+                                        <div >
                                           <button 
                                             onClick={() => setExpandedLeadId(isExpanded ? null : cid)}
-                                            className="p-1.5 rounded-xl border border-border text-text-muted hover:text-brand transition-all bg-surface cursor-pointer"
+                                            
                                             title="Expand detail drawer"
                                           >
-                                            <ChevronDown className={`w-3.5 h-3.5 transform transition-transform${isExpanded ? 'rotate-180' : ''}`} />
+                                            <ChevronDown  />
                                           </button>
                                           {l.id && (
                                             <button 
@@ -3082,10 +3032,10 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                                                   handleDeleteLead(l.id!);
                                                 }
                                               }}
-                                              className="p-1.5 rounded-xl border border-border text-text-muted hover:text-red-500 hover:border-red-500/35 transition-all bg-surface cursor-pointer"
+                                              
                                               title="Delete Lead"
                                             >
-                                              <Trash2 className="w-3.5 h-3.5" />
+                                              <Trash2  />
                                             </button>
                                           )}
                                         </div>
@@ -3094,67 +3044,67 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                                     
                                     {isExpanded && (
                                       <tr>
-                                        <td colSpan={10} className="px-5 py-4 border-b border-border/30">
+                                        <td colSpan={10} >
                                           {editingLeadId === l.id ? (
-                                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs animate-fadeIn text-left">
+                                            <div >
                                               <div>
-                                                <span className="text-[9px] text-text-muted font-bold uppercase block mb-1">Name</span>
+                                                <span >Name</span>
                                                 <input 
                                                   type="text" 
                                                   value={editedLeadData?.name || ''} 
                                                   onChange={e => setEditedLeadData(prev => prev ? ({ ...prev, name: e.target.value }) : null)}
-                                                  className="w-full border border-border rounded-xl p-2.5 text-xs text-text outline-none focus:border-brand" 
+                                                   
                                                 />
                                               </div>
                                               <div>
-                                                <span className="text-[9px] text-text-muted font-bold uppercase block mb-1">Company</span>
+                                                <span >Company</span>
                                                 <input 
                                                   type="text" 
                                                   value={editedLeadData?.company || ''} 
                                                   onChange={e => setEditedLeadData(prev => prev ? ({ ...prev, company: e.target.value }) : null)}
-                                                  className="w-full border border-border rounded-xl p-2.5 text-xs text-text outline-none focus:border-brand" 
+                                                   
                                                 />
                                               </div>
                                               <div>
-                                                <span className="text-[9px] text-text-muted font-bold uppercase block mb-1">Role</span>
+                                                <span >Role</span>
                                                 <input 
                                                   type="text" 
                                                   value={editedLeadData?.role || ''} 
                                                   onChange={e => setEditedLeadData(prev => prev ? ({ ...prev, role: e.target.value }) : null)}
-                                                  className="w-full border border-border rounded-xl p-2.5 text-xs text-text outline-none focus:border-brand" 
+                                                   
                                                 />
                                               </div>
                                               <div>
-                                                <span className="text-[9px] text-text-muted font-bold uppercase block mb-1">Email</span>
+                                                <span >Email</span>
                                                 <input 
                                                   type="text" 
                                                   value={editedLeadData?.email || ''} 
                                                   onChange={e => setEditedLeadData(prev => prev ? ({ ...prev, email: e.target.value }) : null)}
-                                                  className="w-full border border-border rounded-xl p-2.5 text-xs text-text outline-none focus:border-brand" 
+                                                   
                                                 />
                                               </div>
                                               <div>
-                                                <span className="text-[9px] text-text-muted font-bold uppercase block mb-1">Phone</span>
+                                                <span >Phone</span>
                                                 <input 
                                                   type="text" 
                                                   value={editedLeadData?.phone || ''} 
                                                   onChange={e => setEditedLeadData(prev => prev ? ({ ...prev, phone: e.target.value }) : null)}
-                                                  className="w-full border border-border rounded-xl p-2.5 text-xs text-text outline-none focus:border-brand" 
+                                                   
                                                 />
                                               </div>
                                               <div>
-                                                <span className="text-[9px] text-text-muted font-bold uppercase block mb-1">LinkedIn</span>
+                                                <span >LinkedIn</span>
                                                 <input 
                                                   type="text" 
                                                   value={editedLeadData?.linkedin_url || ''} 
                                                   onChange={e => setEditedLeadData(prev => prev ? ({ ...prev, linkedin_url: e.target.value }) : null)}
-                                                  className="w-full border border-border rounded-xl p-2.5 text-xs text-text outline-none focus:border-brand" 
+                                                   
                                                 />
                                               </div>
-                                              <div className="col-span-full flex justify-end gap-2 pt-2 border-t border-border/20">
+                                              <div >
                                                 <button 
                                                   onClick={() => { setEditingLeadId(null); setEditedLeadData(null); }}
-                                                  className="px-3 py-1.5 rounded-xl border border-border text-[11px] font-semibold text-text-muted cursor-pointer"
+                                                  
                                                 >
                                                   Cancel
                                                 </button>
@@ -3165,36 +3115,36 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                                                     setEditingLeadId(null);
                                                     setEditedLeadData(null);
                                                   }}
-                                                  className="px-4 py-1.5 bg-brand text-text rounded-xl text-[11px] font-bold cursor-pointer"
+                                                  
                                                 >
                                                   Save
                                                 </button>
                                               </div>
                                             </div>
                                           ) : (
-                                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs text-left animate-fadeIn">
+                                            <div >
                                               <div>
-                                                <span className="text-[9px] text-text-muted font-bold uppercase">Role / Title</span>
-                                                <span className="text-text font-medium block truncate mt-0.5">{l.role || 'N/A'}</span>
+                                                <span >Role / Title</span>
+                                                <span >{l.role || 'N/A'}</span>
                                               </div>
                                               <div>
-                                                <span className="text-[9px] text-text-muted font-bold uppercase">Official Email</span>
-                                                <span className="text-text font-medium block truncate mt-0.5">{l.email || 'N/A'}</span>
+                                                <span >Official Email</span>
+                                                <span >{l.email || 'N/A'}</span>
                                               </div>
                                               <div>
-                                                <span className="text-[9px] text-text-muted font-bold uppercase">Direct Phone</span>
-                                                <span className="text-text font-medium block truncate mt-0.5">{l.phone || 'N/A'}</span>
+                                                <span >Direct Phone</span>
+                                                <span >{l.phone || 'N/A'}</span>
                                               </div>
                                               <div>
-                                                <span className="text-[9px] text-text-muted font-bold uppercase">Industry Segment</span>
-                                                <span className="text-text font-medium block truncate mt-0.5">{l.industry || 'N/A'}</span>
+                                                <span >Industry Segment</span>
+                                                <span >{l.industry || 'N/A'}</span>
                                               </div>
-                                              <div className="col-span-full pt-2 border-t border-border/20 flex justify-end">
+                                              <div >
                                                 <button 
                                                   onClick={() => { setEditingLeadId(l.id || `lead-${leadIndex}`); setEditedLeadData(l); }}
-                                                  className="px-3.5 py-1.5 bg-brand/10 hover:bg-brand hover:text-white text-brand rounded-xl text-[11px] font-bold flex items-center gap-1 cursor-pointer transition-all"
+                                                  
                                                 >
-                                                  <Settings className="w-3.5 h-3.5" />
+                                                  <Settings  />
                                                   Edit Details
                                                 </button>
                                               </div>
@@ -3210,11 +3160,11 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                           </table>
                         </div>
                         {/* Pagination Controls */}
-                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-5 border-t border-border text-xs text-text-muted">
-                          <div className="flex items-center gap-2">
+                        <div >
+                          <div >
                             <span>Show</span>
                             <select 
-                              className="border border-border rounded-xl px-2 py-1 text-text text-xs outline-none focus:border-brand cursor-pointer font-bold"
+                              
                               value={leadsPerPage}
                               onChange={(e) => {
                                 setLeadsPerPage(Number(e.target.value));
@@ -3228,21 +3178,17 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                             <span>per page</span>
                           </div>
                           
-                          <div className="text-center font-medium">
-                            Showing <span className="text-text font-bold">{displayedLeads.length === 0 ? 0 : (leadsPage - 1) * leadsPerPage + 1}</span> to{" "}
-                            <span className="text-text font-bold">{Math.min(displayedLeads.length, leadsPage * leadsPerPage)}</span> of{" "}
-                            <span className="text-brand font-bold">{displayedLeads.length}</span> leads
+                          <div >
+                            Showing <span >{displayedLeads.length === 0 ? 0 : (leadsPage - 1) * leadsPerPage + 1}</span> to{" "}
+                            <span >{Math.min(displayedLeads.length, leadsPage * leadsPerPage)}</span> of{" "}
+                            <span >{displayedLeads.length}</span> leads
                           </div>
 
-                          <div className="flex items-center gap-1.5">
+                          <div >
                             <button
                               onClick={() => setLeadsPage(prev => Math.max(1, prev - 1))}
                               disabled={leadsPage === 1}
-                              className={`px-3 py-1.5 rounded-lg border border-border text-[11px] font-bold transition-all cursor-pointer ${
-                                leadsPage === 1
-                                  ? 'opacity-40 cursor-not-allowed text-text-muted'
-                                  : 'hover:border-brand/40 text-text hover:text-white bg-surface-alt'
-                              }`}
+                              
                             >
                               Previous
                             </button>
@@ -3261,11 +3207,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                                 <button
                                   key={targetPage}
                                   onClick={() => setLeadsPage(targetPage)}
-                                  className={`w-8 h-8 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
-                                    leadsPage === targetPage
-                                      ? 'bg-brand/10 border border-brand/50 text-brand font-extrabold'
-                                      : 'border border-transparent text-text-muted hover:bg-surface-alt hover:text-white'
-                                  }`}
+                                  
                                 >
                                   {targetPage}
                                 </button>
@@ -3274,11 +3216,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                             <button
                               onClick={() => setLeadsPage(prev => Math.min(Math.ceil(displayedLeads.length / leadsPerPage), prev + 1))}
                               disabled={leadsPage >= Math.ceil(displayedLeads.length / leadsPerPage)}
-                              className={`px-3 py-1.5 rounded-lg border border-border text-[11px] font-bold transition-all cursor-pointer ${
-                                leadsPage >= Math.ceil(displayedLeads.length / leadsPerPage)
-                                  ? 'opacity-40 cursor-not-allowed text-text-muted'
-                                  : 'hover:border-brand/40 text-text hover:text-white bg-surface-alt'
-                              }`}
+                              
                             >
                               Next
                             </button>
@@ -3286,7 +3224,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                         </div>
                       </div>
                     ) : (
-                <div className="grid grid-cols-1 xl:grid-cols-5 gap-4 overflow-x-auto pb-4 pt-2">
+                <div >
                   {[
                     { id: 'imported', label: 'Discovered leads', color: 'border-purple-500/20 text-purple-400 bg-purple-500/5', dot: 'bg-purple-400' },
                     { id: 'pending', label: 'Active engagement', color: 'border-amber-500/20 text-amber-400 bg-amber-500/5', dot: 'bg-amber-400' },
@@ -3327,24 +3265,20 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                             showToast(`Updated stage for contact to ${col.label}`, "success");
                           }
                         }}
-                        className={`flex flex-col rounded-3xl border p-4 transition-all min-h-[480px] duration-300 relative ${
-                          isDraggedOver 
-                            ? 'bg-brand/10 border-brand/50 scale-[1.01] shadow-[0_0_20px_rgba(0,212,170,0.1)]' 
-                            : 'bg-[#0b0c11]/80 border-border'
-                        }`}
+                        
                       >
-                        <div className="flex items-center justify-between mb-4 pb-2.5 border-b border-border/80">
-                          <div className="flex items-center gap-2">
-                            <span className={`w-2 h-2 rounded-full${col.dot}`} />
-                            <span className="font-syne font-bold text-xs tracking-wider text-text uppercase">{col.label}</span>
+                        <div >
+                          <div >
+                            <span  />
+                            <span >{col.label}</span>
                           </div>
-                          <span className="border border-border rounded-xl px-2 py-0.5 text-[10px] font-bold text-text-muted">{colLeads.length}</span>
+                          <span >{colLeads.length}</span>
                         </div>
 
-                        <div className="flex-1 flex flex-col gap-3 overflow-y-auto max-h-[420px] scrollbar-thin font-sans">
+                        <div >
                           {colLeads.length === 0 ? (
-                            <div className="flex-1 border border-dashed border-border/40 rounded-xl flex flex-col items-center justify-center p-4 text-center text-[11px] text-text-muted border-border transition-all min-h-[140px]">
-                              <span className="font-semibold block mb-0.5">Drag leads here</span>
+                            <div >
+                              <span >Drag leads here</span>
                               <span>to update status</span>
                             </div>
                           ) : (
@@ -3366,36 +3300,28 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                                     const cid = l.id || `lead-${leadIdx}`;
                                     setExpandedLeadId(expandedLeadId === cid ? null : cid);
                                   }}
-                                  className={`p-3.5 rounded-2xl border transition-all duration-200 cursor-grab hover:shadow-md active:cursor-grabbing hover:translate-y-[-2px] text-left select-none ${
-                                    isElite 
-                                      ? 'bg-emerald-500/5 border-emerald-500/35 shadow-[0_0_10px_rgba(16,185,129,0.05)]' 
-                                      : 'bg-surface-alt border-border hover:border-brand/40'
-                                  }`}
+                                  
                                 >
-                                  <div className="flex items-start gap-2.5">
-                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs text-white shrink-0 ${
-                                      isElite 
-                                        ? 'bg-gradient-to-br from-emerald-400 to-emerald-700 animate-pulse'
-                                        : 'bg-gradient-to-br from-brand to-brand-alt'
-                                    }`}>
+                                  <div >
+                                    <div >
                                       {(l.name || '?')[0]}
                                     </div>
-                                    <div className="min-w-0 flex-1">
-                                      <div className="font-bold text-xs text-text truncate max-w-[120px] leading-tight flex items-center gap-1.5">
+                                    <div >
+                                      <div >
                                         <span>{l.name}</span>
                                       </div>
-                                      <div className="text-[10px] text-text-muted truncate mt-0.5 font-semibold">
+                                      <div >
                                         {l.role}
                                       </div>
-                                      <div className="text-[10px] text-brand truncate font-bold">
+                                      <div >
                                         {l.company}
                                       </div>
                                     </div>
                                   </div>
 
                                   {/* Recommendation panel */}
-                                  <div className="mt-2 text-[9px] flex flex-col gap-1">
-                                    <span className="text-[8px] uppercase tracking-wider font-extrabold text-text-muted">Recommendation:</span>
+                                  <div >
+                                    <span >Recommendation:</span>
                                     {(() => {
                                       let label = 'Qualify/generate draft';
                                       let cls = 'bg-blue-500/10 text-blue-400 border-blue-500/25';
@@ -3413,23 +3339,23 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                                         cls = 'bg-amber-500/15 text-amber-400 border-amber-500/30';
                                       }
                                       return (
-                                        <span className={`px-2 py-0.5 rounded-xl border text-center font-bold tracking-tight truncate${cls}`}>
+                                        <span >
                                           {label}
                                         </span>
                                       );
                                     })()}
                                   </div>
 
-                                  <div className="mt-3.5 pt-2.5 border-t border-border/40 flex items-center justify-between">
-                                    <div className="flex items-center gap-1 border border-border px-1.5 py-0.5 rounded-xl text-[9px] font-mono text-text-muted">
-                                      <Award className="w-3 h-3 text-brand-alt animate-pulse" />
-                                      <span className="font-extrabold">{lScore}</span>
+                                  <div >
+                                    <div >
+                                      <Award  />
+                                      <span >{lScore}</span>
                                     </div>
 
-                                    <div className="flex items-center gap-1">
-                                      {l.phone && <span className="w-2 h-2 rounded-full" title="WhatsApp ready" />}
-                                      {l.email && <span className="w-2 h-2 rounded-full bg-blue-400" title="Email channel configured" />}
-                                      {l.linkedin_url && <span className="w-2 h-2 rounded-full" title="LinkedIn profile mapped" />}
+                                    <div >
+                                      {l.phone && <span  title="WhatsApp ready" />}
+                                      {l.email && <span  title="Email channel configured" />}
+                                      {l.linkedin_url && <span  title="LinkedIn profile mapped" />}
                                     </div>
                                   </div>
 
@@ -3437,19 +3363,19 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                                     <motion.div 
                                       initial={{ opacity: 0, height: 0 }}
                                       animate={{ opacity: 1, height: 'auto' }}
-                                      className="mt-3 pt-3 border-t border-border/40 text-[10px] space-y-1.5 text-text-muted"
+                                      
                                       onClick={e => e.stopPropagation()}
                                     >
-                                      <p className="truncate text-[10px]"><strong className="text-text">Email:</strong> {l.email || 'N/A'}</p>
-                                      <p className="truncate text-[10px]"><strong className="text-text">Phone:</strong> {l.phone || 'N/A'}</p>
-                                      <div className="flex justify-end pt-1.5">
+                                      <p ><strong >Email:</strong> {l.email || 'N/A'}</p>
+                                      <p ><strong >Phone:</strong> {l.phone || 'N/A'}</p>
+                                      <div >
                                         <button
                                           onClick={(e) => {
                                             e.stopPropagation();
                                             setEditingLeadId(l.id || `lead-${leadIdx}`);
                                             setEditedLeadData(l);
                                           }}
-                                          className="px-2 py-1 bg-brand/10 hover:bg-brand/20 text-brand rounded-xl text-[9px] font-bold cursor-pointer"
+                                          
                                         >
                                           Edit Details
                                         </button>
@@ -3471,7 +3397,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                                 [col.id]: colLimit + 30
                               }));
                             }}
-                            className="w-full mt-2 py-2 hover:bg-brand hover:text-[#090a0f] border border-border hover:border-brand text-brand tracking-wide text-[10px] font-extrabold rounded-xl transition-all cursor-pointer text-center"
+                            
                           >
                             + Load {colLeads.length - colLimit} More Leads
                           </button>
@@ -3492,10 +3418,10 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => setActivePanel(2)}
-                className="w-full text-text font-syne font-extrabold py-6 rounded-xl transition-all flex items-center justify-center gap-3 group text-lg"
+                
               >
                 Continue to Generate
-                <ChevronRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
+                <ChevronRight  />
               </motion.button>
             </motion.div>
           )}
@@ -3503,34 +3429,34 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
 
         {/* Panel 2: Generate */}
         <PanelWrapper index={2} activePanel={activePanel}>
-          <div className="space-y-1 mb-8">
-            <h1 className="text-xl md:text-2xl font-bold tracking-tight">Generate</h1>
-            <p className="text-text-muted text-xs md:text-sm">AI writes WhatsApp + LinkedIn + Email per lead.</p>
+          <div >
+            <h1 >Generate</h1>
+            <p >AI writes WhatsApp + LinkedIn + Email per lead.</p>
           </div>
 
-          <div className="bg-email/10 border border-email/20 rounded-xl p-6 text-sm text-warning-muted leading-relaxed flex items-start gap-4 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-email/20 flex items-center justify-center text-email shrink-0">
-              <Zap className="w-5 h-5" />
+          <div >
+            <div >
+              <Zap  />
             </div>
             <div>
-              <div className="font-bold text-brand mb-1">Resource Usage</div>
+              <div >Resource Usage</div>
               Each lead = 1 API call (all 3 channels). {leads.length} leads ≈ 30–60 seconds.
             </div>
           </div>
 
           {!isGenerating && Object.keys(messages).length === 0 && (
-            <div className="bg-surface border border-border rounded-xl p-8 space-y-6">
-              <div className="flex items-center gap-3 text-sm font-bold">
-                <div className="w-8 h-8 rounded-xl bg-brand/10 flex items-center justify-center text-brand">
-                  <Zap className="w-4 h-4" />
+            <div >
+              <div >
+                <div >
+                  <Zap  />
                 </div>
                 Settings
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-[10px] text-text-muted font-bold uppercase tracking-widest">Batch Size</label>
+              <div >
+                <div >
+                  <label >Batch Size</label>
                   <select 
-                    className="w-full border border-border rounded-xl p-4 text-sm focus:border-brand outline-none transition-all appearance-none cursor-pointer"
+                    
                     value={batchSize}
                     onChange={e => setBatchSize(parseInt(e.target.value))}
                   >
@@ -3540,10 +3466,10 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                     <option value={999}>All leads</option>
                   </select>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] text-text-muted font-bold uppercase tracking-widest">Tone Style</label>
+                <div >
+                  <label >Tone Style</label>
                   <select 
-                    className="w-full border border-border rounded-xl p-4 text-sm focus:border-brand outline-none transition-all appearance-none cursor-pointer"
+                    
                     value={tone}
                     onChange={e => setTone(e.target.value)}
                   >
@@ -3555,34 +3481,34 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
               </div>
               <button 
                 onClick={startGeneration}
-                className="w-full bg-brand hover:bg-brand/90 text-text font-syne font-extrabold py-5 rounded-xl transition-all flex items-center justify-center gap-3"
+                
               >
-                <Zap className="w-6 h-6 fill-current" />
+                <Zap  />
                 Generate All Messages
               </button>
             </div>
           )}
 
           {isGenerating && (
-            <div className="bg-surface border border-border rounded-xl p-8 space-y-6">
-              <div className="flex items-center gap-3 text-sm font-bold">
-                <Loader2 className="w-5 h-5 text-brand animate-spin" />
+            <div >
+              <div >
+                <Loader2  />
                 Generating…
               </div>
-              <div className="h-2 w-full rounded-full overflow-hidden border border-border">
+              <div >
                 <motion.div 
-                  className="h-full"
+                  
                   initial={{ width: 0 }}
                   animate={{ width: `${genProgress}%` }}
                 />
               </div>
-              <div className="text-[10px] text-text-muted font-mono uppercase tracking-widest">
+              <div >
                 Progress: {Math.round(genProgress)}%
               </div>
-              <div className="bg-bg-subtle border border-border rounded-xl p-5 h-48 overflow-y-auto font-mono text-[11px] text-text-muted space-y-2 custom-scrollbar">
+              <div >
                 {genLog.map((log, i) => (
-                  <div key={i} className={`flex items-start gap-2${log.includes('✓') ? 'text-brand-alt' : ''}`}>
-                    <span className="opacity-30">[{new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'})}]</span>
+                  <div key={i} >
+                    <span >[{new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'})}]</span>
                     {log}
                   </div>
                 ))}
@@ -3595,18 +3521,18 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
             <motion.div 
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="bg-surface border border-border rounded-xl p-8 text-center space-y-6"
+              
             >
-              <div className="w-20 h-20 bg-brand-alt/10 rounded-full flex items-center justify-center mx-auto">
-                <CheckCircle2 className="w-10 h-10 text-brand-alt" />
+              <div >
+                <CheckCircle2  />
               </div>
-              <div className="space-y-2">
-                <h3 className="text-2xl font-syne font-bold text-brand-alt">All Messages Ready</h3>
-                <p className="text-text-muted text-base">Tap Review to read and edit before sending.</p>
+              <div >
+                <h3 >All Messages Ready</h3>
+                <p >Tap Review to read and edit before sending.</p>
               </div>
               <button 
                 onClick={() => setActivePanel(3)}
-                className="w-full bg-brand-alt/10 hover:bg-brand-alt/20 text-brand-alt border border-brand-alt/30 font-syne font-extrabold py-5 rounded-xl transition-all"
+                
               >
                 Review Messages →
               </button>
@@ -3616,12 +3542,12 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
 
         {/* Panel 3: Review */}
         <PanelWrapper index={3} activePanel={activePanel}>
-          <div className="space-y-1 mb-8">
-            <h1 className="text-xl md:text-2xl font-bold tracking-tight">Review & Refine</h1>
-            <p className="text-text-muted text-xs md:text-sm">Fine-tune your AI agents' output before sending.</p>
+          <div >
+            <h1 >Review & Refine</h1>
+            <p >Fine-tune your AI agents' output before sending.</p>
           </div>
 
-          <div className="space-y-6">
+          <div >
             {leads.filter(l => l.id && messages[l.id]).map((lead) => (
               <ReviewCard 
                 key={lead.id} 
@@ -3640,108 +3566,108 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => setActivePanel(4)}
-            className="w-full text-text font-syne font-extrabold py-6 rounded-xl transition-all flex items-center justify-center gap-3 group mt-10 text-lg"
+            
           >
             Export & Send
-            <ChevronRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
+            <ChevronRight  />
           </motion.button>
         </PanelWrapper>
 
         {/* Panel 4: Export */}
         <PanelWrapper index={4} activePanel={activePanel}>
-          <div className="space-y-1 mb-8">
-            <h1 className="text-xl md:text-2xl font-bold tracking-tight">Export & Send</h1>
-            <p className="text-text-muted text-xs md:text-sm">Download and deploy your outreach.</p>
+          <div >
+            <h1 >Export & Send</h1>
+            <p >Download and deploy your outreach.</p>
           </div>
 
-          <div className="bg-brand/10 border border-border rounded-xl p-6 text-sm text-brand-muted leading-relaxed flex items-start gap-4 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-brand/20 flex items-center justify-center text-brand shrink-0">
-              <Download className="w-5 h-5" />
+          <div >
+            <div >
+              <Download  />
             </div>
             <div>
-              <div className="font-bold text-brand mb-1">Export Options</div>
+              <div >Export Options</div>
               Master CSV works in Google Sheets. n8n JSON imports directly into your workflow.
             </div>
           </div>
 
-          <div className="grid gap-6">
-            <div className="grid md:grid-cols-2 gap-6">
+          <div >
+            <div >
               {liAccount?.connected && (
-                <div className="md:col-span-2 bg-brand/5 border border-border rounded-xl p-8 space-y-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-brand/10 flex items-center justify-center text-brand">
-                        <Linkedin className="w-6 h-6" />
+                <div >
+                  <div >
+                    <div >
+                      <div >
+                        <Linkedin  />
                       </div>
                       <div>
-                        <div className="text-lg font-bold">LinkedIn Auto-Send Queue</div>
-                        <div className="text-xs text-text-muted font-medium">Sync with automation bridge</div>
+                        <div >LinkedIn Auto-Send Queue</div>
+                        <div >Sync with automation bridge</div>
                       </div>
                     </div>
                     {lastSync && (
-                      <div className="px-3 py-1 rounded-full bg-brand/10 text-brand text-[9px] font-mono font-bold">LAST SYNC: {lastSync}</div>
+                      <div >LAST SYNC: {lastSync}</div>
                     )}
                   </div>
-                  <p className="text-sm text-text-muted leading-relaxed">
+                  <p >
                     Your LinkedIn account is connected. Sync your generated messages to the automation bridge to start background sending.
                   </p>
                   <button 
                     onClick={handleSyncLinkedIn}
                     disabled={isSyncingLi || Object.keys(messages).length === 0}
-                    className="w-full py-4 rounded-xl bg-brand text-text font-syne font-extrabold flex items-center justify-center gap-3 hover:bg-brand/90 transition-all disabled:opacity-50"
+                    
                   >
-                    {isSyncingLi ? <Loader2 className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5 fill-current" />}
+                    {isSyncingLi ? <Loader2  /> : <Zap  />}
                     Sync {Object.keys(messages).length} Messages to Queue
                   </button>
                 </div>
               )}
               {[
-                { id: 'whatsapp' as const, icon: <Smartphone className="w-6 h-6" />, title: 'WhatsApp', color: '#25d366', desc: 'CSV with all messages + Node.js send script' },
-                { id: 'linkedin' as const, icon: <Linkedin className="w-6 h-6" />, title: 'LinkedIn', color: '#4da6ff', desc: 'Connect request + DM text. Import to Expandi / Dripify.' },
-                { id: 'email' as const, icon: <Mail className="w-6 h-6" />, title: 'Email', color: '#f59e0b', desc: 'Subject + body + follow-up. Import to Apollo / Lemlist.' },
-                { id: 'master' as const, icon: <FileSpreadsheet className="w-6 h-6" />, title: 'Master CSV', color: '#00d4aa', desc: 'All leads + all 3 channels in one tracking spreadsheet.' }
+                { id: 'whatsapp' as const, icon: <Smartphone  />, title: 'WhatsApp', color: '#25d366', desc: 'CSV with all messages + Node.js send script' },
+                { id: 'linkedin' as const, icon: <Linkedin  />, title: 'LinkedIn', color: '#4da6ff', desc: 'Connect request + DM text. Import to Expandi / Dripify.' },
+                { id: 'email' as const, icon: <Mail  />, title: 'Email', color: '#f59e0b', desc: 'Subject + body + follow-up. Import to Apollo / Lemlist.' },
+                { id: 'master' as const, icon: <FileSpreadsheet  />, title: 'Master CSV', color: '#00d4aa', desc: 'All leads + all 3 channels in one tracking spreadsheet.' }
               ].map(ex => (
-                <div key={ex.id} className="bg-surface border border-border rounded-xl p-8 space-y-6 group transition-all">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl flex items-center justify-center text-text" style={{ backgroundColor: ex.color }}>
+                <div key={ex.id} >
+                  <div >
+                    <div  style={{ backgroundColor: ex.color }}>
                       {ex.icon}
                     </div>
                     <div>
-                      <div className="text-lg font-bold">{ex.title}</div>
-                      <div className="text-xs text-text-muted font-medium">{ex.desc}</div>
+                      <div >{ex.title}</div>
+                      <div >{ex.desc}</div>
                     </div>
                   </div>
                   
-                  <div className="flex gap-3">
+                  <div >
                     <button 
                       onClick={() => exportCSV(ex.id as any)}
-                      className="flex-1 py-4 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 bg-surface border border-border hover:bg-surface-alt cursor-pointer"
+                      
                     >
-                      <Download className="w-4 h-4" />
+                      <Download  />
                       Download
                     </button>
                   </div>
 
                   {ex.id === 'linkedin' && liAccount?.connected && (
-                    <div className="pt-4 border-t border-border space-y-4">
-                      <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-text-muted">
+                    <div >
+                      <div >
                         <span>Automation Bridge</span>
-                        <span className="text-brand-alt">Ready</span>
+                        <span >Ready</span>
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div >
                         <button 
                           onClick={handleSyncLinkedIn}
                           disabled={isSyncingLi}
-                          className="flex items-center justify-center gap-2 py-3 rounded-xl bg-brand-alt/10 text-brand-alt border border-brand-alt/20 text-[10px] font-bold hover:bg-brand-alt hover:text-white transition-all disabled:opacity-50"
+                          
                         >
-                          {isSyncingLi ? <Loader2 className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
+                          {isSyncingLi ? <Loader2  /> : <Zap  />}
                           Sync Queue
                         </button>
                         <button 
                           onClick={() => exportCSV('li_script')}
-                          className="flex items-center justify-center gap-2 py-3 rounded-xl border border-border text-[10px] font-bold hover:bg-border transition-all"
+                          
                         >
-                          <Code2 className="w-3 h-3" />
+                          <Code2  />
                           Get Script
                         </button>
                       </div>
@@ -3753,32 +3679,32 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
           </div>
 
           {/* CRM Integration Section */}
-          <div className="bg-surface border border-border rounded-xl p-8 space-y-6 mt-10 relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none">
-              <Database className="w-24 h-24 text-brand" />
+          <div >
+            <div >
+              <Database  />
             </div>
 
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-brand/10 flex items-center justify-center text-brand">
-                    <Database className="w-4.5 h-4.5" />
+            <div >
+              <div >
+                <div >
+                  <div >
+                    <Database  />
                   </div>
-                  <h3 className="text-base font-bold">Enterprise CRM Integration</h3>
+                  <h3 >Enterprise CRM Integration</h3>
                 </div>
-                <p className="text-xs text-text-muted">
+                <p >
                   Export personalized leads and conversation metrics directly to HubSpot or Salesforce pipelines.
                 </p>
               </div>
 
               {!crmAccount?.connected ? (
-                <div className="flex items-center gap-2">
+                <div >
                   <button 
                     onClick={() => {
                       setCrmPlatformToConnect('HubSpot');
                       setShowCrmModal(true);
                     }}
-                    className="px-4 py-2 border border-border hover:bg-border rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
+                    
                   >
                     Connect HubSpot
                   </button>
@@ -3787,20 +3713,20 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                       setCrmPlatformToConnect('Salesforce');
                       setShowCrmModal(true);
                     }}
-                    className="px-4 py-2 bg-brand hover:bg-brand/90 text-text rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
+                    
                   >
                     Connect Salesforce
                   </button>
                 </div>
               ) : (
-                <div className="flex items-center gap-2">
-                  <span className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-mono font-bold uppercase flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                <div >
+                  <span >
+                    <span  />
                     {crmAccount.platform} Connected
                   </span>
                   <button 
                     onClick={handleDisconnectCRM}
-                    className="px-3 py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-xl text-[10px] font-bold transition-all cursor-pointer"
+                    
                   >
                     Disconnect
                   </button>
@@ -3812,22 +3738,22 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
               <motion.div 
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="pt-6 border-t border-border grid grid-cols-1 md:grid-cols-3 gap-6"
+                
               >
-                <div className="space-y-2">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted block">Connected Org</label>
-                  <div className="p-3.5 border border-border rounded-xl text-xs font-mono font-semibold flex items-center justify-between text-brand">
+                <div >
+                  <label >Connected Org</label>
+                  <div >
                     <span>{crmAccount.orgName}</span>
-                    <RefreshCw className="w-3.5 h-3.5 opacity-60 animate-spin" />
+                    <RefreshCw  />
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted block">Pipeline Target Stage</label>
+                <div >
+                  <label >Pipeline Target Stage</label>
                   <select 
                     value={crmMappingStage}
                     onChange={(e) => setCrmMappingStage(e.target.value)}
-                    className="w-full p-3.5 border border-border rounded-xl text-xs font-bold text-text cursor-pointer focus:outline-none focus:border-brand"
+                    
                   >
                     <option value="Prospecting / SDR Out">Prospecting / SDR Out</option>
                     <option value="Lead Qualified / Verified">Lead Qualified / Verified</option>
@@ -3836,20 +3762,20 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                   </select>
                 </div>
 
-                <div className="flex items-end">
+                <div >
                   <button 
                     onClick={handlePushCRMData}
                     disabled={isCrmPushing}
-                    className="w-full py-3.5 rounded-xl hover:opacity-90 disabled:opacity-50 text-text text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer"
+                    
                   >
                     {isCrmPushing ? (
                       <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <Loader2  />
                         <span>Syncing to {crmAccount.platform}...</span>
                       </>
                     ) : (
                       <>
-                        <Database className="w-4 h-4 fill-current" />
+                        <Database  />
                         <span>Push {leads.length || 3} Leads to {crmAccount.platform}</span>
                       </>
                     )}
@@ -3862,27 +3788,27 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
               <motion.div 
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
-                className="border border-border rounded-xl p-5 space-y-4"
+                
               >
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-brand flex items-center gap-1.5">
-                    <Database className="w-4 h-4 text-brand animate-pulse" />
+                <div >
+                  <span >
+                    <Database  />
                     API INTEGRATION PIPELINE SYNC
                   </span>
-                  <span className="font-mono font-bold text-brand">{crmPushProgress}%</span>
+                  <span >{crmPushProgress}%</span>
                 </div>
                 
-                <div className="h-2 w-full rounded-full overflow-hidden border border-border">
+                <div >
                   <div 
-                    className="h-full transition-all duration-300"
+                    
                     style={{ width: `${crmPushProgress}%` }}
                   />
                 </div>
 
-                <div className="border border-border rounded-xl p-4 h-40 overflow-y-auto font-mono text-[10px] text-text-muted space-y-1.5 custom-scrollbar">
+                <div >
                   {crmPushLog.map((log, i) => (
-                    <div key={i} className={`flex items-start gap-1.5${log.includes('HTTP 201') ? 'text-brand-alt' : log.includes('[SUCCESS]') || log.includes('Successfully') ? 'text-brand font-bold' : ''}`}>
-                      <span className="opacity-30">[{new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'})}]</span>
+                    <div key={i} >
+                      <span >[{new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'})}]</span>
                       <span>{log}</span>
                     </div>
                   ))}
@@ -3891,20 +3817,20 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
             )}
           </div>
 
-          <div className="bg-surface border border-border rounded-xl p-8 space-y-6 mt-10">
-            <div className="flex items-center gap-3 text-sm font-bold">
-              <ShieldCheck className="w-4 h-4 text-brand" />
+          <div >
+            <div >
+              <ShieldCheck  />
               Daily Limits & Safety
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div >
               {[
                 { title: 'WhatsApp', color: '#25d366', body: 'Max 50-80 msg/day. 8-10s delay.' },
                 { title: 'LinkedIn', color: '#4da6ff', body: 'Max 20-25 req/day. No links in msg 1.' },
                 { title: 'Email', color: '#f59e0b', body: 'Max 50-100/day. Warm domain first.' }
               ].map((s, i) => (
-                <div key={i} className="border border-border rounded-xl p-4 space-y-2">
-                  <div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: s.color }}>{s.title}</div>
-                  <div className="text-[10px] text-text-muted font-medium leading-relaxed">{s.body}</div>
+                <div key={i} >
+                  <div  style={{ color: s.color }}>{s.title}</div>
+                  <div >{s.body}</div>
                 </div>
               ))}
             </div>
@@ -3954,33 +3880,33 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
 
     {/* Dynamic Reader/Viewer views */}
     {(activeView === 'VIEWER_DASHBOARD' || activeView === 'VIEWER_PIPELINE') && (
-      <div className="bg-surface border border-border rounded-xl p-8 max-w-4xl mx-auto text-center space-y-4">
-        <div className="text-3xl font-syne font-bold text-purple-400">Read-Only Viewer Analytics Panel</div>
-        <p className="text-sm text-text-muted">You are currently logged in with a read-only seat. Inbound sequence analytics and company pipelines can be viewed but edit actions are restricted by administrative guidelines.</p>
-        <div className="border border-border p-4 rounded-xl text-left space-y-2 text-xs">
-          <div className="font-bold text-text uppercase tracking-wider text-[10px]">&bull; Corporate Multi-Tenant Compliance</div>
-          <p className="text-text-muted">Domain settings and members roster configurations are managed by organizational administrators. To acquire edit-seat clearance, please contact your billing coordinator.</p>
+      <div >
+        <div >Read-Only Viewer Analytics Panel</div>
+        <p >You are currently logged in with a read-only seat. Inbound sequence analytics and company pipelines can be viewed but edit actions are restricted by administrative guidelines.</p>
+        <div >
+          <div >&bull; Corporate Multi-Tenant Compliance</div>
+          <p >Domain settings and members roster configurations are managed by organizational administrators. To acquire edit-seat clearance, please contact your billing coordinator.</p>
         </div>
       </div>
     )}
 
     {/* Super Admin Billing view */}
     {activeView === 'SUPER_ADMIN_BILLING' && (
-      <div className="bg-surface border border-border rounded-xl p-8 max-w-4xl mx-auto space-y-6">
-        <h3 className="text-xl font-bold tracking-tight font-syne">Platform Multi-Tenant Billing Gateway</h3>
-        <p className="text-text-muted text-xs md:text-sm">Manage subscription pricing matrices, super-administrator global MRR graphs, and direct merchant overrides.</p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-4">
-          <div className="border border-border p-6 rounded-xl">
-            <div className="text-3xl font-syne font-bold text-emerald-400">$38,240</div>
-            <div className="text-[9px] text-text-muted uppercase tracking-widest font-bold mt-1">Platform Run-Rate MRR</div>
+      <div >
+        <h3 >Platform Multi-Tenant Billing Gateway</h3>
+        <p >Manage subscription pricing matrices, super-administrator global MRR graphs, and direct merchant overrides.</p>
+        <div >
+          <div >
+            <div >$38,240</div>
+            <div >Platform Run-Rate MRR</div>
           </div>
-          <div className="border border-border p-6 rounded-xl">
-            <div className="text-3xl font-syne font-bold text-blue-400">42</div>
-            <div className="text-[9px] text-text-muted uppercase tracking-widest font-bold mt-1">Active Enterprise Orgs</div>
+          <div >
+            <div >42</div>
+            <div >Active Enterprise Orgs</div>
           </div>
-          <div className="border border-border p-6 rounded-xl">
-            <div className="text-3xl font-syne font-bold">100%</div>
-            <div className="text-[9px] text-text-muted uppercase tracking-widest font-bold mt-1">Stripe Server uptime</div>
+          <div >
+            <div >100%</div>
+            <div >Stripe Server uptime</div>
           </div>
         </div>
       </div>
@@ -4040,46 +3966,46 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
       />
     )}
     {(activeView as string) === 'PIPELINE_ANALYTICS' && (
-      <div className="p-6 max-w-5xl mx-auto space-y-6">
+      <div >
         <div>
-          <h1 className="text-xl font-bold text-text">Pipeline Analytics</h1>
-          <p className="text-xs text-text-secondary mt-0.5">Stage funnel, channel attribution, BANT distribution</p>
+          <h1 >Pipeline Analytics</h1>
+          <p >Stage funnel, channel attribution, BANT distribution</p>
         </div>
         <PipelineFunnelChart orgId={profile?.orgId || user?.uid || 'default'} />
       </div>
     )}
     {(activeView as string) === 'AI_COSTS' && (
-      <div className="p-6 max-w-4xl mx-auto space-y-6">
+      <div >
         <div>
-          <h1 className="text-xl font-bold text-text">AI Cost Tracker</h1>
-          <p className="text-xs text-text-secondary mt-0.5">Token usage, model breakdown, and per-lead costs</p>
+          <h1 >AI Cost Tracker</h1>
+          <p >Token usage, model breakdown, and per-lead costs</p>
         </div>
         <AiCostTracker orgId={profile?.orgId || user?.uid || 'default'} />
       </div>
     )}
     {(activeView as string) === 'INTEGRATIONS' && (
-      <div className="p-6 max-w-3xl mx-auto">
-        <div className="mb-6">
-          <h1 className="text-xl font-bold text-text">Integrations</h1>
-          <p className="text-xs text-text-secondary mt-0.5">Manage Listmonk, n8n, Whisper, and Meilisearch services</p>
+      <div >
+        <div >
+          <h1 >Integrations</h1>
+          <p >Manage Listmonk, n8n, Whisper, and Meilisearch services</p>
         </div>
         <IntegrationStatusPanel />
       </div>
     )}
   </main>
-  <footer className="py-8 border-t border-border-subtle/50 mt-auto">
-    <div className="max-w-6xl mx-auto px-4 md:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-text-muted">
-      <div className="flex items-center gap-2">
-        <span className="w-2 h-2 rounded-full bg-brand animate-pulse" />
+  <footer >
+    <div >
+      <div >
+        <span  />
         <span>Zyntra SDR Portal &copy; {new Date().getFullYear()}</span>
       </div>
-      <div className="flex items-center gap-1.5">
+      <div >
         <span>Developed by</span>
         <a 
           href="https://www.linkedin.com/in/pratyushmalviy/" 
           target="_blank" 
           rel="noopener noreferrer" 
-          className="text-brand hover:text-brand-alt hover:underline font-bold transition-all relative group"
+          
         >
           Pratyush Malviya
         </a>
@@ -4091,14 +4017,14 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
       {/* CRM OAuth / API Credentials Simulated Connection Modal */}
       <AnimatePresence>
         {showCrmModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div >
             {/* Backdrop */}
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => { if (!isConnectingCrm) setShowCrmModal(false); }}
-              className="absolute inset-0"
+              
             />
 
             {/* Modal Body */}
@@ -4106,88 +4032,88 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="relative max-w-md w-full border border-border rounded-xl p-8 space-y-6 overflow-hidden text-text"
+              
             >
               {/* Colored accent header depending on selection */}
               <div 
-                className="absolute top-0 left-0 right-0 h-1.5"
+                
                 style={{ backgroundColor: crmPlatformToConnect === 'Salesforce' ? '#00a1e0' : '#ff7a59' }}
               />
 
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-white/[0.04] flex items-center justify-center">
-                    <Database className="w-5 h-5 text-brand" />
+              <div >
+                <div >
+                  <div >
+                    <Database  />
                   </div>
                   <div>
-                    <h3 className="font-bold text-base">Connect {crmPlatformToConnect}</h3>
-                    <p className="text-[10px] text-text font-medium font-mono">OAuth 2.0 Secure Handshake</p>
+                    <h3 >Connect {crmPlatformToConnect}</h3>
+                    <p >OAuth 2.0 Secure Handshake</p>
                   </div>
                 </div>
                 <button 
                   onClick={() => setShowCrmModal(false)}
                   disabled={isConnectingCrm}
-                  className="p-1 rounded-xl hover:bg-white/5 cursor-pointer disabled:opacity-40"
+                  
                 >
-                  <X className="w-5 h-5 text-slate-500" />
+                  <X  />
                 </button>
               </div>
 
-              <div className="space-y-4">
-                <div className="space-y-1.5 text-left">
-                  <label className="text-[10px] font-bold uppercase tracking-widest">Instance Endpoint URL</label>
+              <div >
+                <div >
+                  <label >Instance Endpoint URL</label>
                   <input 
                     type="text" 
                     value={crmInstanceUrl}
                     onChange={(e) => setCrmInstanceUrl(e.target.value)}
                     placeholder={crmPlatformToConnect === 'Salesforce' ? 'https://na162.salesforce.com' : 'https://api.hubspot.com/v3'}
                     disabled={isConnectingCrm}
-                    className="w-full px-4 py-3 border border-border rounded-xl text-xs text-text placeholder-slate-600 focus:outline-none focus:border-brand"
+                    
                   />
-                  <p className="text-[9px] text-slate-500 italic">Leave blank to route via public API gateways.</p>
+                  <p >Leave blank to route via public API gateways.</p>
                 </div>
 
-                <div className="space-y-1.5 text-left">
-                  <label className="text-[10px] font-bold uppercase tracking-widest">Authorization Bearer Code</label>
+                <div >
+                  <label >Authorization Bearer Code</label>
                   <input 
                     type="password" 
                     value={crmAuthCode}
                     onChange={(e) => setCrmAuthCode(e.target.value)}
                     placeholder="Enter permanent private API secret verification token"
                     disabled={isConnectingCrm}
-                    className="w-full px-4 py-3 border border-border rounded-xl text-xs text-text placeholder-slate-600 focus:outline-none focus:border-brand"
+                    
                   />
                 </div>
 
-                <div className="p-4 bg-white/[0.02] border border-border rounded-xl text-[10px] text-text leading-relaxed flex items-start gap-2.5 text-left">
-                  <ShieldCheck className="w-5 h-5 shrink-0" />
+                <div >
+                  <ShieldCheck  />
                   <span>
                     Your authorization credentials are encrypted and stored inside secure sandbox storage schemas aligned with modern TLS encryption guidelines.
                   </span>
                 </div>
               </div>
 
-              <div className="flex gap-3">
+              <div >
                 <button 
                   onClick={() => setShowCrmModal(false)}
                   disabled={isConnectingCrm}
-                  className="flex-1 py-3.5 bg-white/[0.04] border border-border hover:bg-white/5 rounded-xl text-xs font-bold transition-all cursor-pointer disabled:opacity-50 text-text"
+                  
                 >
                   Cancel
                 </button>
                 <button 
                   onClick={() => handleConnectCRM(crmPlatformToConnect)}
                   disabled={isConnectingCrm}
-                  className="flex-1 py-3.5 bg-brand hover:opacity-90 rounded-xl text-xs font-bold text-text transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  
                 >
                   {isConnectingCrm ? (
                     <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <Loader2  />
                       <span>Authorizing...</span>
                     </>
                   ) : (
                     <>
-                      <Link2 className="w-4 h-4" />
+                      <Link2  />
                       <span>Connect Securely</span>
                     </>
                   )}
@@ -4207,86 +4133,86 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
         )}
 
         {showBulkEditModal && (
-          <div className="fixed inset-0 flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div >
             <motion.div 
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-surface border border-border rounded-xl p-8 max-w-lg w-full space-y-6 relative select-text"
+              
             >
-              <div className="flex items-center justify-between">
+              <div >
                 <div>
-                  <h2 className="text-lg font-syne font-bold text-text flex items-center gap-2">
-                    <Settings className="w-5 h-5 text-brand" />
+                  <h2 >
+                    <Settings  />
                     Bulk Edit {selectedLeadIds.length} Selected Leads
                   </h2>
-                  <p className="text-xs text-text-muted mt-0.5">Specify non-empty values for attributes you wish to change.</p>
+                  <p >Specify non-empty values for attributes you wish to change.</p>
                 </div>
                 <button 
                   onClick={() => setShowBulkEditModal(false)}
-                  className="p-1 px-1.5 rounded-xl hover:bg-surface-alt text-text-muted transition-all cursor-pointer"
+                  
                 >
                   ✕
                 </button>
               </div>
 
-              <div className="space-y-4">
+              <div >
                 <div>
-                  <label className="text-[10px] text-text-muted font-bold uppercase tracking-wider block mb-1">Role / Designation</label>
+                  <label >Role / Designation</label>
                   <input 
                     type="text" 
                     placeholder="e.g. CTO, Director of Eng" 
-                    className="w-full border border-border rounded-xl p-3 text-xs text-text outline-none focus:border-brand"
+                    
                     value={bulkEditFields.role}
                     onChange={e => setBulkEditFields(prev => ({ ...prev, role: e.target.value }))}
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] text-text-muted font-bold uppercase tracking-wider block mb-1">Company Name</label>
+                  <label >Company Name</label>
                   <input 
                     type="text" 
                     placeholder="e.g. Acme Corp" 
-                    className="w-full border border-border rounded-xl p-3 text-xs text-text outline-none focus:border-brand"
+                    
                     value={bulkEditFields.company}
                     onChange={e => setBulkEditFields(prev => ({ ...prev, company: e.target.value }))}
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] text-text-muted font-bold uppercase tracking-wider block mb-1">Industry Segment</label>
+                  <label >Industry Segment</label>
                   <input 
                     type="text" 
                     placeholder="e.g. SaaS, Fintech" 
-                    className="w-full border border-border rounded-xl p-3 text-xs text-text outline-none focus:border-brand"
+                    
                     value={bulkEditFields.industry}
                     onChange={e => setBulkEditFields(prev => ({ ...prev, industry: e.target.value }))}
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] text-text-muted font-bold uppercase tracking-wider block mb-1">Country ISO Code</label>
+                  <label >Country ISO Code</label>
                   <input 
                     type="text" 
                     placeholder="e.g. US, GB, IN" 
-                    className="w-full border border-border rounded-xl p-3 text-xs text-text outline-none focus:border-brand"
+                    
                     value={bulkEditFields.country}
                     onChange={e => setBulkEditFields(prev => ({ ...prev, country: e.target.value }))}
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] text-text-muted font-bold uppercase tracking-wider block mb-1">Status Code</label>
+                  <label >Status Code</label>
                   <input 
                     type="text" 
                     placeholder="e.g. pending, sent, contact" 
-                    className="w-full border border-border rounded-xl p-3 text-xs text-text outline-none focus:border-brand"
+                    
                     value={bulkEditFields.status}
                     onChange={e => setBulkEditFields(prev => ({ ...prev, status: e.target.value }))}
                   />
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
+              <div >
                 <button
                   onClick={() => setShowBulkEditModal(false)}
-                  className="px-4.5 py-2 rounded-xl text-xs font-semibold text-text-muted border border-border hover:bg-surface-alt cursor-pointer transition-all"
+                  
                 >
                   Cancel
                 </button>
@@ -4295,7 +4221,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                     await handleBulkUpdateLeads(selectedLeadIds, bulkEditFields as any);
                     setShowBulkEditModal(false);
                   }}
-                  className="px-6 py-2 bg-brand text-text hover:opacity-90 rounded-xl text-xs font-bold cursor-pointer transition-all"
+                  
                 >
                   Apply Updates
                 </button>
@@ -4305,45 +4231,45 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
         )}
 
         {showBulkAddModal && (
-          <div className="fixed inset-0 flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div >
             <motion.div 
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-surface border border-border rounded-xl p-8 max-w-2xl w-full space-y-6 relative select-text"
+              
             >
-              <div className="flex items-center justify-between">
+              <div >
                 <div>
-                  <h2 className="text-lg font-syne font-bold text-text flex items-center gap-2">
-                    <PlusCircle className="w-5 h-5 text-brand-alt" />
+                  <h2 >
+                    <PlusCircle  />
                     Bulk Add Leads
                   </h2>
-                  <p className="text-xs text-text-muted mt-0.5">Paste CSV or TSV format data below. First row as values directly.</p>
+                  <p >Paste CSV or TSV format data below. First row as values directly.</p>
                 </div>
                 <button 
                   onClick={() => setShowBulkAddModal(false)}
-                  className="p-1 px-1.5 rounded-xl hover:bg-surface-alt text-text-muted transition-all cursor-pointer"
+                  
                 >
                   ✕
                 </button>
               </div>
 
-              <div className="space-y-4">
-                <div className="p-3 bg-brand/5 border border-border rounded-xl text-[11px] text-brand shrink-0">
-                  <span className="font-bold">Format: </span> <code className="p-1 rounded-xl">name,role,company,industry,country,phone,email,linkedin_url</code>. Paste one lead per line.
+              <div >
+                <div >
+                  <span >Format: </span> <code >name,role,company,industry,country,phone,email,linkedin_url</code>. Paste one lead per line.
                 </div>
                 <textarea 
-                  className="w-full border border-border rounded-xl p-6 text-xs font-mono focus:border-brand outline-none transition-all min-h-[220px] resize-none"
+                  
                   placeholder="Alice Smith,CEO,Acme Corp,Software,US,12345,alice@acme.com,linkedin.com/in/alice"
                   value={bulkAddRowsText}
                   onChange={e => setBulkAddRowsText(e.target.value)}
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
+              <div >
                 <button
                   onClick={() => setShowBulkAddModal(false)}
-                  className="px-4.5 py-2 rounded-xl text-xs font-semibold text-text-muted border border-border hover:bg-surface-alt cursor-pointer transition-all"
+                  
                 >
                   Cancel
                 </button>
@@ -4357,7 +4283,7 @@ console.log("🚀 Zyntra AI Bridge Initialized. Found " + outreachData.length + 
                     setBulkAddRowsText('');
                     setShowBulkAddModal(false);
                   }}
-                  className="px-6 py-2 bg-brand text-text hover:opacity-90 rounded-xl text-xs font-bold cursor-pointer transition-all"
+                  
                 >
                   Parse & Insert Leads
                 </button>
@@ -4381,23 +4307,15 @@ function NavButton({ active, onClick, icon: Icon, label, subLabel, isCollapsed }
   return (
     <button
       onClick={onClick}
-      className={`w-full flex items-center gap-4 transition-all group cursor-pointer ${
-        isCollapsed ? 'justify-center p-2' : 'p-3 rounded-2xl'
-      } ${
-        active 
-          ? 'bg-brand text-white shadow-lg shadow-brand/20 rounded-2xl font-bold' 
-          : 'text-text-muted hover:bg-bg-subtle hover:text-text rounded-2xl'
-      }`}
+      
     >
-      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
-        active ? 'bg-white/20' : 'bg-surface border border-border group-hover:border-border-subtle'
-      }`}>
-        <Icon className="w-5 h-5" />
+      <div >
+        <Icon  />
       </div>
       {!isCollapsed && (
-        <div className="text-left overflow-hidden block">
-          <div className="text-sm font-bold truncate">{label}</div>
-          <div className={`text-[9px] font-medium uppercase tracking-wider truncate${active ? 'text-white/80' : 'text-text-muted'}`}>
+        <div >
+          <div >{label}</div>
+          <div >
             {subLabel}
           </div>
         </div>
@@ -4423,58 +4341,58 @@ function TeamAdminPanel({ profile }: { profile: UserProfile }) {
   }, [profile.orgId]);
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8">
-      <div className="space-y-1">
-        <h1 className="text-xl md:text-2xl font-bold tracking-tight">Team Administration</h1>
-        <p className="text-text-muted text-xs md:text-sm">Manage your organization's users and permissions.</p>
+    <div >
+      <div >
+        <h1 >Team Administration</h1>
+        <p >Manage your organization's users and permissions.</p>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-6">
-        <div className="bg-surface border border-border rounded-xl p-8 space-y-4">
-          <div className="text-3xl font-syne font-bold text-brand">{users.length}</div>
-          <div className="text-[10px] text-text-muted font-bold uppercase tracking-widest">Total Members</div>
+      <div >
+        <div >
+          <div >{users.length}</div>
+          <div >Total Members</div>
         </div>
-        <div className="bg-surface border border-border rounded-xl p-8 space-y-4">
-          <div className="text-3xl font-syne font-bold text-brand-alt">Active</div>
-          <div className="text-[10px] text-text-muted font-bold uppercase tracking-widest">Subscription Status</div>
+        <div >
+          <div >Active</div>
+          <div >Subscription Status</div>
         </div>
       </div>
 
-      <div className="bg-surface border border-border rounded-xl overflow-hidden">
-        <table className="w-full text-left border-collapse">
+      <div >
+        <table >
           <thead>
-            <tr className="bg-surface-alt/50 border-b border-border">
-              <th className="px-8 py-6 text-[10px] font-bold uppercase tracking-widest text-text-muted">User</th>
-              <th className="px-8 py-6 text-[10px] font-bold uppercase tracking-widest text-text-muted">Role</th>
-              <th className="px-8 py-6 text-[10px] font-bold uppercase tracking-widest text-text-muted">Status</th>
-              <th className="px-8 py-6 text-[10px] font-bold uppercase tracking-widest text-text-muted text-right">Actions</th>
+            <tr >
+              <th >User</th>
+              <th >Role</th>
+              <th >Status</th>
+              <th >Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border">
+          <tbody >
             {users.map(u => (
-              <tr key={u.uid} className="hover:bg-bg-subtle transition-colors">
-                <td className="px-8 py-6">
-                  <div className="flex items-center gap-3">
-                    <img src={u.photoURL} className="w-10 h-10 rounded-full border border-border" />
+              <tr key={u.uid} >
+                <td >
+                  <div >
+                    <img src={u.photoURL}  />
                     <div>
-                      <div className="text-sm font-bold">{u.displayName}</div>
-                      <div className="text-xs text-text-muted">{u.email}</div>
+                      <div >{u.displayName}</div>
+                      <div >{u.email}</div>
                     </div>
                   </div>
                 </td>
-                <td className="px-8 py-6">
-                  <span className="px-3 py-1 rounded-full border border-border text-[10px] font-bold uppercase tracking-wider">
+                <td >
+                  <span >
                     {(u.role || '').replace('_', ' ')}
                   </span>
                 </td>
-                <td className="px-8 py-6">
-                  <div className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-brand-alt animate-pulse" />
-                    <span className="text-xs font-medium">Active</span>
+                <td >
+                  <div >
+                    <div  />
+                    <span >Active</span>
                   </div>
                 </td>
-                <td className="px-8 py-6 text-right">
-                  <button className="text-[10px] font-bold text-brand hover:underline">Edit Role</button>
+                <td >
+                  <button >Edit Role</button>
                 </td>
               </tr>
             ))}
@@ -4494,125 +4412,123 @@ function CampaignDashboard({ campaigns, onCreate, onSelect, onDelete, onDownload
   const [newCampName, setNewCampName] = useState('');
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="space-y-1">
-          <h1 className="text-xl md:text-2xl font-bold tracking-tight">Campaigns</h1>
-          <p className="text-text-muted text-xs md:text-sm">Manage your outreach strategies.</p>
+    <div >
+      <div >
+        <div >
+          <h1 >Campaigns</h1>
+          <p >Manage your outreach strategies.</p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+        <div >
           <input 
-            className="bg-surface border border-border rounded-xl px-4 py-2 text-xs focus:border-brand outline-none w-full sm:w-56 min-w-0"
+            
             placeholder="New Campaign Name"
             value={newCampName}
             onChange={e => setNewCampName(e.target.value)}
           />
           <button 
             onClick={() => { if(newCampName) { onCreate(newCampName); setNewCampName(''); } }}
-            className="bg-brand text-text px-4 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-brand/90 transition-all w-full sm:w-auto cursor-pointer shrink-0"
+            
           >
-            <Plus className="w-4 h-4" />
+            <Plus  />
             Create
           </button>
         </div>
       </div>
 
       {/* Visual Showcase Banner */}
-      <div className="grid md:grid-cols-12 gap-6 bg-surface border border-border rounded-xl p-6 relative overflow-hidden items-center">
+      <div >
         {/* Background gradient blur */}
-        <div className="absolute top-[-20%] right-[-10%] w-[35%] h-[60%] bg-brand/10 rounded-full pointer-events-none" />
+        <div  />
         
         {/* Left column - Promo text */}
-        <div className="md:col-span-8 space-y-4 relative z-10">
-          <div className="inline-flex items-center gap-1.5 bg-brand/10 text-brand border border-border px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider">
-            <Sparkles className="w-3.5 h-3.5 animate-pulse text-brand" />
+        <div >
+          <div >
+            <Sparkles  />
             <span>Active Enterprise Workspace</span>
           </div>
-          <div className="space-y-2">
-            <h2 className="text-xl md:text-2xl font-bold tracking-tight text-text leading-tight">
+          <div >
+            <h2 >
               Scale Your Outreach with Precision GTM Analytics
             </h2>
-            <p className="text-xs text-text-muted leading-relaxed max-w-xl">
+            <p >
               Zyntra AI synchronizes LinkedIn messaging and custom SMTP channels with automated Lead Intent Scoring. Maximize response rates by tracking high-fidelity prospect signals from decision makers.
             </p>
           </div>
-          <div className="flex items-center gap-6 flex-wrap">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-text font-mono">100%</span>
-              <span className="text-[10px] text-text-muted font-bold uppercase tracking-wide">AI Personalization</span>
+          <div >
+            <div >
+              <span >100%</span>
+              <span >AI Personalization</span>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-text font-mono">65+ Benchmark</span>
-              <span className="text-[10px] text-text-muted font-bold uppercase tracking-wide">Lead Quality Standard</span>
+            <div >
+              <span >65+ Benchmark</span>
+              <span >Lead Quality Standard</span>
             </div>
           </div>
         </div>
 
         {/* Right column - Visual branding graphic */}
-        <div className="md:col-span-4 relative flex justify-center w-full z-10">
-          <div className="w-full h-32 relative rounded-xl overflow-hidden border border-border/80 group">
+        <div >
+          <div >
             <img 
               src="https://picsum.photos/seed/cyber-enterprise/400/200" 
               alt="Zyntra Enterprise Hub" 
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              
               referrerPolicy="no-referrer"
             />
             {/* Overlay Glass Panel */}
-            <div className="absolute inset-0 p-4 flex flex-col justify-end">
-              <h4 className="text-xs font-bold text-text uppercase font-sans">Multi-Agent Lead Scorer</h4>
-              <p className="text-[10px] text-brand font-medium">Model: Gemini 3.5 Flash</p>
+            <div >
+              <h4 >Multi-Agent Lead Scorer</h4>
+              <p >Model: Gemini 3.5 Flash</p>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div >
         {campaigns.length === 0 && (
-          <div className="col-span-full py-20 text-center space-y-4 opacity-40">
-            <Target className="w-16 h-16 mx-auto" />
-            <p className="font-syne font-bold">No campaigns yet. Create your first one above!</p>
+          <div >
+            <Target  />
+            <p >No campaigns yet. Create your first one above!</p>
           </div>
         )}
         {campaigns.map(c => (
           <motion.div 
             key={c.id}
             whileHover={{ y: -3 }}
-            className="bg-surface border border-border rounded-xl p-6 space-y-4 group cursor-pointer relative overflow-hidden"
+            
             onClick={() => onSelect(c)}
           >
-            <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1.5 z-20">
+            <div >
               <button 
                 onClick={(e) => { e.stopPropagation(); onDownloadPDF(c); }}
-                className="p-1.5 hover:bg-brand/10 text-text-muted hover:text-brand rounded-xl transition-colors cursor-pointer"
+                
                 title="Download Campaign PDF Report"
               >
-                <Download className="w-4 h-4" />
+                <Download  />
               </button>
               <button 
                 onClick={(e) => { e.stopPropagation(); onDelete(c.id); }}
-                className="p-1.5 hover:bg-red-500/10 text-text-muted hover:text-red-500 rounded-xl transition-colors cursor-pointer"
+                
                 title="Delete Campaign"
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2  />
               </button>
             </div>
-            <div className="space-y-3">
-              <div className="w-9 h-9 rounded-xl bg-brand/10 flex items-center justify-center text-brand">
-                <Target className="w-4 h-4" />
+            <div >
+              <div >
+                <Target  />
               </div>
               <div>
-                <h3 className="text-base font-bold group-hover:text-brand transition-colors">{c.name}</h3>
-                <p className="text-[11px] text-text-muted mt-0.5">Created {c.createdAt?.toDate().toLocaleDateString()}</p>
+                <h3 >{c.name}</h3>
+                <p >Created {c.createdAt?.toDate().toLocaleDateString()}</p>
               </div>
             </div>
-            <div className="flex items-center justify-between pt-4 border-t border-border">
-              <div className="flex items-center gap-2">
-                <Users className="w-4 h-4 text-text-muted" />
-                <span className="text-sm font-bold">{c.leadsCount} Leads</span>
+            <div >
+              <div >
+                <Users  />
+                <span >{c.leadsCount} Leads</span>
               </div>
-              <div className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${
-                c.status === 'active' ? 'bg-brand-alt/10 text-brand-alt' : 'bg-surface-alt text-text-muted'
-              }`}>
+              <div >
                 {c.status}
               </div>
             </div>

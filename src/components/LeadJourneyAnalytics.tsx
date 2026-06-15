@@ -294,9 +294,9 @@ export const LeadJourneyAnalytics: React.FC<AnalyticsProps> = ({ showToast, prof
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 space-y-4">
-        <div className="w-8 h-8 rounded-full border-2 border-brand border-t-transparent animate-spin" />
-        <span className="text-xs text-text-muted font-medium uppercase tracking-widest font-mono">Loading pipeline state metrics...</span>
+      <div >
+        <div  />
+        <span >Loading pipeline state metrics...</span>
       </div>
     );
   }
@@ -304,13 +304,13 @@ export const LeadJourneyAnalytics: React.FC<AnalyticsProps> = ({ showToast, prof
   // Handle fully empty state
   if (allLeads.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center p-16 max-w-xl mx-auto text-center space-y-5 bg-surface border border-border rounded-xl my-8">
-        <div className="w-12 h-12 rounded-xl bg-brand/10 border border-border flex items-center justify-center text-brand">
-          <Activity className="w-6 h-6" />
+      <div >
+        <div >
+          <Activity  />
         </div>
-        <div className="space-y-1.5">
-          <h3 className="text-base font-bold font-syne text-text">No outreach data yet</h3>
-          <p className="text-xs text-text-muted leading-relaxed">
+        <div >
+          <h3 >No outreach data yet</h3>
+          <p >
             Start or select a campaign, import leads via CSV file, or synchronize B2B contact lists inside the Outreach page to initiate metrics calculation.
           </p>
         </div>
@@ -319,128 +319,128 @@ export const LeadJourneyAnalytics: React.FC<AnalyticsProps> = ({ showToast, prof
   }
 
   return (
-    <div className="space-y-10 text-text max-w-7xl mx-auto">
+    <div >
       
       {/* SECTION 1: SNAPSHOT BAR */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-surface border border-border p-6 rounded-xl flex flex-col justify-between text-left transition-all hover:bg-surface-alt/40">
-          <span className="text-[11px] md:text-xs font-medium text-text-muted font-sans antialiased">Total Active Leads</span>
-          <div className="text-xl md:text-2xl font-semibold text-text leading-tight mt-1">{metrics.totalLeads}</div>
+      <div >
+        <div >
+          <span >Total Active Leads</span>
+          <div >{metrics.totalLeads}</div>
         </div>
 
-        <div className="bg-surface border border-border p-6 rounded-xl flex flex-col justify-between text-left transition-all hover:bg-surface-alt/40">
-          <span className="text-[11px] md:text-xs font-medium text-text-muted font-sans antialiased">Avg Lead Score</span>
-          <div className="text-xl md:text-2xl font-semibold text-text leading-tight mt-1">{metrics.avgScore} <span className="text-xs text-text-muted font-normal">/ 90</span></div>
+        <div >
+          <span >Avg Lead Score</span>
+          <div >{metrics.avgScore} <span >/ 90</span></div>
         </div>
 
-        <div className="bg-surface border border-border p-6 rounded-xl flex flex-col justify-between text-left transition-all hover:bg-surface-alt/40">
-          <span className="text-[11px] md:text-xs font-medium text-text-muted font-sans antialiased">Sent This Week</span>
-          <div className="text-xl md:text-2xl font-semibold text-text leading-tight mt-1">{metrics.sentThisWeek}</div>
+        <div >
+          <span >Sent This Week</span>
+          <div >{metrics.sentThisWeek}</div>
         </div>
 
-        <div className="bg-surface border border-border p-6 rounded-xl flex flex-col justify-between text-left transition-all hover:bg-surface-alt/40">
-          <span className="text-[11px] md:text-xs font-medium text-text-muted font-sans antialiased">Conversion Rate</span>
-          <div className="text-xl md:text-2xl font-semibold text-text leading-tight mt-1">{metrics.conversionRate}%</div>
+        <div >
+          <span >Conversion Rate</span>
+          <div >{metrics.conversionRate}%</div>
         </div>
       </div>
 
       {/* SECTION 2: FUNNEL DROP-OFF */}
-      <div className="bg-surface border border-border p-6 rounded-xl space-y-6 text-left">
+      <div >
         <div>
-          <h3 className="text-sm md:text-base font-bold font-syne text-text tracking-tight uppercase">Funnel Drop-off</h3>
-          <p className="text-xs text-text-muted mt-0.5">Progression rate and drop values between sequential customer stages.</p>
+          <h3 >Funnel Drop-off</h3>
+          <p >Progression rate and drop values between sequential customer stages.</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-9 items-center gap-2 pt-2">
+        <div >
           {/* Step 1: New */}
-          <div className="md:col-span-1 p-4 border border-border rounded-xl text-center hover:bg-surface-alt/80 transition-all">
-            <span className="text-[8px] font-mono text-text-muted font-bold uppercase tracking-widest block">Stage 1</span>
-            <div className="text-[11px] font-bold text-text truncate mt-1">New</div>
-            <div className="text-lg font-bold font-mono text-text mt-1 leading-none">{metrics.stagingCounts.new}</div>
+          <div >
+            <span >Stage 1</span>
+            <div >New</div>
+            <div >{metrics.stagingCounts.new}</div>
           </div>
 
           {/* Arrow 1 */}
-          <div className="md:col-span-1 flex flex-col items-center justify-center text-center">
-            <div className="flex items-center gap-1.5 md:flex-col py-1 md:py-0">
-              <span className="text-[9px] font-bold text-brand bg-brand/10 border border-border px-1.5 py-0.5 rounded-full font-mono md:mb-1">
+          <div >
+            <div >
+              <span >
                 {getRate(metrics.stagingCounts.new, metrics.stagingCounts.todo)}%
               </span>
-              <span className="text-[9px] font-medium text-text-muted md:mb-1 leading-none">moved</span>
-              <ChevronRight className="w-3.5 h-3.5 text-text-muted/40 rotate-90 md:rotate-0" />
+              <span >moved</span>
+              <ChevronRight  />
             </div>
           </div>
 
           {/* Step 2: To Do */}
-          <div className="md:col-span-1 p-4 border border-border rounded-xl text-center hover:bg-surface-alt/80 transition-all">
-            <span className="text-[8px] font-mono text-text-muted font-bold uppercase tracking-widest block">Stage 2</span>
-            <div className="text-[11px] font-bold text-text truncate mt-1">To Do</div>
-            <div className="text-lg font-bold font-mono text-text mt-1 leading-none">{metrics.stagingCounts.todo}</div>
+          <div >
+            <span >Stage 2</span>
+            <div >To Do</div>
+            <div >{metrics.stagingCounts.todo}</div>
           </div>
 
           {/* Arrow 2 */}
-          <div className="md:col-span-1 flex flex-col items-center justify-center text-center">
-            <div className="flex items-center gap-1.5 md:flex-col py-1 md:py-0">
-              <span className="text-[9px] font-bold text-brand bg-brand/10 border border-border px-1.5 py-0.5 rounded-full font-mono md:mb-1">
+          <div >
+            <div >
+              <span >
                 {getRate(metrics.stagingCounts.todo, metrics.stagingCounts.ready)}%
               </span>
-              <span className="text-[9px] font-medium text-text-muted md:mb-1 leading-none">moved</span>
-              <ChevronRight className="w-3.5 h-3.5 text-text-muted/40 rotate-90 md:rotate-0" />
+              <span >moved</span>
+              <ChevronRight  />
             </div>
           </div>
 
           {/* Step 3: Message Ready */}
-          <div className="md:col-span-1 p-4 border border-border rounded-xl text-center hover:bg-surface-alt/80 transition-all">
-            <span className="text-[8px] font-mono text-text-muted font-bold uppercase tracking-widest block">Stage 3</span>
-            <div className="text-[11px] font-bold text-text truncate mt-1">Message Ready</div>
-            <div className="text-lg font-bold font-mono text-text mt-1 leading-none">{metrics.stagingCounts.ready}</div>
+          <div >
+            <span >Stage 3</span>
+            <div >Message Ready</div>
+            <div >{metrics.stagingCounts.ready}</div>
           </div>
 
           {/* Arrow 3 */}
-          <div className="md:col-span-1 flex flex-col items-center justify-center text-center">
-            <div className="flex items-center gap-1.5 md:flex-col py-1 md:py-0">
-              <span className="text-[9px] font-bold text-brand bg-brand/10 border border-border px-1.5 py-0.5 rounded-full font-mono md:mb-1">
+          <div >
+            <div >
+              <span >
                 {getRate(metrics.stagingCounts.ready, metrics.stagingCounts.sent)}%
               </span>
-              <span className="text-[9px] font-medium text-text-muted md:mb-1 leading-none">moved</span>
-              <ChevronRight className="w-3.5 h-3.5 text-text-muted/40 rotate-90 md:rotate-0" />
+              <span >moved</span>
+              <ChevronRight  />
             </div>
           </div>
 
           {/* Step 4: Sent */}
-          <div className="md:col-span-1 p-4 border border-border rounded-xl text-center hover:bg-surface-alt/80 transition-all">
-            <span className="text-[8px] font-mono text-text-muted font-bold uppercase tracking-widest block">Stage 4</span>
-            <div className="text-[11px] font-bold text-text truncate mt-1">Sent</div>
-            <div className="text-lg font-bold font-mono text-text mt-1 leading-none">{metrics.stagingCounts.sent}</div>
+          <div >
+            <span >Stage 4</span>
+            <div >Sent</div>
+            <div >{metrics.stagingCounts.sent}</div>
           </div>
 
           {/* Arrow 4 */}
-          <div className="md:col-span-1 flex flex-col items-center justify-center text-center">
-            <div className="flex items-center gap-1.5 md:flex-col py-1 md:py-0">
-              <span className="text-[9px] font-bold text-brand bg-brand/10 border border-border px-1.5 py-0.5 rounded-full font-mono md:mb-1">
+          <div >
+            <div >
+              <span >
                 {getRate(metrics.stagingCounts.sent, metrics.stagingCounts.bounced)}%
               </span>
-              <span className="text-[9px] font-medium text-text-muted md:mb-1 leading-none">bounced</span>
-              <ChevronRight className="w-3.5 h-3.5 text-text-muted/40 rotate-90 md:rotate-0" />
+              <span >bounced</span>
+              <ChevronRight  />
             </div>
           </div>
 
           {/* Step 5: Bounced */}
-          <div className="md:col-span-1 p-4 border border-border rounded-xl text-center hover:bg-surface-alt/80 transition-all">
-            <span className="text-[8px] font-mono text-text-muted font-bold uppercase tracking-widest block">Stage 5</span>
-            <div className="text-[11px] font-bold text-text truncate mt-1">Bounced</div>
-            <div className="text-lg font-bold font-mono text-text mt-1 leading-none">{metrics.stagingCounts.bounced}</div>
+          <div >
+            <span >Stage 5</span>
+            <div >Bounced</div>
+            <div >{metrics.stagingCounts.bounced}</div>
           </div>
         </div>
       </div>
 
       {/* SECTION 3: SCORE DISTRIBUTION */}
-      <div className="bg-surface border border-border p-6 rounded-xl text-left">
-        <div className="mb-4">
-          <h3 className="text-sm md:text-base font-bold font-syne text-text uppercase tracking-tight">Score Distribution</h3>
-          <p className="text-xs text-text-muted mt-0.5">Distribution of lead scores across active campaigns</p>
+      <div >
+        <div >
+          <h3 >Score Distribution</h3>
+          <p >Distribution of lead scores across active campaigns</p>
         </div>
 
-        <div className="h-64 mt-4">
+        <div >
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={histogramData} margin={{ top: 10, right: 30, left: 0, bottom: 20 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.4} />
@@ -464,14 +464,14 @@ export const LeadJourneyAnalytics: React.FC<AnalyticsProps> = ({ showToast, prof
       </div>
 
       {/* SECTION 4: BANT SCORE & PIPELINE VELOCITY */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div >
         {/* BANT distribution */}
-        <div className="bg-surface border border-border p-6 rounded-xl text-left">
-          <div className="mb-4">
-            <h3 className="text-sm md:text-base font-bold font-syne text-text uppercase tracking-tight">BANT Score Distribution</h3>
-            <p className="text-xs text-text-muted mt-0.5">Distribution of leads across qualification status levels</p>
+        <div >
+          <div >
+            <h3 >BANT Score Distribution</h3>
+            <p >Distribution of leads across qualification status levels</p>
           </div>
-          <div className="h-60 mt-4">
+          <div >
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={bantDistribution} margin={{ top: 10, right: 30, left: 0, bottom: 20 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.4} />
@@ -485,12 +485,12 @@ export const LeadJourneyAnalytics: React.FC<AnalyticsProps> = ({ showToast, prof
         </div>
 
         {/* Stage velocity */}
-        <div className="bg-surface border border-border p-6 rounded-xl text-left">
-          <div className="mb-4">
-            <h3 className="text-sm md:text-base font-bold font-syne text-text uppercase tracking-tight">Stage Velocity</h3>
-            <p className="text-xs text-text-muted mt-0.5">Average days spent in each pipeline stage</p>
+        <div >
+          <div >
+            <h3 >Stage Velocity</h3>
+            <p >Average days spent in each pipeline stage</p>
           </div>
-          <div className="h-60 mt-4">
+          <div >
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={stageVelocity} margin={{ top: 10, right: 30, left: 0, bottom: 20 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.4} />
@@ -505,31 +505,31 @@ export const LeadJourneyAnalytics: React.FC<AnalyticsProps> = ({ showToast, prof
       </div>
 
       {/* SECTION 5: AFFILIATE PERFORMANCE */}
-      <div className="bg-surface border border-border p-6 rounded-xl text-left">
-        <div className="mb-4">
-          <h3 className="text-sm md:text-base font-bold font-syne text-text uppercase tracking-tight">Affiliate Performance</h3>
-          <p className="text-xs text-text-muted mt-0.5">Partner contributions to pipeline generation</p>
+      <div >
+        <div >
+          <h3 >Affiliate Performance</h3>
+          <p >Partner contributions to pipeline generation</p>
         </div>
         {affiliates.length === 0 ? (
-          <div className="text-xs text-text-muted italic text-center py-6">No affiliate performance data recorded yet.</div>
+          <div >No affiliate performance data recorded yet.</div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs text-left border-collapse">
+          <div >
+            <table >
               <thead>
-                <tr className="border-b border-border text-text-secondary">
-                  <th className="py-2.5 font-semibold">Partner Name</th>
-                  <th className="py-2.5 font-semibold">Referral Code</th>
-                  <th className="py-2.5 font-semibold text-right">Referrals</th>
-                  <th className="py-2.5 font-semibold text-right">Total Earned</th>
+                <tr >
+                  <th >Partner Name</th>
+                  <th >Referral Code</th>
+                  <th >Referrals</th>
+                  <th >Total Earned</th>
                 </tr>
               </thead>
               <tbody>
                 {affiliates.map((aff, idx) => (
-                  <tr key={aff.id || idx} className="border-b border-border/40 hover:bg-surface-alt/40">
-                    <td className="py-2.5 font-semibold text-text">{aff.fullName}</td>
-                    <td className="py-2.5 font-mono text-primary">{aff.referralCode}</td>
-                    <td className="py-2.5 text-right font-semibold text-text">{aff.totalReferrals}</td>
-                    <td className="py-2.5 text-right font-semibold text-emerald-400">${aff.totalEarned.toLocaleString()}</td>
+                  <tr key={aff.id || idx} >
+                    <td >{aff.fullName}</td>
+                    <td >{aff.referralCode}</td>
+                    <td >{aff.totalReferrals}</td>
+                    <td >${aff.totalEarned.toLocaleString()}</td>
                   </tr>
                 ))}
               </tbody>
@@ -539,38 +539,38 @@ export const LeadJourneyAnalytics: React.FC<AnalyticsProps> = ({ showToast, prof
       </div>
 
       {/* SECTION 6: ACTIVITY FEED */}
-      <div className="bg-surface border border-border p-6 rounded-xl text-left">
-        <div className="flex items-center justify-between border-b border-border/80 pb-4 mb-4">
+      <div >
+        <div >
           <div>
-            <h3 className="text-sm md:text-base font-bold font-syne text-text uppercase tracking-tight">Team Activity</h3>
-            <p className="text-xs text-text-muted mt-0.5">Chronological feed of actions completed across campaigns.</p>
+            <h3 >Team Activity</h3>
+            <p >Chronological feed of actions completed across campaigns.</p>
           </div>
           <button 
             onClick={() => showToast("Showing all logs dynamically", "success")} 
-            className="text-xs font-bold text-brand hover:text-brand-alt transition-colors"
+            
           >
             View all activity
           </button>
         </div>
 
-        <div className="divide-y divide-border/60">
+        <div >
           {activities.map((act) => (
-            <div key={act.id} className="py-3 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black uppercase${act.avatarBg}`}>
+            <div key={act.id} >
+              <div >
+                <div >
                   {act.user.substring(0, 2)}
                 </div>
-                <div className="text-xs">
-                  <span className="font-bold text-text mr-1.5">{act.user}</span>
-                  <span className="text-text-muted">{act.action}</span>
+                <div >
+                  <span >{act.user}</span>
+                  <span >{act.action}</span>
                   {act.details && (
-                    <span className="ml-1.5 px-2 py-0.5 rounded-full bg-brand-alt/10 text-brand-alt font-bold font-mono text-[9px]">
+                    <span >
                       → {act.details}
                     </span>
                   )}
                 </div>
               </div>
-              <span className="text-[10px] text-text-muted block shrink-0 font-mono">{act.time}</span>
+              <span >{act.time}</span>
             </div>
           ))}
         </div>

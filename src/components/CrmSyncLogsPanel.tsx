@@ -179,14 +179,14 @@ export const CrmSyncLogsPanel: React.FC<CrmSyncLogsPanelProps> = ({
   };
 
   return (
-    <div className="crm-push-logs-panel bg-surface border border-border rounded-xl p-6 space-y-6 relative mt-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div >
+      <div >
         <div>
-          <h3 className="text-base font-bold flex items-center gap-2">
-            <Database className="w-5 h-5 text-brand" />
+          <h3 >
+            <Database  />
             CRM Live Sync Dashboard
           </h3>
-          <p className="text-xs text-text-muted mt-0.5">
+          <p >
             Monitor real-time synchronization pipelines and webhook integrations with Salesforce / HubSpot.
           </p>
         </div>
@@ -195,9 +195,9 @@ export const CrmSyncLogsPanel: React.FC<CrmSyncLogsPanelProps> = ({
           <button
             onClick={handleBulkSyncAll}
             disabled={loading}
-            className="px-4 py-2 border hover:bg-[#00d4aa] hover:text-[#090a0f] rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-40"
+            
           >
-            <RefreshCw className={`w-3.5 h-3.5${loading ? "animate-spin" : ""}`} />
+            <RefreshCw  />
             Force Global CRM Sync
           </button>
         )}
@@ -218,105 +218,105 @@ export const CrmSyncLogsPanel: React.FC<CrmSyncLogsPanelProps> = ({
         const failAttemptRate = totalAttempts > 0 ? 100 - successAttemptRate : 0;
 
         return (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div >
             {/* Success KPI Card */}
-            <div className="bg-surface-alt/40 border border-border/60 rounded-xl p-4 flex flex-col justify-between relative overflow-hidden group">
-              <div className="absolute top-0 right-0 p-3 opacity-10 pointer-events-none">
-                <CheckCircle className="w-12 h-12 text-emerald-400" />
+            <div >
+              <div >
+                <CheckCircle  />
               </div>
               <div>
-                <span className="text-[10px] text-text-muted font-bold uppercase tracking-widest block">Success Rate (Mapped)</span>
-                <span className="text-2xl md:text-3xl font-syne font-extrabold text-emerald-400 mt-1.5 block">
+                <span >Success Rate (Mapped)</span>
+                <span >
                   {Math.round((mapped / (total || 1)) * 100)}%
                 </span>
-                <p className="text-[10px] text-text-muted mt-1 leading-relaxed">
+                <p >
                   Proportion of pipeline leads synced to target organizations securely.
                 </p>
               </div>
-              <div className="mt-4">
-                <div className="w-full h-1.5 bg-rose-500/10 rounded-full overflow-hidden flex">
-                  <div className="h-full bg-emerald-500 transition-all duration-700" style={{ width: `${Math.round((mapped / (total || 1)) * 100)}%` }}></div>
+              <div >
+                <div >
+                  <div  style={{ width: `${Math.round((mapped / (total || 1)) * 100)}%` }}></div>
                 </div>
-                <div className="flex justify-between items-center text-[9px] text-text-muted font-mono mt-1.5">
-                  <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" /> {mapped} Successful</span>
+                <div >
+                  <span ><span  /> {mapped} Successful</span>
                   <span>Total: {total}</span>
                 </div>
               </div>
             </div>
 
             {/* Failure KPI Card */}
-            <div className="bg-surface-alt/40 border border-border/60 rounded-xl p-4 flex flex-col justify-between relative overflow-hidden group">
-              <div className="absolute top-0 right-0 p-3 opacity-10 pointer-events-none">
-                <AlertCircle className="w-12 h-12 text-rose-400" />
+            <div >
+              <div >
+                <AlertCircle  />
               </div>
               <div>
-                <span className="text-[10px] text-text-muted font-bold uppercase tracking-widest block">Failure Rate (Failed / Unmapped)</span>
-                <span className="text-2xl md:text-3xl font-syne font-extrabold text-rose-400 mt-1.5 block">
+                <span >Failure Rate (Failed / Unmapped)</span>
+                <span >
                   {Math.round((failed / (total || 1)) * 100)}%
                 </span>
-                <p className="text-[10px] text-text-muted mt-1 leading-relaxed">
+                <p >
                   Percentage of targets currently failing validation rules or awaiting sync.
                 </p>
               </div>
-              <div className="mt-4">
-                <div className="w-full h-1.5 bg-emerald-500/10 rounded-full overflow-hidden">
-                  <div className="h-full bg-rose-500 transition-all duration-700" style={{ width: `${Math.round((failed / (total || 1)) * 100)}%` }}></div>
+              <div >
+                <div >
+                  <div  style={{ width: `${Math.round((failed / (total || 1)) * 100)}%` }}></div>
                 </div>
-                <div className="flex justify-between items-center text-[9px] text-text-muted font-mono mt-1.5">
-                  <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-rose-500 inline-block" /> {failed} Retriable</span>
+                <div >
+                  <span ><span  /> {failed} Retriable</span>
                   <span>Requires Manual Retry</span>
                 </div>
               </div>
             </div>
 
             {/* NEW Summary Card: Mapping Efficiency (Successful Mappings vs Failed Attempts) */}
-            <div className="bg-surface-alt/40 border border-border/60 rounded-xl p-4 flex flex-col justify-between relative overflow-hidden group">
-              <div className="absolute top-0 right-0 p-3 opacity-10 pointer-events-none">
-                <RefreshCw className="w-12 h-12 text-amber-400" />
+            <div >
+              <div >
+                <RefreshCw  />
               </div>
               <div>
-                <span className="text-[10px] text-text-muted font-bold uppercase tracking-widest block text-brand-alt">Mapping Efficiency Ratio</span>
-                <span className="text-2xl md:text-3xl font-syne font-extrabold text-brand-alt mt-1.5 block">
+                <span >Mapping Efficiency Ratio</span>
+                <span >
                   {successAttemptRate}% / {failAttemptRate}%
                 </span>
-                <p className="text-[10px] text-text-muted mt-1 leading-relaxed">
+                <p >
                   Direct ratio of successfully mapped versus failed mapping pipeline attempts.
                 </p>
               </div>
-              <div className="mt-4">
+              <div >
                 {/* Horizontal split gauge bar */}
-                <div className="w-full h-1.5 bg-border rounded-full overflow-hidden flex">
-                  <div className="h-full bg-emerald-500 transition-all duration-700" style={{ width: `${successAttemptRate}%` }} title={`Success attempt rate: ${successAttemptRate}%`}></div>
-                  <div className="h-full bg-rose-500 transition-all duration-700" style={{ width: `${failAttemptRate}%` }} title={`Failed attempt rate: ${failAttemptRate}%`}></div>
+                <div >
+                  <div  style={{ width: `${successAttemptRate}%` }} title={`Success attempt rate: ${successAttemptRate}%`}></div>
+                  <div  style={{ width: `${failAttemptRate}%` }} title={`Failed attempt rate: ${failAttemptRate}%`}></div>
                 </div>
-                <div className="flex justify-between items-center text-[9px] text-text-muted font-mono mt-1.5">
-                  <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" /> {mapped} Succeeded</span>
-                  <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-rose-400 inline-block" /> {failed} Failed</span>
+                <div >
+                  <span ><span  /> {mapped} Succeeded</span>
+                  <span ><span  /> {failed} Failed</span>
                 </div>
               </div>
             </div>
 
             {/* Active Sync Pipeline Status */}
-            <div className="bg-surface-alt/40 border border-border/60 rounded-xl p-4 flex flex-col justify-between relative overflow-hidden group">
-              <div className="absolute top-0 right-0 p-3 opacity-10 pointer-events-none animate-pulse">
-                <Database className="w-12 h-12 text-cyan-400" />
+            <div >
+              <div >
+                <Database  />
               </div>
               <div>
-                <span className="text-[10px] text-text-muted font-bold uppercase tracking-widest block">Active Webhook Queue</span>
-                <span className="text-2xl md:text-3xl font-syne font-extrabold text-cyan-400 mt-1.5 block">
+                <span >Active Webhook Queue</span>
+                <span >
                   {syncing} Syncing
                 </span>
-                <p className="text-[10px] text-text-muted mt-1 leading-relaxed">
+                <p >
                   Real-time parallel socket communication streams processing updates.
                 </p>
               </div>
-              <div className="mt-4 flex items-center justify-between border-t border-border/20 pt-2.5">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full animate-ping" />
-                  <span className="text-[10px] font-bold">Pipeline Online</span>
+              <div >
+                <div >
+                  <span  />
+                  <span >Pipeline Online</span>
                 </div>
-                <div className="text-[10px] text-text-muted font-mono">
-                  Volume: <b className="text-text">{total} Hits</b>
+                <div >
+                  Volume: <b >{total} Hits</b>
                 </div>
               </div>
             </div>
@@ -324,28 +324,28 @@ export const CrmSyncLogsPanel: React.FC<CrmSyncLogsPanelProps> = ({
         );
       })()}
 
-      <div className="overflow-x-auto min-h-32">
+      <div >
         {leads.length === 0 ? (
-          <div className="flex flex-col items-center justify-center p-8 border border-border/50 rounded-xl text-center">
-            <Database className="w-8 h-8 text-text-muted/40 mb-2" />
-            <p className="text-xs font-bold text-text-muted">No Pipeline Leads Present</p>
-            <p className="text-[10px] text-text-muted/60 mt-1 max-w-sm">
+          <div >
+            <Database  />
+            <p >No Pipeline Leads Present</p>
+            <p >
               Populate leads using Campaign settings, or run a smart CSV/Excel mapped catalog import.
             </p>
           </div>
         ) : (
-          <table className="w-full text-left border-collapse">
+          <table >
             <thead>
-              <tr className="border-b border-border text-[9px] font-bold uppercase tracking-widest text-text-muted">
-                <th className="pb-3 pl-3">Lead Target</th>
-                <th className="pb-3">Organization</th>
-                <th className="pb-3">Email Address</th>
-                <th className="pb-3 text-center">Status Badge</th>
-                <th className="pb-3">Last Sync Date</th>
-                <th className="pb-3 pr-3 text-right">Outreach Controls</th>
+              <tr >
+                <th >Lead Target</th>
+                <th >Organization</th>
+                <th >Email Address</th>
+                <th >Status Badge</th>
+                <th >Last Sync Date</th>
+                <th >Outreach Controls</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border/40 text-xs">
+            <tbody >
               {leads.map((lead) => {
                 const log = logs[lead.id];
                 const status = log?.status || "Failed"; // Default unmapped/missing to failed/retryable
@@ -356,44 +356,44 @@ export const CrmSyncLogsPanel: React.FC<CrmSyncLogsPanelProps> = ({
                   : "Never";
 
                 return (
-                  <tr key={lead.id} className="hover:bg-surface-alt/50 transition-colors">
-                    <td className="py-3.5 pl-3 font-semibold text-text">{lead.name}</td>
-                    <td className="py-3.5 text-text-muted font-medium">{lead.company}</td>
-                    <td className="py-3.5 text-text-muted font-mono text-[11px]">{lead.email}</td>
-                    <td className="py-3.5 text-center">
-                      <div className="flex items-center justify-center">
+                  <tr key={lead.id} >
+                    <td >{lead.name}</td>
+                    <td >{lead.company}</td>
+                    <td >{lead.email}</td>
+                    <td >
+                      <div >
                         {status === "Mapped" && (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-bold border border-emerald-500/20">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                          <span >
+                            <span  />
                             Mapped
                           </span>
                         )}
                         {status === "Syncing" && (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 text-[10px] font-bold border border-cyan-500/20">
+                          <span >
                             {/* Animated pulse badge strictly with standard keyframe */}
-                            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                            <span  />
                             Syncing...
                           </span>
                         )}
                         {status === "Failed" && (
-                          <div className="relative inline-block">
+                          <div >
                             <span 
                               onMouseEnter={() => setHoveredError(lead.id)}
                               onMouseLeave={() => setHoveredError(null)}
                               onClick={() => setHoveredError(hoveredError === lead.id ? null : lead.id)}
-                              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-rose-500/10 text-rose-400 text-[10px] font-bold border border-rose-500/20 cursor-help relative"
+                              
                             >
-                              <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-ping" />
+                              <span  />
                               Failed
-                              <AlertCircle className="w-3 h-3 ml-0.5" />
+                              <AlertCircle  />
                             </span>
 
                             {/* Error payload tooltip (Task 1 requirement) */}
                             {hoveredError === lead.id && (
-                              <div className="absolute z-50 bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-56 p-3 border border-rose-500/30 rounded-xl text-rose-300 text-[10px] leading-relaxed font-mono text-center">
-                                <div className="font-bold text-rose-400 mb-1">CRM Sync Error:</div>
+                              <div >
+                                <div >CRM Sync Error:</div>
                                 {errorMsg}
-                                <div className="text-[8px] text-text-muted mt-1.5 border-t border-border/40 pt-1">
+                                <div >
                                   Attempts: {retryCount} | Click tooltip to dismiss
                                 </div>
                               </div>
@@ -402,15 +402,15 @@ export const CrmSyncLogsPanel: React.FC<CrmSyncLogsPanelProps> = ({
                         )}
                       </div>
                     </td>
-                    <td className="py-3.5 text-text-muted font-mono text-[10px] flex items-center gap-1.5">
-                      <Clock className="w-3.5 h-3.5 opacity-55 text-text-muted" />
+                    <td >
+                      <Clock  />
                       {lastSynced}
                     </td>
-                    <td className="py-3.5 pr-3 text-right">
+                    <td >
                       {status === "Failed" && (
                         <button
                           onClick={() => handleTriggerSync(lead.id)}
-                          className="px-2.5 py-1 bg-rose-500/15 hover:bg-rose-500 text-rose-400 hover:text-white rounded-xl text-[10px] font-bold transition-all cursor-pointer border border-rose-500/25"
+                          
                         >
                           Retry Sync
                         </button>
@@ -418,13 +418,13 @@ export const CrmSyncLogsPanel: React.FC<CrmSyncLogsPanelProps> = ({
                       {status === "Mapped" && (
                         <button
                           onClick={() => handleTriggerSync(lead.id)}
-                          className="px-2.5 py-1 hover:bg-border text-text-muted hover:text-text rounded-xl text-[10px] font-bold transition-all cursor-pointer border border-border"
+                          
                         >
                           Re-Sync Address
                         </button>
                       )}
                       {status === "Syncing" && (
-                        <span className="text-[10px] text-text-muted italic animate-pulse">
+                        <span >
                           Locking...
                         </span>
                       )}
@@ -437,9 +437,9 @@ export const CrmSyncLogsPanel: React.FC<CrmSyncLogsPanelProps> = ({
         )}
       </div>
 
-      <div className="flex items-center justify-between text-[10px] text-text-muted border-t border-border/30 pt-3 font-mono">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+      <div >
+        <div >
+          <span  />
           <span>WebSocket Pipeline Status: Active (Listening)</span>
         </div>
         <span>Channel: ws://127.0.0.1/crm-sync/{workspaceId}</span>

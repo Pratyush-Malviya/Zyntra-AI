@@ -217,50 +217,50 @@ export function SdrCalendarView({ leads = [], campaigns = [], showToast }: SdrCa
   }, [allEvents]);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+    <div >
       {/* Calendar Grid side */}
-      <div className="lg:col-span-8 bg-surface border border-border rounded-xl p-6 md:p-8 space-y-6">
+      <div >
         
         {/* Navigation & Controls */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-border/40">
+        <div >
           <div>
-            <h2 className="text-lg font-bold font-syne text-text flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-amber-400" />
+            <h2 >
+              <Calendar  />
               {monthNames[month]} {year}
             </h2>
-            <p className="text-[11px] text-text-muted mt-1 font-mono uppercase tracking-wider">
+            <p >
               Outbound Schedule & Campaign Cadences
             </p>
           </div>
 
-          <div className="flex items-center gap-2 self-stretch sm:self-auto justify-between">
+          <div >
             <button 
               onClick={setToday}
-              className="px-3 py-1.5 hover:bg-[#12131a] border border-border/60 hover:border-amber-500/30 text-xs font-bold rounded-xl transition-all text-text"
+              
             >
               Today
             </button>
-            <div className="flex items-center gap-1 border border-border/60 rounded-xl p-0.5">
+            <div >
               <button 
                 onClick={handlePrevMonth}
-                className="p-1.5 hover:bg-[#12131a] rounded-xl text-text-muted hover:text-white transition-all cursor-pointer"
+                
               >
-                <ChevronLeft className="w-4 h-4" />
+                <ChevronLeft  />
               </button>
               <button 
                 onClick={handleNextMonth}
-                className="p-1.5 hover:bg-[#12131a] rounded-xl text-text-muted hover:text-white transition-all cursor-pointer"
+                
               >
-                <ChevronRight className="w-4 h-4" />
+                <ChevronRight  />
               </button>
             </div>
           </div>
         </div>
 
         {/* Filter Toolbar */}
-        <div className="flex flex-wrap items-center gap-2 border border-border/40 p-3 rounded-xl">
-          <span className="flex items-center gap-1.5 text-[10px] uppercase font-extrabold text-text-muted tracking-wider px-2 border-r border-border/40 mr-1">
-            <Filter className="w-3.5 h-3.5 text-amber-500" />
+        <div >
+          <span >
+            <Filter  />
             Filter By:
           </span>
           {[
@@ -275,11 +275,7 @@ export function SdrCalendarView({ leads = [], campaigns = [], showToast }: SdrCa
                 setFilterType(btn.id as any);
                 showToast(`Filter loaded: ${btn.label}`, 'info');
               }}
-              className={`px-3 py-1 text-[11px] font-bold rounded-xl border transition-all cursor-pointer ${
-                filterType === btn.id 
-                  ? btn.activeStyle 
-                  : `border-transparent hover:border-border/40 ${btn.color}`
-              }`}
+              
             >
               {btn.label}
             </button>
@@ -287,9 +283,9 @@ export function SdrCalendarView({ leads = [], campaigns = [], showToast }: SdrCa
         </div>
 
         {/* Calendar Grid */}
-        <div className="space-y-1">
+        <div >
           {/* Calendar Week Header */}
-          <div className="grid grid-cols-7 gap-1 text-center font-mono text-[10px] font-bold uppercase tracking-wider text-text-muted py-2 rounded-xl">
+          <div >
             <span>Sun</span>
             <span>Mon</span>
             <span>Tue</span>
@@ -300,7 +296,7 @@ export function SdrCalendarView({ leads = [], campaigns = [], showToast }: SdrCa
           </div>
 
           {/* Calendar Grid Days */}
-          <div className="grid grid-cols-7 gap-1.5 pt-1">
+          <div >
             {calendarGrid.map((cell, idx) => {
               const dayEvents = getEventsForDate(cell.date);
               const isSelected = selectedDate && 
@@ -316,28 +312,14 @@ export function SdrCalendarView({ leads = [], campaigns = [], showToast }: SdrCa
                 <div
                   key={idx}
                   onClick={() => setSelectedDate(cell.date)}
-                  className={`min-h-[75px] md:min-h-[90px] p-2 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between group ${
-                    isSelected 
-                      ? 'border-[#f59e0b] bg-amber-500/5 shadow-inner' 
-                      : isToday 
-                        ? 'border-brand/70 bg-brand/5 shadow'
-                        : cell.isCurrentMonth
-                          ? 'border-border/50 bg-[#07080c]/30 hover:bg-[#0c0d12]/50 hover:border-border/80'
-                          : 'border-transparent opacity-30 bg-transparent hover:opacity-50'
-                  }`}
+                  
                 >
-                  <div className="flex justify-between items-center">
-                    <span className={`text-xs font-mono font-bold px-1.5 py-0.5 rounded-md ${
-                      isToday
-                        ? 'bg-brand text-[#07080c] font-black'
-                        : isSelected
-                          ? 'text-[#f59e0b]'
-                          : 'text-slate-400 group-hover:text-white'
-                    }`}>
+                  <div >
+                    <span >
                       {cell.dayNum}
                     </span>
                     {isToday && (
-                      <span className="text-[7px] font-mono leading-none bg-brand/10 text-brand px-1 py-0.5 rounded-xl border border-border">
+                      <span >
                         Today
                       </span>
                     )}
@@ -345,7 +327,7 @@ export function SdrCalendarView({ leads = [], campaigns = [], showToast }: SdrCa
 
                   {/* Micro list of events inside cell */}
                   {dayEvents.length > 0 && (
-                    <div className="space-y-1 mt-1.5">
+                    <div >
                       {dayEvents.slice(0, 3).map((event) => {
                         const styleMap = {
                           outreach: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
@@ -355,7 +337,7 @@ export function SdrCalendarView({ leads = [], campaigns = [], showToast }: SdrCa
                         return (
                           <div 
                             key={event.id}
-                            className={`text-[8px] font-extrabold px-1.5 py-0.5 rounded-xl truncate border leading-none font-sans uppercase tracking-[0.02em]${styleMap[event.type]}`}
+                            
                             title={event.title}
                           >
                             {event.type === 'campaign' ? '🎉 ' : event.type === 'followup' ? '⏱ ' : '✉ '}
@@ -364,7 +346,7 @@ export function SdrCalendarView({ leads = [], campaigns = [], showToast }: SdrCa
                         );
                       })}
                       {dayEvents.length > 3 && (
-                        <div className="text-[7px] font-mono font-extrabold text-text-muted text-right pr-0.5">
+                        <div >
                           +{dayEvents.length - 3} more
                         </div>
                       )}
@@ -377,20 +359,20 @@ export function SdrCalendarView({ leads = [], campaigns = [], showToast }: SdrCa
         </div>
 
         {/* Legend */}
-        <div className="flex gap-4 pt-4 border-t border-border/40 text-[9px] font-mono uppercase tracking-wider text-text-muted justify-between">
-          <span className="flex items-center gap-1">
-            <Info className="w-3 h-3 text-amber-500" />
+        <div >
+          <span >
+            <Info  />
             Click on any cellular coordinates day slot to review detailed outbound briefs.
           </span>
-          <div className="flex gap-4">
-            <span className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-500" /> Outreach Scheduled
+          <div >
+            <span >
+              <span  /> Outreach Scheduled
             </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-yellow-500" /> Reminders & Follow-ups
+            <span >
+              <span  /> Reminders & Follow-ups
             </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-purple-500" /> Campaigns Launched
+            <span >
+              <span  /> Campaigns Launched
             </span>
           </div>
         </div>
@@ -398,26 +380,26 @@ export function SdrCalendarView({ leads = [], campaigns = [], showToast }: SdrCa
       </div>
 
       {/* Right Details Panel */}
-      <div className="lg:col-span-4 bg-surface border border-border rounded-xl p-6 md:p-8 space-y-6 flex flex-col justify-between">
-        <div className="space-y-6">
-          <div className="pb-4 border-b border-border/40">
-            <span className="text-[10px] font-extrabold uppercase tracking-widest text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-xl">
+      <div >
+        <div >
+          <div >
+            <span >
               Focus Ledger
             </span>
-            <h3 className="text-sm font-bold font-syne text-text mt-3">
+            <h3 >
               {selectedDate ? selectedDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : 'Choose a date'}
             </h3>
-            <p className="text-[10px] text-text-muted mt-0.5">
+            <p >
               Sequence agenda itemization rosters for the active SDR slot.
             </p>
           </div>
 
           {/* Agenda Items list */}
-          <div className="space-y-4 max-h-[350px] overflow-y-auto custom-scrollbar pr-1">
+          <div >
             {selectedDateEvents.length === 0 ? (
-              <div className="p-8 text-center rounded-xl border border-border/40 space-y-2.5">
-                <ShieldAlert className="w-6 h-6 text-text-muted mx-auto" />
-                <p className="text-xs text-text-muted">No scheduled outbound items or reminder checkpoints on this date coordinates.</p>
+              <div >
+                <ShieldAlert  />
+                <p >No scheduled outbound items or reminder checkpoints on this date coordinates.</p>
               </div>
             ) : (
               selectedDateEvents.map(event => {
@@ -441,50 +423,47 @@ export function SdrCalendarView({ leads = [], campaigns = [], showToast }: SdrCa
                 return (
                   <div 
                     key={event.id}
-                    className={`p-4 rounded-xl border${colorTheme.bg}space-y-3 relative overflow-hidden`}
+                    
                   >
                     {/* Color indicator vertical bar */}
-                    <div className={`absolute left-0 top-0 bottom-0 w-1${colorTheme.indicator}`} />
+                    <div  />
 
-                    <div className="flex items-start justify-between gap-2 pl-1.5">
-                      <div className="space-y-1">
-                        <span className="text-[9px] font-extrabold uppercase tracking-widest text-text-muted">
+                    <div >
+                      <div >
+                        <span >
                           {colorTheme.label}
                         </span>
-                        <h4 className="text-xs font-bold text-text pr-2">
+                        <h4 >
                           {event.title}
                         </h4>
                       </div>
-                      <div className={`p-1.5 rounded-xl text-xs font-medium shrink-0${colorTheme.iconBg}`}>
-                        {event.type === 'campaign' ? <Clock className="w-3.5 h-3.5" /> : event.type === 'followup' ? <AlertCircle className="w-3.5 h-3.5" /> : <User className="w-3.5 h-3.5" />}
+                      <div >
+                        {event.type === 'campaign' ? <Clock  /> : event.type === 'followup' ? <AlertCircle  /> : <User  />}
                       </div>
                     </div>
 
-                    <p className="text-[11px] text-text-muted pl-1.5 leading-relaxed">
+                    <p >
                       {event.details}
                     </p>
 
                     {/* Meta coordinates block */}
                     {event.lead && (
-                      <div className="border border-border/40 p-2.5 rounded-xl text-[10px] space-y-1 ml-1.5 font-mono">
-                        <div className="flex justify-between">
-                          <span className="font-semibold">Lead Company:</span>
-                          <span className="text-text font-bold">{event.lead.company}</span>
+                      <div >
+                        <div >
+                          <span >Lead Company:</span>
+                          <span >{event.lead.company}</span>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="font-semibold">Industry Focus:</span>
-                          <span className="text-zinc-400 font-bold uppercase text-[9px]">{event.lead.industry || 'B2B Outbound'}</span>
+                        <div >
+                          <span >Industry Focus:</span>
+                          <span >{event.lead.industry || 'B2B Outbound'}</span>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="font-semibold">Contact Email:</span>
-                          <span className="text-amber-400 hover:underline cursor-pointer">{event.lead.email || 'None Recorded'}</span>
+                        <div >
+                          <span >Contact Email:</span>
+                          <span >{event.lead.email || 'None Recorded'}</span>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="font-semibold">SLA Status:</span>
-                          <span className={`px-1 rounded-sm uppercase text-[8px] font-bold ${
-                            event.lead.status === 'sent' ? 'bg-emerald-500/10 text-emerald-400' :
-                            event.lead.status === 'failed' ? 'bg-red-500/10 text-red-400' : 'bg-blue-500/10 text-blue-400'
-                          }`}>
+                        <div >
+                          <span >SLA Status:</span>
+                          <span >
                             {event.lead.status || 'imported'}
                           </span>
                         </div>
@@ -492,14 +471,14 @@ export function SdrCalendarView({ leads = [], campaigns = [], showToast }: SdrCa
                     )}
 
                     {event.campaign && (
-                      <div className="border border-border/40 p-2.5 rounded-xl text-[10px] space-y-1 ml-1.5 font-mono">
-                        <div className="flex justify-between">
-                          <span className="font-semibold">Target Size:</span>
-                          <span className="text-text font-bold">{event.campaign.leadsCount} prospects</span>
+                      <div >
+                        <div >
+                          <span >Target Size:</span>
+                          <span >{event.campaign.leadsCount} prospects</span>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="font-semibold">Approval State:</span>
-                          <span className="text-purple-400 font-bold uppercase text-[8px]">{event.campaign.status}</span>
+                        <div >
+                          <span >Approval State:</span>
+                          <span >{event.campaign.status}</span>
                         </div>
                       </div>
                     )}
@@ -511,14 +490,14 @@ export function SdrCalendarView({ leads = [], campaigns = [], showToast }: SdrCa
         </div>
 
         {/* Action summaries widgets */}
-        <div className="pt-4 border-t border-border/40">
-          <div className="border border-amber-500/20 p-4 rounded-xl flex items-center gap-3">
-            <div className="p-2.5 bg-amber-500/20 text-amber-400 rounded-xl">
-              <Target className="w-4 h-4 animate-pulse" />
+        <div >
+          <div >
+            <div >
+              <Target  />
             </div>
-            <div className="space-y-0.5">
-              <div className="text-[10px] font-extrabold uppercase tracking-widest">Action Recommended</div>
-              <p className="text-[11px] text-zinc-300 font-semibold leading-snug">
+            <div >
+              <div >Action Recommended</div>
+              <p >
                 {selectedDateEvents.filter(e => e.type === 'outreach').length} dispatches pending today coordinates.
               </p>
             </div>
