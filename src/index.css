@@ -11,6 +11,10 @@
   --color-accent-light: #90C5F1;
   --color-accent-dark: #0858DC;
   --color-accent-subtle: rgba(21, 91, 208, 0.1);
+  --color-brand: #155BD0;
+  --color-brand-light: #90C5F1;
+  --color-brand-dark: #0858DC;
+  --color-brand-subtle: rgba(21, 91, 208, 0.1);
 
   --bg: #FFFFFF; /* surface-base */
   --surface: #FFFFFF;
@@ -63,6 +67,10 @@
   --color-accent-light: var(--color-accent-light);
   --color-accent-dark: var(--color-accent-dark);
   --color-accent-subtle: var(--color-accent-subtle);
+  --color-brand: var(--color-brand);
+  --color-brand-light: var(--color-brand-light);
+  --color-brand-dark: var(--color-brand-dark);
+  --color-brand-subtle: var(--color-brand-subtle);
   --color-surface: var(--surface);
   --color-surface-elevated: var(--surface-elevated);
   --color-surface-hover: var(--surface-hover);

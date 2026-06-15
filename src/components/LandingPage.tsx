@@ -110,7 +110,7 @@ export default function LandingPage({ onLaunchApp, isAuthenticated, theme, setTh
 
             <button 
               onClick={onLaunchApp}
-              className="px-5 py-2.5 text-xs font-bold rounded-xl hover:from-blue-500 hover:to-emerald-500 text-text cursor-pointer flex items-center gap-2 transition-all hover:scale-[1.02]"
+              className="px-5 py-2.5 text-xs font-bold rounded-xl bg-primary hover:bg-primary/90 text-white cursor-pointer flex items-center gap-2 transition-all hover:scale-[1.02]"
             >
               <span>{isAuthenticated ? 'Go to Console' : 'Launch Console'}</span>
               <ArrowRight className="w-4 h-4" />
@@ -148,7 +148,7 @@ export default function LandingPage({ onLaunchApp, isAuthenticated, theme, setTh
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4 max-w-md mx-auto">
             <button 
               onClick={onLaunchApp}
-              className="w-full sm:w-auto px-8 py-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-text font-bold text-xs uppercase tracking-widest transition-all cursor-pointer flex items-center justify-center gap-2"
+              className="w-full sm:w-auto px-8 py-4 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-xs uppercase tracking-widest transition-all cursor-pointer flex items-center justify-center gap-2"
             >
               <span>Get Started Now</span>
               <ArrowRight className="w-4 h-4" />
@@ -478,7 +478,7 @@ export default function LandingPage({ onLaunchApp, isAuthenticated, theme, setTh
             <div className="flex gap-4">
               <button 
                 onClick={onLaunchApp}
-                className="px-8 py-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-text font-extrabold text-xs uppercase tracking-wider cursor-pointer flex items-center gap-2 transition-all hover:scale-[1.02]"
+                className="px-8 py-4 rounded-xl bg-primary hover:bg-primary/90 text-white font-extrabold text-xs uppercase tracking-wider cursor-pointer flex items-center gap-2 transition-all hover:scale-[1.02]"
               >
                 <span>Process Your First List</span>
                 <ChevronRight className="w-4 h-4" />
@@ -553,7 +553,7 @@ export default function LandingPage({ onLaunchApp, isAuthenticated, theme, setTh
             <div className="flex justify-center z-10 relative pt-2">
               <button 
                 onClick={onLaunchApp}
-                className="px-10 py-4.5 rounded-xl hover:opacity-90 text-text font-bold text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 hover:scale-[1.02]"
+                className="px-10 py-4.5 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 hover:scale-[1.02]"
               >
                 <span>Launch Enterprise Console</span>
                 <ArrowRight className="w-4 h-4" />

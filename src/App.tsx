@@ -738,7 +738,7 @@ function LoginView({
           <div className="space-y-4">
             <button 
               onClick={handleLogin} 
-              className="w-full py-3.5 rounded-xl bg-white hover:bg-slate-100 font-bold flex items-center justify-center gap-3 transition-all hover:shadow-white/5 cursor-pointer text-xs"
+              className="w-full py-3.5 rounded-xl bg-surface border border-border hover:bg-surface-hover text-text font-bold flex items-center justify-center gap-3 transition-all shadow-sm cursor-pointer text-xs"
             >
               <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-4 h-4" alt="Google" />
               Sign in with Google Account
