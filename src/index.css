@@ -1,32 +1,34 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Syne:wght@600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
 :root {
-  --color-primary: #6366f1;
-  --color-primary-light: #818cf8;
-  --color-primary-dark: #4f46e5;
-  --color-primary-subtle: rgba(99, 102, 241, 0.1);
-  --color-accent: #10b981;
-  --color-accent-light: #34d399;
-  --color-accent-dark: #059669;
-  --color-accent-subtle: rgba(16, 185, 129, 0.1);
+  /* Apple Design System Tokens */
+  --color-primary: #155BD0; /* accent */
+  --color-primary-light: #90C5F1;
+  --color-primary-dark: #0858DC;
+  --color-primary-subtle: rgba(21, 91, 208, 0.1);
+  --color-accent: #155BD0;
+  --color-accent-light: #90C5F1;
+  --color-accent-dark: #0858DC;
+  --color-accent-subtle: rgba(21, 91, 208, 0.1);
 
-  --bg: #f5f5f7;
-  --surface: #ffffff;
-  --surface-elevated: #ffffff;
-  --surface-hover: #fafafa;
-  --border: #e5e7eb;
-  --border-light: #f3f4f6;
-  --text: #111827;
-  --text-secondary: #6b7280;
-  --text-tertiary: #9ca3af;
-  --sidebar-surface: #0d0d19;
-  --sidebar-border: rgba(255, 255, 255, 0.06);
-  --sidebar-text: rgba(255, 255, 255, 0.5);
-  --sidebar-text-hover: rgba(255, 255, 255, 0.9);
-  --sidebar-text-active: #818cf8;
-  --sidebar-bg-hover: rgba(255, 255, 255, 0.04);
-  --sidebar-bg-active: rgba(99, 102, 241, 0.12);
+  --bg: #FFFFFF; /* surface-base */
+  --surface: #FFFFFF;
+  --surface-elevated: #0858DC; /* surface-raised */
+  --surface-hover: #F9F9F9;
+  --border: #B5C7D8; /* border-default */
+  --border-light: #E8EEF3;
+  --text: #454547; /* text-primary (body text color from Apple) */
+  --text-secondary: #6D89B5; /* text-secondary */
+  --text-tertiary: #90C5F1; /* text-tertiary */
+  
+  --sidebar-surface: #FFFFFF;
+  --sidebar-border: #B5C7D8;
+  --sidebar-text: #6D89B5;
+  --sidebar-text-hover: #155BD0;
+  --sidebar-text-active: #155BD0;
+  --sidebar-bg-hover: rgba(21, 91, 208, 0.05);
+  --sidebar-bg-active: rgba(21, 91, 208, 0.1);
 
   --success: #10b981;
   --warning: #f59e0b;
@@ -39,37 +41,19 @@
   --sidebar-w: 260px;
   --sidebar-w-collapsed: 68px;
   --header-h: 56px;
-  --radius-sm: 6px;
-  --radius: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
+  
+  /* Apple Radius Scale */
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 21px; /* Required by Apple skill */
 }
 
-.dark {
-  --bg: #07070d;
-  --surface: #0f0f18;
-  --surface-elevated: #16161f;
-  --surface-hover: #1a1a24;
-  --border: #1a1a24;
-  --border-light: #12121c;
-  --text: #f1f5f9;
-  --text-secondary: #94a3b8;
-  --text-tertiary: #64748b;
-  --sidebar-surface: #07070d;
-  --sidebar-border: rgba(255, 255, 255, 0.06);
-  --sidebar-text: rgba(255, 255, 255, 0.45);
-  --sidebar-text-hover: rgba(255, 255, 255, 0.9);
-  --sidebar-text-active: #a5b4fc;
-  --sidebar-bg-hover: rgba(255, 255, 255, 0.04);
-  --sidebar-bg-active: rgba(99, 102, 241, 0.15);
-  --wa: #25d366;
-  --li: #3b82f6;
-  --em: #f97316;
-}
+/* Removed .dark theme to enforce Apple Light Mode */
 
 @theme {
   --font-sans: "Inter", sans-serif;
-  --font-mono: "JetBrains Mono", monospace;
+  --font-mono: "Inter", monospace;
 
   --color-primary: var(--color-primary);
   --color-primary-light: var(--color-primary-light);
@@ -95,6 +79,15 @@
   --color-whatsapp: var(--wa);
   --color-linkedin: var(--li);
   --color-email: var(--em);
+  
+  /* Enforce Apple 21px border radius across the board */
+  --radius: var(--radius-xl);
+  --radius-sm: var(--radius-xl);
+  --radius-md: var(--radius-xl);
+  --radius-lg: var(--radius-xl);
+  --radius-xl: var(--radius-xl);
+  --radius-2xl: var(--radius-xl);
+  --radius-3xl: var(--radius-xl);
 }
 
 @layer base {
@@ -109,21 +102,22 @@
 }
 
 .glass {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.6);
   backdrop-filter: blur(16px);
 }
 
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--radius-xl);
 }
 
 .card-elevated {
   background: var(--surface-elevated);
+  color: #FFFFFF; /* White text on blue raised surface */
   border: 1px solid var(--border);
-  border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 4px 12px rgba(8, 88, 220, 0.2);
 }
 
 .sidebar-item {
@@ -137,6 +131,7 @@
   cursor: pointer;
   user-select: none;
   color: var(--sidebar-text);
+  transition: all 0.2s ease;
 }
 
 .sidebar-item:hover {
@@ -157,7 +152,7 @@
 }
 
 .glow-primary {
-  box-shadow: 0 0 24px rgba(99, 102, 241, 0.15);
+  box-shadow: 0 0 24px rgba(21, 91, 208, 0.2);
 }
 
 ::-webkit-scrollbar {
@@ -175,5 +170,5 @@
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--text-tertiary);
+  background: var(--text-secondary);
 }
