@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { motion } from "motion/react";
+import { generateCrmHelp } from "../services/geminiService";
 
 interface Lead {
   id: string;
@@ -177,6 +178,17 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
   const [newNoteText, setNewNoteText] = useState("");
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [noteDraftText, setNoteDraftText] = useState("");
+
+  // Omnichannel AI Log Panel States
+  const [logType, setLogType] = useState<"note" | "call" | "email">("note");
+  const [emailSubject, setEmailSubject] = useState("");
+  const [isAnalyzingCrmHelp, setIsAnalyzingCrmHelp] = useState(false);
+  const [aiCallAnalysisResult, setAiCallAnalysisResult] = useState<any | null>(null);
+  const [aiEmailAnalysisResult, setAiEmailAnalysisResult] = useState<any | null>(null);
+
+  // New Deal AI Pricing & Estimator States
+  const [isEstimatingDeal, setIsEstimatingDeal] = useState(false);
+  const [aiDealStrategyResult, setAiDealStrategyResult] = useState<string | null>(null);
 
   // Deduplication Duplicate Matches List
   const [duplicateConflicts, setDuplicateConflicts] = useState<{ leadA: Lead; leadB: Lead; fieldConflicts: string[] } | null>(null);
@@ -528,6 +540,164 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
     }
   };
 
+  // Trigger AI analysis on raw call transcripts or summaries
+  const handleAnalyzeCallNotes = async () => {
+    if (!selectedDeal || !newNoteText.trim()) {
+      showToast("Please enter call notes first.", "error");
+      return;
+    }
+    setIsAnalyzingCrmHelp(true);
+    setAiCallAnalysisResult(null);
+    try {
+      const associatedLead = initialLeads.find(l => l.id === selectedDeal.leadId);
+      const leadContext = {
+        name: associatedLead?.name,
+        role: associatedLead?.role,
+        company: associatedLead?.company,
+        industry: associatedLead?.industry,
+        country: associatedLead?.country,
+        employees: (associatedLead as any)?.employees,
+        website: (associatedLead as any)?.website
+      };
+
+      const result = await generateCrmHelp("call_notes_assist", {
+        callNotes: newNoteText,
+        leadContext
+      });
+
+      setAiCallAnalysisResult(result);
+      showToast("AI Call Analysis completed. Dynamic action suggestions retrieved.", "success");
+    } catch (err: any) {
+      showToast("Failed to analyze call notes via Gemini.", "error");
+    } finally {
+      setIsAnalyzingCrmHelp(false);
+    }
+  };
+
+  // Trigger AI professional rewrite of email outreach drafts
+  const handleImproveEmailDraft = async () => {
+    if (!selectedDeal || !newNoteText.trim()) {
+      showToast("Please enter email draft text first.", "error");
+      return;
+    }
+    setIsAnalyzingCrmHelp(true);
+    setAiEmailAnalysisResult(null);
+    try {
+      const associatedLead = initialLeads.find(l => l.id === selectedDeal.leadId);
+      const leadContext = {
+        name: associatedLead?.name,
+        role: associatedLead?.role,
+        company: associatedLead?.company,
+        industry: associatedLead?.industry
+      };
+
+      const result = await generateCrmHelp("email_draft_assist", {
+        emailBody: newNoteText,
+        leadContext
+      });
+
+      setAiEmailAnalysisResult(result);
+      if (result?.improved_subject) {
+        setEmailSubject(result.improved_subject);
+      }
+      showToast("AI Email rephrase completed successfully.", "success");
+    } catch (err: any) {
+      showToast("Failed to improve email draft via Gemini.", "error");
+    } finally {
+      setIsAnalyzingCrmHelp(false);
+    }
+  };
+
+  // Log Note, Call, or Email to Journey timelines and auto-add any accepted tasks
+  const handlePublishOmnichannelLog = async () => {
+    if (!selectedDeal) return;
+    
+    let contentToPublish = newNoteText;
+    let title = "Internal Note logged";
+    let typeKeyword = "note_added";
+
+    if (logType === "call") {
+      typeKeyword = "call_logged";
+      title = "📞 Call Recap & Summary Logged";
+      if (aiCallAnalysisResult?.summary) {
+        const bullets = aiCallAnalysisResult.key_points ? aiCallAnalysisResult.key_points.map((p: string) => `• ${p}`).join("\n") : "";
+        contentToPublish = `[AI Summary]: ${aiCallAnalysisResult.summary}\n\n[Sentiment]: ${aiCallAnalysisResult.sentiment || 'N/A'}\n\n[Key Points]:\n${bullets}\n\n[Raw Call Transcript]:\n${newNoteText}`;
+      } else {
+        contentToPublish = `[Call Transcript]:\n${newNoteText}`;
+      }
+    } else if (logType === "email") {
+      typeKeyword = "email_sent";
+      title = emailSubject ? `✉️ Email Outreach: ${emailSubject}` : "✉️ Outbound Email Outreach";
+      if (aiEmailAnalysisResult?.improved_body) {
+        contentToPublish = `[AI Processed Email Outreach]:\n${aiEmailAnalysisResult.improved_body}\n\n[Draft Concept Rephrased]:\n${newNoteText}`;
+      } else {
+        contentToPublish = `[Outreach Email Body]:\n${newNoteText}`;
+      }
+    }
+
+    if (!newNoteText.trim() && !aiCallAnalysisResult && !aiEmailAnalysisResult) {
+      showToast("Please enter valid log context first.", "error");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/activities", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          dealId: selectedDeal.id,
+          type: typeKeyword,
+          title: title,
+          description: contentToPublish,
+          agentName: selectedDeal.assignedAgent || "Workspace Team"
+        })
+      });
+
+      if (res.ok) {
+        if (logType === "call" && aiCallAnalysisResult?.extracted_tasks?.length) {
+          for (const task of aiCallAnalysisResult.extracted_tasks) {
+            await fetch("/api/tasks", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                dealId: selectedDeal.id,
+                title: task.title,
+                dueDate: task.dueDate || new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString().split('T')[0],
+                completed: false,
+                assignedAgent: selectedDeal.assignedAgent || "Workspace Team"
+              })
+            });
+          }
+          const tRes = await fetch("/api/tasks");
+          if (tRes.ok) {
+            const allTasks = await tRes.json();
+            setDealTasks(allTasks.filter((t: any) => t.dealId === selectedDeal.id));
+          }
+        }
+
+        showToast(`${logType.toUpperCase()} recap successfully added to journey timeline.`, "success");
+        setNewNoteText("");
+        setEmailSubject("");
+        setAiCallAnalysisResult(null);
+        setAiEmailAnalysisResult(null);
+        
+        const actRes = await fetch("/api/activities");
+        if (actRes.ok) {
+          const allActs = await actRes.json();
+          setDealActivities(allActs.filter(a => a.dealId === selectedDeal.id));
+        }
+
+        if (onLeadsUpdated) {
+          onLeadsUpdated();
+        }
+      } else {
+        showToast("Failed to post journey activity log.", "error");
+      }
+    } catch (err) {
+      showToast("Error processing timeline entry publish.", "error");
+    }
+  };
+
   // Add a quick-action "Summary Note" field save function
   const handleSaveSummaryNote = async (dealId: string, text: string) => {
     try {
@@ -791,6 +961,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
         setNewDealLeadId("");
         setNewDealStage("");
         setNewDealTags("");
+        setAiDealStrategyResult(null);
         setShowAddDealModal(false);
         refreshDbState();
       } else {
@@ -798,6 +969,46 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
       }
     } catch (err) {
       showToast("Cannot write new Deal path.", "error");
+    }
+  };
+
+  // Auto-estimate value, tags, and account plans using Gemini
+  const handleEstimateDealValue = async () => {
+    if (!newDealLeadId) {
+      showToast("Please associate a target Lead record first to estimate parameters.", "error");
+      return;
+    }
+    setIsEstimatingDeal(true);
+    setAiDealStrategyResult(null);
+    try {
+      const associatedLead = initialLeads.find(l => l.id === newDealLeadId);
+      const leadContext = {
+        name: associatedLead?.name,
+        role: associatedLead?.role,
+        company: associatedLead?.company,
+        industry: associatedLead?.industry,
+        country: associatedLead?.country,
+        employees: (associatedLead as any)?.employees,
+        website: (associatedLead as any)?.website
+      };
+
+      const result = await generateCrmHelp("lead_deal_score", { leadContext });
+      if (result) {
+        if (result.recommended_deal_value) {
+          setNewDealValue(result.recommended_deal_value);
+        }
+        if (result.suggested_tags && Array.isArray(result.suggested_tags)) {
+          setNewDealTags(result.suggested_tags.join(", "));
+        }
+        if (result.closing_strategy) {
+          setAiDealStrategyResult(result.closing_strategy);
+        }
+        showToast("Gemini dynamic deal insights & tags applied.", "success");
+      }
+    } catch (err: any) {
+      showToast("Could not estimate deal details from lead context.", "error");
+    } finally {
+      setIsEstimatingDeal(false);
     }
   };
 
@@ -837,36 +1048,19 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
     return searchMatch && tagMatch && agentMatch;
   });
 
-  // BANT score styles mapping
-  const getBantBadge = (bantScore?: string) => {
-    if (!bantScore) return null;
-    const config: Record<string, { label: string, bg: string, text: string }> = {
-      A: { label: 'BANT: A', bg: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400', text: 'text-emerald-400' },
-      B: { label: 'BANT: B', bg: 'bg-blue-500/10 border-blue-500/20 text-blue-400', text: 'text-blue-400' },
-      C: { label: 'BANT: C', bg: 'bg-amber-500/10 border-amber-500/20 text-amber-400', text: 'text-amber-400' },
-      D: { label: 'BANT: D', bg: 'bg-rose-500/10 border-rose-500/20 text-rose-400', text: 'text-rose-400' },
-    };
-    const cfg = config[bantScore] || { label: `BANT: ${bantScore}`, bg: 'bg-zinc-500/10 border-zinc-500/20 text-zinc-400', text: 'text-zinc-400' };
-    return (
-      <span className={`inline-flex items-center px-1.5 py-0.5 text-[8px] font-mono font-bold border rounded-xl${cfg.bg}`}>
-        {cfg.label}
-      </span>
-    );
-  };
-
   // Hot, warm, cold style mappings
   const getHealthBadge = (health: string | undefined) => {
     switch(health) {
       case "hot":
-        return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200/60 font-bold text-[9px]">🔥 Hot Close</span>;
+        return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200/60 font-bold text-[9px] shadow-xs">🔥 Hot Close</span>;
       case "warm":
-        return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-850 border border-amber-200/60 font-bold text-[9px]">⚡ Warm Play</span>;
+        return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-850 border border-amber-200/60 font-bold text-[9px] shadow-xs">⚡ Warm Play</span>;
       case "cold":
-        return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-cyan-50 text-cyan-800 border border-cyan-200/60 font-bold text-[9px]">❄️ Cold Strobe</span>;
+        return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-cyan-50 text-cyan-800 border border-cyan-200/60 font-bold text-[9px] shadow-xs">❄️ Cold Strobe</span>;
       case "lost":
-        return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-surface text-text border border-border font-bold text-[9px]">💨 Closed Lost</span>;
+        return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200/60 font-bold text-[9px] shadow-xs">💨 Closed Lost</span>;
       default:
-        return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-55 text-blue-800 border border-blue-150 font-bold text-[9px]">⚡ Recalculating</span>;
+        return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-55 text-blue-800 border border-blue-150 font-bold text-[9px] shadow-xs">⚡ Recalculating</span>;
     }
   };
 
@@ -894,7 +1088,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
       return (
         <button
           onClick={triggerSync}
-          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/25 transition-all text-[8px] font-mono tracking-wider font-extrabold uppercase shrink-0 cursor-pointer leading-none"
+          className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/25 transition-all text-[8px] font-mono tracking-wider font-extrabold uppercase shrink-0 cursor-pointer shadow-xs leading-none"
           title="Synced. Click to re-sync."
         >
           <span className="w-1 h-1 rounded-full bg-emerald-400 shrink-0" />
@@ -905,7 +1099,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
       return (
         <div
           onClick={(e) => e.stopPropagation()}
-          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[8px] font-mono tracking-wider font-extrabold uppercase shrink-0 animate-pulse cursor-wait leading-none"
+          className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[8px] font-mono tracking-wider font-extrabold uppercase shrink-0 animate-pulse cursor-wait leading-none"
           title="Integrating payload in background..."
         >
           <RefreshCw className="w-2.5 h-2.5 animate-spin text-amber-400 shrink-0" />
@@ -916,7 +1110,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
       return (
         <button
           onClick={triggerSync}
-          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/25 transition-all text-[8px] font-mono tracking-wider font-extrabold uppercase shrink-0 cursor-pointer leading-none"
+          className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/25 transition-all text-[8px] font-mono tracking-wider font-extrabold uppercase shrink-0 cursor-pointer shadow-xs leading-none"
           title="Sync failed. Click to rebuild and retry."
         >
           <span className="w-1 h-1 rounded-full bg-rose-400 animate-ping shrink-0" />
@@ -952,7 +1146,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
   const chartData = getChartData();
 
   return (
-    <div id="crm-field-mapping-panel" className="bg-surface border border-border rounded-xl p-6 space-y-6 text-text">
+    <div id="crm-field-mapping-panel" className="bg-surface border border-border rounded-3xl p-6 shadow-sm space-y-6 text-text">
       {/* Upper header section */}
       <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 border-b border-border pb-6">
         <div>
@@ -968,7 +1162,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
         {/* View Layout, Merge triggers, pipelines configuring row */}
         <div className="flex flex-wrap items-center gap-2.5">
           {/* Pipeline Dropdown Selector */}
-          <div className="flex items-center gap-1.5 p-1.5 border border-border rounded-xl">
+          <div className="flex items-center gap-1.5 p-1.5 bg-[#090a0f] border border-border rounded-xl">
             <span className="hidden sm:inline text-[9px] font-extrabold uppercase tracking-widest text-text-muted px-2">
               PIPELINE:
             </span>
@@ -983,7 +1177,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                   }
                 }
               }}
-              className="bg-surface border border-border/80 rounded-xl text-[10px] font-semibold text-text px-2.5 py-1 focus:border-brand-alt outline-none transition-colors cursor-pointer"
+              className="bg-surface border border-border/80 rounded-lg text-[10px] font-semibold text-white px-2.5 py-1 focus:border-brand-alt outline-none transition-colors cursor-pointer"
             >
               {pipelinesList.map(p => (
                 <option key={p.id} value={p.id}>{p.name.toUpperCase()}</option>
@@ -994,7 +1188,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
           {/* Deduplication check */}
           <button 
             onClick={checkForDuplicates}
-            className="px-3.5 py-1.5 rounded-xl border border-rose-200/50 bg-rose-500/10 text-rose-600 hover:bg-rose-500/15 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+            className="px-3.5 py-1.5 rounded-xl border border-rose-200/50 bg-rose-500/10 text-rose-600 hover:bg-rose-500/15 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
           >
             <ShieldAlert className="w-4 h-4 text-rose-500" />
             De-Duplicate Leads Tool
@@ -1003,7 +1197,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
           {/* New Deal */}
           <button 
             onClick={() => setShowAddDealModal(true)}
-            className="px-3.5 py-1.5 rounded-xl bg-brand hover:brightness-110 text-text text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+            className="px-3.5 py-1.5 rounded-xl bg-brand hover:brightness-110 text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
           >
             <Plus className="w-4 h-4" />
             Create Deal
@@ -1039,7 +1233,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
           )}
 
           {/* Toggle switcher layout state */}
-          <div className="flex items-center p-1 rounded-xl border border-border">
+          <div className="flex items-center bg-surface-alt p-1 rounded-xl border border-border">
             <button
               onClick={() => toggleViewPreference("kanban")}
               className={`p-1.5 rounded-lg transition-all flex items-center gap-1 text-xs cursor-pointer ${
@@ -1065,7 +1259,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
       </div>
 
       {/* Filter & Advanced searching queries */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-surface p-4 border border-border rounded-xl">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-surface p-4 border border-border rounded-2xl shadow-xs">
         {/* Search */}
         <div className="relative">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted/65" />
@@ -1074,7 +1268,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
             placeholder="Search deals, contacts or company name..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full border border-border rounded-xl py-2 pl-10 pr-4 text-xs select-text text-text placeholder:text-text-muted/65 focus:border-brand focus:ring-1 focus:ring-brand outline-none transition-all"
+            className="w-full bg-surface-alt border border-border rounded-xl py-2 pl-10 pr-4 text-xs select-text text-text placeholder:text-text-muted/65 focus:border-brand focus:ring-1 focus:ring-brand outline-none transition-all"
           />
         </div>
 
@@ -1084,7 +1278,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
           <select 
             value={selectedTagFilter}
             onChange={(e) => setSelectedTagFilter(e.target.value)}
-            className="grow border border-border text-text rounded-xl py-2 px-3 text-xs outline-none focus:border-brand transition-all appearance-none cursor-pointer"
+            className="grow bg-surface-alt border border-border text-text rounded-xl py-2 px-3 text-xs outline-none focus:border-brand transition-all appearance-none cursor-pointer"
           >
             <option value="all">Filter by Tag: All</option>
             <option value="Enterprise">Enterprise</option>
@@ -1101,7 +1295,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
           <select 
             value={selectedAgentFilter}
             onChange={(e) => setSelectedAgentFilter(e.target.value)}
-            className="grow border border-border text-text rounded-xl py-2 px-3 text-xs outline-none focus:border-brand transition-all appearance-none cursor-pointer"
+            className="grow bg-surface-alt border border-border text-text rounded-xl py-2 px-3 text-xs outline-none focus:border-brand transition-all appearance-none cursor-pointer"
           >
             <option value="all">Filter by Agent: All</option>
             <option value="Sarah Mitchell">Sarah Mitchell</option>
@@ -1113,19 +1307,19 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
 
       {/* Team Activity Widget */}
       {showTeamActivityWidget && (
-        <div className="bg-surface border border-border rounded-xl p-5 space-y-4">
+        <div className="bg-surface border border-border rounded-2xl p-5 space-y-4 shadow-sm">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <BarChart3 className="w-4.5 h-4.5 text-brand" />
               <h3 className="text-xs font-bold uppercase tracking-wider text-text">Team Activity Metrics (Deals Moved in Last 30 Days)</h3>
             </div>
-            <span className="text-[10px] text-text-muted border border-border px-2.5 py-0.5 rounded-full font-mono font-bold">
+            <span className="text-[10px] text-text-muted bg-surface-alt border border-border px-2.5 py-0.5 rounded-full font-mono font-bold">
               Total movements: {chartData.reduce((sum, d) => sum + d.moves, 0)}
             </span>
           </div>
 
           {chartData.length === 0 ? (
-            <div className="py-8 text-center text-xs text-text-muted italic rounded-xl border border-dashed border-border">
+            <div className="py-8 text-center text-xs text-text-muted italic bg-surface-alt rounded-xl border border-dashed border-border">
               No deal movements logged by team agents over the last 30 days. Promote a deal between stages to record activity!
             </div>
           ) : (
@@ -1172,15 +1366,15 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                     const totalValue = laneDeals.reduce((sum, d) => sum + d.value, 0);
 
                     return (
-                      <div key={lane.key} className="space-y-3 bg-surface border border-border rounded-xl p-4.5">
+                      <div key={lane.key} className="space-y-3 bg-surface border border-border rounded-2xl p-4.5 shadow-xs">
                         {/* Swimlane Header */}
                         <div className="flex items-center justify-between border-b border-border pb-2.5">
                           <div className="flex items-center gap-2">
                             <span className="text-sm">{lane.icon}</span>
-                            <h3 className={`text-xs font-bold font-sans uppercase tracking-wider${lane.colorClass}`}>
+                            <h3 className={`text-xs font-bold font-sans uppercase tracking-wider ${lane.colorClass}`}>
                               {lane.label}
                             </h3>
-                            <span className="text-[10px] px-2 py-0.5 rounded-full text-text border border-border font-bold font-mono">
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-surface-alt text-text border border-border font-bold font-mono">
                               {laneDeals.length} Deals
                             </span>
                           </div>
@@ -1202,7 +1396,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                                 onDrop={(e) => handleDrop(e, stage.id, lane.key as any)}
                                 animate={pulsingColumnId === stage.id ? { scale: [1, 1.015, 1], borderColor: ["var(--border)", "var(--brand)", "var(--border)"] } : {}}
                                 transition={{ duration: 0.8 }}
-                                className={`flex flex-col bg-surface-alt/75 border p-3 rounded-xl min-w-[245px] lg:min-w-0 lg:w-auto shrink-0 min-h-[180px]${pulsingColumnId === stage.id ? "border-brand shadow-md" : "border-border"}`}
+                                className={`flex flex-col bg-surface-alt/75 border p-3 rounded-xl min-w-[245px] lg:min-w-0 lg:w-auto shrink-0 min-h-[180px] ${pulsingColumnId === stage.id ? "border-brand shadow-md" : "border-border"}`}
                               >
                                 {/* Stage name Inside Swimlane */}
                                 <motion.div 
@@ -1216,7 +1410,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                                       {stage.name}
                                     </span>
                                   </div>
-                                  <span className="text-[9px] font-bold font-mono text-amber-600 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded-xl">
+                                  <span className="text-[9px] font-bold font-mono text-amber-600 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded">
                                     ${cumulativeStageValue.toLocaleString()}
                                   </span>
                                 </motion.div>
@@ -1224,7 +1418,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                                 {/* Render stage lane deals */}
                                 <div className="flex-1 space-y-2 overflow-y-auto pr-1 scrollbar-thin max-h-[250px]">
                                   {stageLaneDeals.length === 0 ? (
-                                    <div className="h-full flex flex-col items-center justify-center text-center p-3 border border-dashed border-border rounded-xl bg-surface/45">
+                                    <div className="h-full flex flex-col items-center justify-center text-center p-3 border border-dashed border-border rounded-lg bg-surface/45">
                                       <span className="text-[8px] text-text-muted uppercase">No Matches</span>
                                     </div>
                                   ) : (
@@ -1251,7 +1445,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                                         >
                                           {/* SLA Breach visual warning alert */}
                                           {isSlaBreached && (
-                                            <div className="bg-rose-500/10 border border-rose-500/25 text-rose-500 rounded-xl p-1.5 flex items-start gap-1 text-[9px] leading-tight font-bold">
+                                            <div className="bg-rose-500/10 border border-rose-500/25 text-rose-500 rounded-lg p-1.5 flex items-start gap-1 text-[9px] leading-tight font-bold">
                                               <AlertCircle className="w-3 h-3 mt-0.5 shrink-0 text-rose-500" />
                                               <span>SLA Overdue ({daysInfo.days}d / max {stage.slaDays}d)</span>
                                             </div>
@@ -1263,7 +1457,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                                             </h5>
                                             <button 
                                               onClick={(e) => handleDeleteDeal(deal.id, e)}
-                                              className="opacity-0 group-hover:opacity-100 p-0.5 hover:text-rose-600 text-text-muted transition-all rounded-xl"
+                                              className="opacity-0 group-hover:opacity-100 p-0.5 hover:text-rose-600 text-text-muted transition-all rounded-md"
                                             >
                                               <Trash2 className="w-3.5 h-3.5" />
                                             </button>
@@ -1284,8 +1478,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                                           <div className="flex items-center justify-between border-t border-border pt-1.5 text-[9px]">
                                             <span className="font-bold text-brand-alt">${deal.value.toLocaleString()}</span>
                                             <div className="flex items-center gap-1">
-                                              {getBantBadge((associatedLead as any)?.bantScore)}
-                                              <span className="inline-flex items-center gap-0.5 px-1 py-0.2 text-[8px] font-mono font-bold text-brand bg-brand/10 border border-border rounded-xl">
+                                              <span className="inline-flex items-center gap-0.5 px-1 py-0.2 text-[8px] font-mono font-bold text-brand bg-brand/10 border border-brand/20 rounded">
                                                 {associatedLead?.score || 80}%
                                               </span>
                                               {getHealthBadge(deal.status)}
@@ -1317,18 +1510,18 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                                                     }
                                                   }}
                                                   placeholder="Short note..."
-                                                  className="w-full border border-border rounded-xl p-1.5 text-[10px] text-text placeholder:text-text-muted focus:border-brandOutline outline-none resize-none h-12"
+                                                  className="w-full bg-surface-alt border border-border rounded-lg p-1.5 text-[10px] text-text placeholder:text-text-muted focus:border-brandOutline outline-none resize-none h-12"
                                                 />
                                                 <div className="flex items-center justify-end gap-1">
                                                   <button
                                                     onClick={() => setEditingNoteId(null)}
-                                                    className="px-1.5 py-0.5 rounded-xl hover:bg-neutral-200 text-text-muted text-[8px] border border-border cursor-pointer font-bold"
+                                                    className="px-1.5 py-0.5 rounded bg-surface-alt hover:bg-neutral-200 dark:hover:bg-neutral-800 text-text-muted text-[8px] border border-border cursor-pointer font-bold"
                                                   >
                                                     Cancel
                                                   </button>
                                                   <button
                                                     onClick={() => handleSaveSummaryNote(deal.id, noteDraftText)}
-                                                    className="px-1.5 py-0.5 rounded-xl bg-brand hover:brightness-110 text-text text-[8px] cursor-pointer font-bold inline-flex items-center gap-0.5"
+                                                    className="px-1.5 py-0.5 rounded bg-brand hover:brightness-110 text-white text-[8px] cursor-pointer font-bold inline-flex items-center gap-0.5"
                                                   >
                                                     <Check className="w-2.5 h-2.5" /> Save
                                                   </button>
@@ -1340,7 +1533,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                                                   setEditingNoteId(deal.id);
                                                   setNoteDraftText(deal.summaryNote || "");
                                                 }}
-                                                className="group/note flex items-start justify-between gap-1 p-1 rounded-xl hover:bg-brand/5 border border-transparent border-border transition-all cursor-pointer"
+                                                className="group/note flex items-start justify-between gap-1 p-1 rounded bg-surface-alt hover:bg-brand/5 border border-transparent hover:border-brand/10 transition-all cursor-pointer"
                                                 title="Click to edit summary note"
                                               >
                                                 <div className="flex items-start gap-1 min-w-0 flex-1">
@@ -1397,7 +1590,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                   >
                     <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: stage.color }} />
                     <span>{stage.name}</span>
-                    <span className={`text-[9px] px-1.5 py-0.2 rounded-xl font-mono${isSelected ? 'bg-brand/20 text-brand font-black' : 'bg-surface-alt text-text-muted border border-border'}`}>
+                    <span className={`text-[9px] px-1.5 py-0.2 rounded-md font-mono ${isSelected ? 'bg-brand/20 text-brand font-black' : 'bg-surface-alt text-text-muted border border-border'}`}>
                       {count}
                     </span>
                   </button>
@@ -1441,7 +1634,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                   <motion.div 
                     animate={pulsingColumnId === stage.id ? { opacity: [1, 0.4, 1] } : {}}
                     transition={{ duration: 0.8 }}
-                    className={`flex items-center justify-between text-text font-bold text-xs px-4 py-3 rounded-xl transition-all${theme.headerBg}${pulsingColumnId === stage.id ? "animate-pulse" : ""}`}
+                    className={`flex items-center justify-between text-white font-bold text-xs px-4 py-3 rounded-t-2xl shadow-xs transition-all ${theme.headerBg} ${pulsingColumnId === stage.id ? "animate-pulse" : ""}`}
                     style={theme.headerStyle}
                   >
                     <div className="flex items-center gap-1.5 min-w-0">
@@ -1452,7 +1645,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                     
                     <div className="flex items-center gap-1.5 shrink-0">
                       {/* Active items counter box */}
-                      <span className={`px-2 py-0.5 rounded-xl text-xs font-black${theme.chipBg}`}>
+                      <span className={`px-2 py-0.5 rounded-md text-xs font-black ${theme.chipBg}`}>
                         {stageDeals.length}
                       </span>
                       {/* Direct Column Delete button for admins */}
@@ -1462,7 +1655,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                             e.stopPropagation();
                             handleDeletePipelineColumn(stage.id);
                           }}
-                          className="text-text hover:text-red-100 opacity-60 hover:opacity-100 p-0.5 rounded-xl hover:bg-black/10 transition-all cursor-pointer inline-flex items-center"
+                          className="text-white hover:text-red-100 opacity-60 hover:opacity-100 p-0.5 rounded-md hover:bg-black/10 transition-all cursor-pointer inline-flex items-center"
                           title="Delete Segment Stage Column"
                         >
                           <X className="w-3.5 h-3.5" />
@@ -1471,8 +1664,8 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                     </div>
                   </motion.div>
 
-                  <div className="p-3 flex-1 flex flex-col min-h-0 bg-surface rounded-xl border-t border-border">
-                    <div className="text-[10px] text-text-muted font-mono mb-2 flex items-center justify-between px-2.5 border border-border py-1 rounded-xl">
+                  <div className="p-3 flex-1 flex flex-col min-h-0 bg-surface rounded-b-2xl border-t border-border">
+                    <div className="text-[10px] text-text-muted font-mono mb-2 flex items-center justify-between px-2.5 bg-surface-alt border border-border py-1 rounded-lg">
                       <span>Prob: {stage.probability}%</span>
                       <span className="text-brand-alt font-extrabold font-sans">${cumulativeValue.toLocaleString()}</span>
                     </div>
@@ -1511,7 +1704,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                             >
                               {/* SLA Breach visual warning alert */}
                               {isSlaBreached && (
-                                <div className="bg-rose-500/10 border border-rose-500/20 text-rose-500 rounded-xl p-2 flex items-start gap-1 text-[10px] leading-tight font-bold">
+                                <div className="bg-rose-500/10 border border-rose-500/20 text-rose-500 rounded-lg p-2 flex items-start gap-1 text-[10px] leading-tight font-bold">
                                   <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0 text-rose-500" />
                                   <span>SLA Overdue ({daysInfo.days}d / Limit {stage.slaDays}d)</span>
                                 </div>
@@ -1527,9 +1720,9 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                                       e.stopPropagation();
                                       updateDealProperty(deal.id, { completed: !deal.completed });
                                     }}
-                                    className="w-4 h-4 text-brand rounded-xl border-border-subtle focus:ring-brand cursor-pointer mt-0.5 shrink-0"
+                                    className="w-4 h-4 text-brand rounded border-border-subtle focus:ring-brand cursor-pointer mt-0.5 shrink-0"
                                   />
-                                  <h5 className={`text-[12px] font-extrabold text-text tracking-tight leading-tight group-hover:text-brand transition-colors truncate${deal.completed ? "line-through text-text-muted font-normal" : ""}`} title={deal.title}>
+                                  <h5 className={`text-[12px] font-extrabold text-text tracking-tight leading-tight group-hover:text-brand transition-colors truncate ${deal.completed ? "line-through text-text-muted font-normal" : ""}`} title={deal.title}>
                                     {deal.title}
                                   </h5>
                                 </div>
@@ -1551,11 +1744,11 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                                       }`}
                                       title="Set Priority Flag"
                                     >
-                                      <Flag className={`w-3.5 h-3.5${deal.priority && deal.priority !== "none" ? "fill-custom fill-current" : ""}`} />
+                                      <Flag className={`w-3.5 h-3.5 ${deal.priority && deal.priority !== "none" ? "fill-custom fill-current" : ""}`} />
                                     </button>
                                     {activePriorityMenuId === deal.id && (
                                       <div 
-                                        className="absolute right-0 top-6 z-50 bg-surface border border-border rounded-xl p-1.5 min-w-[130px] space-y-1 text-text text-[11px]" 
+                                        className="absolute right-0 top-6 z-50 bg-surface border border-border rounded-xl shadow-xl p-1.5 min-w-[130px] space-y-1 text-text text-[11px]" 
                                         onClick={e => e.stopPropagation()}
                                       >
                                         <div className="text-[9px] uppercase font-bold text-text-muted px-2 py-0.5 select-none border-b border-border pb-1 mb-1">Set Priority</div>
@@ -1564,7 +1757,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                                             e.stopPropagation();
                                             updateDealProperty(deal.id, { priority: "urgent" });
                                           }} 
-                                          className="w-full flex items-center gap-2 px-2 py-1 text-left hover:bg-surface-alt text-rose-500 font-bold rounded-xl"
+                                          className="w-full flex items-center gap-2 px-2 py-1 text-left hover:bg-surface-alt text-rose-500 font-bold rounded-lg"
                                         >
                                           🚩 Urgent
                                         </button>
@@ -1573,7 +1766,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                                             e.stopPropagation();
                                             updateDealProperty(deal.id, { priority: "high" });
                                           }} 
-                                          className="w-full flex items-center gap-2 px-2 py-1 text-left hover:bg-surface-alt text-orange-500 font-bold rounded-xl"
+                                          className="w-full flex items-center gap-2 px-2 py-1 text-left hover:bg-surface-alt text-orange-500 font-bold rounded-lg"
                                         >
                                           🚩 High
                                         </button>
@@ -1582,7 +1775,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                                             e.stopPropagation();
                                             updateDealProperty(deal.id, { priority: "medium" });
                                           }} 
-                                          className="w-full flex items-center gap-2 px-2 py-1 text-left hover:bg-surface-alt text-yellow-500 font-bold rounded-xl"
+                                          className="w-full flex items-center gap-2 px-2 py-1 text-left hover:bg-surface-alt text-yellow-500 font-bold rounded-lg"
                                         >
                                           🚩 Medium
                                         </button>
@@ -1591,7 +1784,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                                             e.stopPropagation();
                                             updateDealProperty(deal.id, { priority: "low" });
                                           }} 
-                                          className="w-full flex items-center gap-2 px-2 py-1 text-left hover:bg-surface-alt text-blue-500 font-bold rounded-xl"
+                                          className="w-full flex items-center gap-2 px-2 py-1 text-left hover:bg-surface-alt text-blue-500 font-bold rounded-lg"
                                         >
                                           🚩 Low
                                         </button>
@@ -1600,7 +1793,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                                             e.stopPropagation();
                                             updateDealProperty(deal.id, { priority: "none" });
                                           }} 
-                                          className="w-full flex items-center gap-2 px-2 py-1 text-left hover:bg-surface-alt text-text-muted font-normal rounded-xl border-t border-border mt-1 pt-1"
+                                          className="w-full flex items-center gap-2 px-2 py-1 text-left hover:bg-surface-alt text-text-muted font-normal rounded-lg border-t border-border mt-1 pt-1"
                                         >
                                           🏳️ None
                                         </button>
@@ -1610,7 +1803,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
 
                                   <button 
                                     onClick={(e) => handleDeleteDeal(deal.id, e)}
-                                    className="opacity-0 group-hover:opacity-100 p-1 hover:text-rose-600 hover:bg-black/5 text-text-muted transition-all rounded-xl"
+                                    className="opacity-0 group-hover:opacity-100 p-1 hover:text-rose-600 hover:bg-black/5 text-text-muted transition-all rounded-lg"
                                     title="Delete Deal"
                                   >
                                     <Trash2 className="w-3.5 h-3.5" />
@@ -1619,7 +1812,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                               </div>
 
                               {/* Row 2: Assigned Agent / Contact name */}
-                              <div className={`text-[10px] font-medium leading-tight${deal.completed ? "text-text-muted/60" : "text-text-muted"}`}>
+                              <div className={`text-[10px] font-medium leading-tight ${deal.completed ? "text-text-muted/60" : "text-text-muted"}`}>
                                 Operator: <span className="font-bold text-text">{deal.assignedAgent || "No Operator Assigned"}</span>
                               </div>
 
@@ -1628,7 +1821,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                                 <div className="flex items-center gap-1 min-w-0">
                                   <span className="truncate">{associatedLead?.name || "Unassigned"}</span>
                                   {associatedLead?.company && (
-                                    <span className="text-[9px] border border-border rounded-xl px-1.5 text-text-muted font-semibold font-mono">
+                                    <span className="text-[9px] bg-surface-alt border border-border rounded px-1.5 text-text-muted font-semibold font-mono">
                                       @{associatedLead.company}
                                     </span>
                                   )}
@@ -1638,7 +1831,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                               <div className="hidden">
                                 <span className="truncate">{associatedLead?.name || "Unassigned"}</span>
                                 {associatedLead?.company && (
-                                  <span className="text-[9px] border border-border rounded-xl px-1.5 text-text-muted font-semibold font-mono">
+                                  <span className="text-[9px] bg-surface-alt border border-border rounded px-1.5 text-text-muted font-semibold font-mono">
                                     @{associatedLead.company}
                                   </span>
                                 )}
@@ -1649,9 +1842,8 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                                 <span className="font-black text-brand-alt">${deal.value.toLocaleString()}</span>
                                 
                                 <div className="flex items-center gap-1">
-                                  {getBantBadge((associatedLead as any)?.bantScore)}
                                   {/* AI score rating */}
-                                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[9px] font-mono font-bold text-brand bg-brand/10 border border-border rounded-xl">
+                                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[9px] font-mono font-bold text-brand bg-brand/10 border border-brand/20 rounded-md">
                                     <Sparkles className="w-2.5 h-2.5 text-brand" />
                                     {associatedLead?.score || 80}%
                                   </span>
@@ -1663,7 +1855,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                               {deal.tags && deal.tags.length > 0 && (
                                 <div className="flex flex-wrap gap-1 mt-1">
                                   {deal.tags.slice(0, 2).map((t, idx) => (
-                                    <span key={idx} className="text-[8px] font-bold text-text-muted px-1.5 py-0.5 rounded-xl border border-border">
+                                    <span key={idx} className="text-[8px] bg-surface-alt font-bold text-text-muted px-1.5 py-0.5 rounded border border-border">
                                       {t}
                                     </span>
                                   ))}
@@ -1696,18 +1888,18 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                                         }
                                       }}
                                       placeholder="Write short comment..."
-                                      className="w-full border border-border rounded-xl p-2 text-[10.5px] text-text placeholder:text-text-muted focus:border-brandOutline focus:ring-1 focus:ring-brand outline-none resize-none h-12"
+                                      className="w-full bg-surface-alt border border-border rounded-lg p-2 text-[10.5px] text-text placeholder:text-text-muted focus:border-brandOutline focus:ring-1 focus:ring-brand outline-none resize-none h-12"
                                     />
                                     <div className="flex items-center justify-end gap-1">
                                       <button
                                         onClick={() => setEditingNoteId(null)}
-                                        className="px-2 py-1 rounded-xl hover:bg-neutral-200 text-text-muted text-[9px] font-bold border border-border cursor-pointer"
+                                        className="px-2 py-1 rounded-md bg-surface-alt hover:bg-neutral-200 dark:hover:bg-neutral-800 text-text-muted text-[9px] font-bold border border-border cursor-pointer"
                                       >
                                         Cancel
                                       </button>
                                       <button
                                         onClick={() => handleSaveSummaryNote(deal.id, noteDraftText)}
-                                        className="px-2 py-1 rounded-xl bg-brand hover:brightness-110 text-text text-[9px] font-bold cursor-pointer inline-flex items-center gap-0.5"
+                                        className="px-2 py-1 rounded-md bg-brand hover:brightness-110 text-white text-[9px] font-bold cursor-pointer inline-flex items-center gap-0.5"
                                       >
                                         <Check className="w-3 h-3" /> Save
                                       </button>
@@ -1719,7 +1911,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                                       setEditingNoteId(deal.id);
                                       setNoteDraftText(deal.summaryNote || "");
                                     }}
-                                    className="group/note flex items-start justify-between gap-1.5 p-1.5 rounded-xl hover:bg-brand/5 border border-transparent border-border transition-all cursor-pointer"
+                                    className="group/note flex items-start justify-between gap-1.5 p-1.5 rounded-lg bg-surface-alt hover:bg-brand/5 border border-transparent hover:border-brand/20 transition-all cursor-pointer"
                                     title="Click to edit summary note"
                                   >
                                     <div className="flex items-start gap-1 min-w-0 flex-1">
@@ -1754,9 +1946,9 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
             {isAuthorizedToManageColumns && (
               <button 
                 onClick={() => setShowAddColumnModal(true)}
-                className="hidden md:flex flex-col bg-surface-alt/45 border-2 border-dashed border-border hover:bg-surface-alt hover:border-border-subtle p-6 rounded-xl min-w-[300px] shrink-0 h-[640px] justify-center items-center cursor-pointer transition-all gap-3.5 group"
+                className="hidden md:flex flex-col bg-surface-alt/45 border-2 border-dashed border-border hover:bg-surface-alt hover:border-border-subtle p-6 rounded-2xl min-w-[300px] shrink-0 h-[640px] justify-center items-center cursor-pointer transition-all gap-3.5 group shadow-xs"
               >
-                <div className="w-12 h-12 rounded-full bg-surface flex items-center justify-center text-text border border-border group-hover:scale-110 transition-transform">
+                <div className="w-12 h-12 rounded-full bg-surface flex items-center justify-center text-text border border-border shadow-md group-hover:scale-110 transition-transform">
                   <Plus className="w-6 h-6 text-brand" />
                 </div>
                 <div className="text-center">
@@ -1772,7 +1964,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
         /* List view fallback with clean bulk support, pagination grids */
         <div id="journey-list-view-container" className="space-y-3.5 text-left w-full">
           {filteredDeals.length === 0 ? (
-            <div className="py-12 text-center text-xs text-text-muted italic bg-surface-alt/30 border border-border border-dashed rounded-xl w-full">
+            <div className="py-12 text-center text-xs text-text-muted italic bg-surface-alt/30 border border-border border-dashed rounded-2xl w-full">
               No active journey deals found in this pipeline segment.
             </div>
           ) : (
@@ -1814,28 +2006,28 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                             e.stopPropagation(); 
                             updateDealProperty(deal.id, { completed: !deal.completed }); 
                           }} 
-                          className="w-4.5 h-4.5 text-brand rounded-xl border-border-subtle focus:ring-brand cursor-pointer bg-surface"
+                          className="w-4.5 h-4.5 text-brand rounded border-border-subtle focus:ring-brand cursor-pointer bg-surface"
                         />
                       </div>
 
                       {/* Initials avatar matching lead index design */}
-                      <div className="w-10 h-10 rounded-xl flex items-center justify-center font-extrabold text-text shrink-0 select-none">
+                      <div className="w-10 h-10 rounded-xl flex items-center justify-center font-extrabold text-white shadow-xs shrink-0 bg-gradient-to-br from-brand to-brand-alt select-none">
                         {(lead?.name || deal.title || "?")[0].toUpperCase()}
                       </div>
 
                       {/* Main identity metadata details column */}
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className={`text-[13px] font-black tracking-tight${deal.completed ? "line-through text-text-muted/60 font-normal" : "text-text group-hover:text-brand transition-colors"}`}>
+                          <span className={`text-[13px] font-black tracking-tight ${deal.completed ? "line-through text-text-muted/60 font-normal" : "text-text group-hover:text-brand transition-colors"}`}>
                             {deal.title}
                           </span>
                           {deal.priority && deal.priority !== "none" && (
-                            <span className={`text-[8px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded-xl border border-border/80${priorityColor}`}>
+                            <span className={`text-[8px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded-md bg-surface-alt border border-border/80 shadow-3xs ${priorityColor}`}>
                               {priorityEmoji}
                             </span>
                           )}
                           {isSlaOverdue && (
-                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-xl bg-rose-500/10 text-rose-500 text-[8px] font-extrabold border border-rose-500/20 animate-pulse whitespace-nowrap">
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-rose-500/10 text-rose-500 text-[8px] font-extrabold border border-rose-500/20 shadow-xs animate-pulse whitespace-nowrap">
                               <AlertCircle className="w-2.5 h-2.5" />
                               SLA Breach
                             </span>
@@ -1849,13 +2041,13 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                           </span>
                           {lead?.company && (
                             <span className="text-[10px] text-text-muted select-none">
-                              <span className="border border-border/70 rounded-xl px-1.5 py-0.2 font-mono font-semibold">
+                              <span className="bg-surface-alt border border-border/70 rounded px-1.5 py-0.2 font-mono font-semibold">
                                 @{lead.company}
                               </span>
                             </span>
                           )}
                           {lead?.score && (
-                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 text-[9px] font-mono font-bold text-brand bg-brand/10 border border-border rounded-xl">
+                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 text-[9px] font-mono font-bold text-brand bg-brand/10 border border-brand/25 rounded-md">
                               <Sparkles className="w-2.5 h-2.5 text-brand" />
                               {lead.score}%
                             </span>
@@ -1899,7 +2091,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                       <div className="shrink-0 pl-1" onClick={e => e.stopPropagation()}>
                         <button 
                           onClick={(e) => handleDeleteDeal(deal.id, e)}
-                          className="p-1 px-2.5 bg-rose-500/10 border border-rose-500/20 text-rose-500 hover:bg-rose-500 hover:text-white hover:border-rose-500 rounded-xl text-[10px] font-bold transition-all cursor-pointer"
+                          className="p-1 px-2.5 bg-rose-500/10 border border-rose-500/20 text-rose-500 hover:bg-rose-500 hover:text-white hover:border-rose-500 rounded-xl text-[10px] font-bold transition-all cursor-pointer shadow-xs"
                         >
                           Delete
                         </button>
@@ -1916,23 +2108,23 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
 
       {/* Dynamic Detail Collapsible Side Drawer Panel */}
       {selectedDeal && (
-        <div className="fixed inset-y-0 right-0 z-50 w-full sm:max-w-2xl bg-white border-l border-border flex flex-col focus:outline-none">
+        <div className="fixed inset-y-0 right-0 z-50 w-full sm:max-w-2xl bg-white border-l border-slate-200 shadow-2xl flex flex-col focus:outline-none">
           {/* Sidebar Drawer Header */}
-          <div className="p-6 border-b border-border flex items-center justify-between bg-surface">
+          <div className="p-6 border-b border-slate-150 flex items-center justify-between bg-slate-50">
             <div className="space-y-1">
               <span className="text-[10px] font-bold font-mono text-blue-600 uppercase tracking-wider">Lead & Deal Journey Detail Drawer</span>
-              <h3 className="text-base font-bold text-text truncate max-w-sm">{selectedDeal.title}</h3>
+              <h3 className="text-base font-bold text-slate-900 truncate max-w-sm">{selectedDeal.title}</h3>
             </div>
             <button 
               onClick={() => setSelectedDeal(null)}
-              className="p-1.5 bg-white border border-border hover:bg-slate-50 text-slate-500 hover:text-slate-800 rounded-xl transition-all cursor-pointer"
+              className="p-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-500 hover:text-slate-800 rounded-lg transition-all cursor-pointer shadow-xs"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
 
           {/* Tabs bar selector */}
-          <div className="flex border-b border-border bg-surface px-6 py-2 gap-4 shrink-0 overflow-x-auto scrollbar-none">
+          <div className="flex border-b border-slate-200 bg-slate-50/50 px-6 py-2 gap-4 shrink-0 overflow-x-auto scrollbar-none">
             <button
               onClick={() => setDrawerTab("ai")}
               className={`pb-2 pt-1.5 text-xs font-bold transition-all border-b-2 cursor-pointer shrink-0 ${
@@ -1971,8 +2163,8 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
             {drawerTab === "ai" && (
               <div className="space-y-6">
                 {/* 1. AI SONNET PROGRESSION AND INTELLIGENCE GAUGES */}
-            <div className="border border-indigo-100 rounded-xl p-5 space-y-4 relative overflow-hidden text-slate-800">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-100/30 rounded-full filter select-none" />
+            <div className="bg-gradient-to-br from-indigo-50/70 to-blue-50/50 border border-indigo-100 rounded-2xl p-5 space-y-4 shadow-xs relative overflow-hidden text-slate-800">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-100/30 rounded-full filter blur-xl select-none" />
               
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -1983,9 +2175,9 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                 <button
                   onClick={handleRefreshAiReport}
                   disabled={isRefreshingAi}
-                  className="px-2.5 py-1 bg-white border border-border text-text hover:bg-slate-50 rounded-xl text-[10px] transition-all flex items-center gap-1 cursor-pointer disabled:opacity-40"
+                  className="px-2.5 py-1 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-lg text-[10px] transition-all flex items-center gap-1 cursor-pointer shadow-xs disabled:opacity-40"
                 >
-                  <RefreshCw className={`w-3 h-3${isRefreshingAi ? "animate-spin" : ""}`} />
+                  <RefreshCw className={`w-3 h-3 ${isRefreshingAi ? "animate-spin" : ""}`} />
                   {isRefreshingAi ? "Analyzing..." : "Refresh Report"}
                 </button>
               </div>
@@ -1994,22 +2186,22 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                 <div className="space-y-4 text-left">
                   <div className="grid grid-cols-2 gap-4">
                     {/* Prob widget gauge */}
-                    <div className="bg-white border border-indigo-100 rounded-xl p-3 text-center space-y-1">
+                    <div className="bg-white border border-indigo-100 shadow-xs rounded-xl p-3 text-center space-y-1">
                       <div className="text-[10px] uppercase font-bold text-slate-500">Win Probability Gauge</div>
                       <div className="text-3xl font-extrabold text-indigo-600 font-mono">{aiReport.close_probability}%</div>
-                      <div className="text-[9px] text-text">Expected close: {aiReport.estimated_close_date || "N/A"}</div>
+                      <div className="text-[9px] text-slate-400">Expected close: {aiReport.estimated_close_date || "N/A"}</div>
                     </div>
 
                     {/* Health Status card widget */}
-                    <div className="bg-white border border-border rounded-xl p-3 text-center space-y-1">
+                    <div className="bg-white border border-slate-150 shadow-xs rounded-xl p-3 text-center space-y-1">
                       <div className="text-[10px] uppercase font-bold text-slate-500">AI Health Status</div>
                       <div className="pt-1.5 flex justify-center">{getHealthBadge(aiReport.health_status)}</div>
-                      <div className="text-[9px] text-text mt-1 select-none uppercase tracking-widest">Model: Claude 3.5 Sonnet</div>
+                      <div className="text-[9px] text-slate-400 mt-1 select-none uppercase tracking-widest">Model: Claude 3.5 Sonnet</div>
                     </div>
                   </div>
 
                   {/* Summary paragraph */}
-                  <div className="bg-white/90 border border-border rounded-xl p-3 text-xs leading-relaxed text-slate-600">
+                  <div className="bg-white/90 border border-slate-200/80 rounded-xl p-3 text-xs leading-relaxed text-slate-600 shadow-xs">
                     <strong className="text-slate-800 block mb-1">Journey Intelligence Summary:</strong>
                     {aiReport.analysis_summary}
                   </div>
@@ -2046,7 +2238,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                   </div>
 
                   {/* Curated Personal copy message template outreach */}
-                  <div className="bg-surface border border-border rounded-xl p-3.5 space-y-2 text-left">
+                  <div className="bg-slate-50 border border-slate-150 rounded-xl p-3.5 space-y-2 text-left">
                     <div className="text-[10px] uppercase font-bold text-indigo-700 flex items-center justify-between">
                       <div className="flex items-center gap-1">
                         <Mail className="w-3.5 h-3.5" />
@@ -2054,22 +2246,22 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                       </div>
                       <span className="text-[8px] opacity-60">Uses company knowledge-base context</span>
                     </div>
-                    <div className="text-xs text-slate-850 leading-relaxed font-mono whitespace-pre-line p-3 bg-white border border-border rounded-xl">
+                    <div className="text-xs text-slate-850 leading-relaxed font-mono whitespace-pre-line p-3 bg-white border border-slate-200 rounded-lg shadow-sm">
                       {aiReport.ideal_outreach_message}
                     </div>
                   </div>
 
                   {/* History Logs comparison charts list */}
                   {aiHistory.length > 0 && (
-                    <div className="border-t border-border pt-3">
+                    <div className="border-t border-slate-150 pt-3">
                       <div className="text-[9px] uppercase font-bold text-slate-500 mb-2 tracking-wider flex items-center gap-1">
                         <History className="w-3.5 h-3.5" />
                         Historical Comparison (Sonnet Runs Audit)
                       </div>
                       <div className="flex items-center gap-2">
                         {aiHistory.map((hist, idx) => (
-                          <div key={idx} className="bg-white border border-border rounded-xl px-2.5 py-1 text-center font-mono">
-                            <span className="text-[8px] text-text block">{hist.date}</span>
+                          <div key={idx} className="bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-center font-mono">
+                            <span className="text-[8px] text-slate-400 block">{hist.date}</span>
                             <span className="text-xs text-indigo-650 font-bold">{hist.score}%</span>
                           </div>
                         ))}
@@ -2078,18 +2270,18 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                   )}
                 </div>
               ) : (
-                <div className="flex flex-col items-center justify-center p-8 bg-white border border-dashed border-border rounded-xl text-center">
-                  <Sparkles className="w-8 h-8 text-text mb-2" />
-                  <p className="text-xs font-bold text-text">No Intelligence Compiled</p>
-                  <p className="text-[10px] text-text mt-1 max-w-sm">
+                <div className="flex flex-col items-center justify-center p-8 bg-white border border-dashed border-slate-200 rounded-xl text-center">
+                  <Sparkles className="w-8 h-8 text-slate-300 mb-2" />
+                  <p className="text-xs font-bold text-slate-700">No Intelligence Compiled</p>
+                  <p className="text-[10px] text-slate-400 mt-1 max-w-sm">
                     Deploy background Sonnet agents to parse negotiation risk blocks and recommend next actionable copy paths.
                   </p>
                   <button
                     onClick={handleRefreshAiReport}
                     disabled={isRefreshingAi}
-                    className="mt-3 px-3 py-1 bg-indigo-600 hover:bg-indigo-750 text-text rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 shrink-0"
+                    className="mt-3 px-3 py-1 bg-indigo-600 hover:bg-indigo-750 text-white rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 shrink-0"
                   >
-                    <RefreshCw className={`w-3.5 h-3.5${isRefreshingAi ? "animate-spin" : ""}`} />
+                    <RefreshCw className={`w-3.5 h-3.5 ${isRefreshingAi ? "animate-spin" : ""}`} />
                     Compile Claude Intelligence Analysis
                   </button>
                 </div>
@@ -2101,66 +2293,66 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
             {drawerTab === "account" && (
               <div className="space-y-6">
                 {/* Account details */}
-                <div className="bg-surface border border-border rounded-xl p-4.5 space-y-4 text-slate-800">
+                <div className="bg-slate-50 border border-slate-150 rounded-2xl p-4.5 space-y-4 text-slate-800">
                   <h4 className="text-xs uppercase font-bold tracking-widest text-slate-550 flex items-center gap-2">
                     <Briefcase className="w-4 h-4 text-indigo-600" />
                     Corporate Account Hierarchy Context
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                     <div className="space-y-1">
-                      <label className="text-[9px] font-bold uppercase tracking-wider text-text">Parent Company Group</label>
+                      <label className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Parent Company Group</label>
                       <input 
                         type="text"
                         value={parentCompany}
                         onChange={(e) => setParentCompany(e.target.value)}
-                        className="w-full bg-white border border-border rounded-xl py-2 px-3 font-bold text-slate-800 outline-none focus:border-indigo-500"
+                        className="w-full bg-white border border-slate-200 rounded-xl py-2 px-3 font-bold text-slate-800 outline-none focus:border-indigo-500"
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[9px] font-bold uppercase tracking-wider text-text">Business Unit / Department</label>
+                      <label className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Business Unit / Department</label>
                       <input 
                         type="text"
                         value={businessUnit}
                         onChange={(e) => setBusinessUnit(e.target.value)}
-                        className="w-full bg-white border border-border rounded-xl py-2 px-3 font-semibold text-text outline-none focus:border-indigo-500"
+                        className="w-full bg-white border border-slate-200 rounded-xl py-2 px-3 font-semibold text-slate-700 outline-none focus:border-indigo-500"
                       />
                     </div>
                   </div>
                 </div>
 
                 {/* Org tree builder preview */}
-                <div className="bg-white border border-border rounded-xl p-5 space-y-4 text-slate-800">
+                <div className="bg-white border border-slate-150 rounded-2xl p-5 space-y-4 shadow-xs text-slate-800">
                   <h4 className="text-xs uppercase font-bold tracking-widest text-slate-600 flex items-center gap-2">
                     <Users className="w-4 h-4 text-blue-600" />
                     Interactive Company Org Hierarchy Map
                   </h4>
-                  <div className="border border-border rounded-xl p-4 bg-surface flex flex-col items-center">
+                  <div className="border border-slate-100 rounded-xl p-4 bg-slate-50/50 flex flex-col items-center">
                     {/* Root company node */}
-                    <div className="bg-indigo-600 text-text rounded-xl py-2 px-4 border border-indigo-700 font-bold text-xs">
+                    <div className="bg-indigo-600 text-white rounded-xl py-2 px-4 shadow-sm border border-indigo-700 font-bold text-xs">
                       🏢 {parentCompany} (Parent Organization)
                     </div>
-                    <div className="w-0.5 h-6 bg-surface" />
+                    <div className="w-0.5 h-6 bg-slate-250" />
                     {/* Business unit node */}
-                    <div className="bg-white border border-border text-slate-800 rounded-xl py-1.5 px-3 font-semibold text-[11px]">
+                    <div className="bg-white border border-slate-250 text-slate-800 rounded-xl py-1.5 px-3 shadow-xs font-semibold text-[11px]">
                       📂 {businessUnit} (Subsidiary)
                     </div>
-                    <div className="w-0.5 h-6 bg-surface" />
+                    <div className="w-0.5 h-6 bg-slate-250" />
                     
                     {/* Horizontal connector line for children */}
                     <div className="w-full max-w-sm flex items-center pr-1.5 pl-1.5 select-none">
-                      <div className="grow h-0.5 bg-surface" />
-                      <div className="w-1.5 h-1.5 rounded-full bg-surface" />
-                      <div className="grow h-0.5 bg-surface" />
+                      <div className="grow h-0.5 bg-slate-250" />
+                      <div className="w-1.5 h-1.5 rounded-full bg-slate-350" />
+                      <div className="grow h-0.5 bg-slate-250" />
                     </div>
                     
                     {/* Buying committee members nodes */}
                     <div className="grid grid-cols-3 gap-2 w-full max-w-md pt-2">
                       {buyingCommittee.map((m, idx) => (
-                        <div key={idx} className="bg-white border border-border rounded-xl p-2.5 text-center space-y-1">
+                        <div key={idx} className="bg-white border border-slate-250 rounded-xl p-2.5 shadow-xs text-center space-y-1">
                           <div className="text-[10px] font-bold text-slate-800 truncate">{m.name}</div>
-                          <div className="text-[8.5px] text-text font-medium truncate">{m.role}</div>
+                          <div className="text-[8.5px] text-slate-400 font-medium truncate">{m.role}</div>
                           <div className="pt-1 flex justify-center">
-                            <span className="text-[7.5px] font-extrabold uppercase px-1.5 py-0.5 rounded-xl bg-stone-100 text-text">
+                            <span className="text-[7.5px] font-extrabold uppercase px-1.5 py-0.5 rounded-md bg-stone-100 text-slate-700">
                               {m.seniority}
                             </span>
                           </div>
@@ -2177,11 +2369,11 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                       <UserCheck className="w-4 h-4 text-emerald-600" />
                       Stakeholder Buying Committee Mapping
                     </span>
-                    <span className="text-[8.5px] bg-surface px-2 py-0.5 rounded-xl font-mono text-slate-500">{buyingCommittee.length} Stakeholders</span>
+                    <span className="text-[8.5px] bg-slate-100 px-2 py-0.5 rounded font-mono text-slate-500">{buyingCommittee.length} Stakeholders</span>
                   </h4>
 
                   {/* Add stakeholder form */}
-                  <div className="bg-surface border border-border border-dashed rounded-xl p-4 space-y-3">
+                  <div className="bg-slate-50 border border-slate-150 border-dashed rounded-xl p-4 space-y-3">
                     <div className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Map New Stakeholder Card</div>
                     <div className="grid grid-cols-2 gap-3 text-xs">
                       <input 
@@ -2189,21 +2381,21 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                         placeholder="Stakeholder Name..." 
                         value={newCommitteeName}
                         onChange={e => setNewCommitteeName(e.target.value)}
-                        className="bg-white border border-border text-slate-800 rounded-xl py-2 px-3 text-xs outline-none focus:border-indigo-500"
+                        className="bg-white border border-slate-200 text-slate-800 rounded-xl py-2 px-3 text-xs outline-none focus:border-indigo-500"
                       />
                       <input 
                         type="text" 
                         placeholder="Corporate Role / Title..." 
                         value={newCommitteeRole}
                         onChange={e => setNewCommitteeRole(e.target.value)}
-                        className="bg-white border border-border text-slate-800 rounded-xl py-2 px-3 text-xs outline-none focus:border-indigo-500"
+                        className="bg-white border border-slate-200 text-slate-800 rounded-xl py-2 px-3 text-xs outline-none focus:border-indigo-500"
                       />
                       <div className="flex flex-col gap-1">
-                        <label className="text-[8px] font-bold text-text uppercase">Influence Level</label>
+                        <label className="text-[8px] font-bold text-slate-400 uppercase">Influence Level</label>
                         <select
                           value={newCommitteeInfluence}
                           onChange={e => setNewCommitteeInfluence(e.target.value as any)}
-                          className="bg-white border border-border text-text rounded-xl py-2 px-3 outline-none cursor-pointer"
+                          className="bg-white border border-slate-200 text-slate-700 rounded-xl py-2 px-3 outline-none cursor-pointer"
                         >
                           <option value="high">🔥 High Influence</option>
                           <option value="medium">⚡ Medium Influence</option>
@@ -2211,11 +2403,11 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                         </select>
                       </div>
                       <div className="flex flex-col gap-1">
-                        <label className="text-[8px] font-bold text-text uppercase">Seniority Title</label>
+                        <label className="text-[8px] font-bold text-slate-400 uppercase">Seniority Title</label>
                         <select
                           value={newCommitteeSeniority}
                           onChange={e => setNewCommitteeSeniority(e.target.value as any)}
-                          className="bg-white border border-border text-text rounded-xl py-2 px-3 outline-none cursor-pointer"
+                          className="bg-white border border-slate-200 text-slate-700 rounded-xl py-2 px-3 outline-none cursor-pointer"
                         >
                           <option value="C-Level">🏆 C-Level Exec</option>
                           <option value="VP">⭐ VP Senior</option>
@@ -2225,16 +2417,16 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                         </select>
                       </div>
                     </div>
-                    <div className="flex flex-wrap items-center justify-between gap-4 pt-1.5 border-t border-border">
+                    <div className="flex flex-wrap items-center justify-between gap-4 pt-1.5 border-t border-slate-200">
                       <div className="flex items-center gap-2 grow min-w-[150px]">
-                        <span className="text-[9px] font-bold text-text uppercase whitespace-nowrap">Engagement: {newCommitteeEngagement}%</span>
+                        <span className="text-[9px] font-bold text-slate-400 uppercase whitespace-nowrap">Engagement: {newCommitteeEngagement}%</span>
                         <input 
                           type="range" 
                           min="0" 
                           max="100" 
                           value={newCommitteeEngagement}
                           onChange={e => setNewCommitteeEngagement(Number(e.target.value))}
-                          className="grow h-1 bg-surface rounded-xl appearance-none cursor-pointer accent-indigo-600"
+                          className="grow h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
                         />
                       </div>
                       <button
@@ -2257,7 +2449,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                           setNewCommitteeRole("");
                           showToast("Stakeholder mapped successfully to the Buying Committee.", "success");
                         }}
-                        className="px-3.5 py-1.5 text-[10px] bg-indigo-650 hover:bg-indigo-750 text-text rounded-xl font-bold transition-all cursor-pointer"
+                        className="px-3.5 py-1.5 text-[10px] bg-indigo-650 hover:bg-indigo-750 text-white rounded-lg font-bold transition-all cursor-pointer"
                       >
                         + Map Lead Stakeholder
                       </button>
@@ -2265,10 +2457,10 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                   </div>
 
                   {/* Operational Committee Table view */}
-                  <div className="border border-border rounded-xl overflow-hidden bg-white">
+                  <div className="border border-slate-200 rounded-xl overflow-hidden bg-white">
                     <table className="w-full border-collapse text-left text-xs text-slate-800">
                       <thead>
-                        <tr className="bg-surface border-b border-border text-[10px] font-bold uppercase text-text font-mono">
+                        <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-bold uppercase text-slate-400 font-mono">
                           <th className="py-2.5 px-3">Stakeholder</th>
                           <th className="py-2.5 px-3">Company Level</th>
                           <th className="py-2.5 px-3">Influence</th>
@@ -2280,7 +2472,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                           <tr key={idx} className="hover:bg-slate-50/50">
                             <td className="py-2.5 px-3">
                               <div className="font-bold text-slate-800">{m.name}</div>
-                              <div className="text-[10px] text-text font-medium">{m.role}</div>
+                              <div className="text-[10px] text-slate-400 font-medium">{m.role}</div>
                             </td>
                             <td className="py-2.5 px-3 text-[10.5px] font-semibold text-slate-600">{m.seniority}</td>
                             <td className="py-2.5 px-3">
@@ -2292,8 +2484,8 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                             </td>
                             <td className="py-2.5 px-3">
                               <div className="flex items-center gap-1.5">
-                                <div className="w-12 bg-surface rounded-full h-1.5 overflow-hidden">
-                                  <div className={`h-full rounded-full${m.engagementScore >= 80 ? 'bg-emerald-500' : m.engagementScore >= 50 ? 'bg-amber-500' : 'bg-rose-500'}`} style={{ width: `${m.engagementScore}%` }} />
+                                <div className="w-12 bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                                  <div className={`h-full rounded-full ${m.engagementScore >= 80 ? 'bg-emerald-500' : m.engagementScore >= 50 ? 'bg-amber-500' : 'bg-rose-500'}`} style={{ width: `${m.engagementScore}%` }} />
                                 </div>
                                 <span className="font-mono text-[9px] font-bold text-slate-500">{m.engagementScore}%</span>
                               </div>
@@ -2323,17 +2515,17 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                   placeholder="Schedule follow-up reminder action..."
                   value={newTaskTitle}
                   onChange={(e) => setNewTaskTitle(e.target.value)}
-                  className="flex-1 min-w-[180px] bg-white border border-border text-slate-800 placeholder:text-slate-400 rounded-xl py-2 px-3 text-xs outline-none focus:border-blue-500"
+                  className="flex-1 min-w-[180px] bg-white border border-slate-200 text-slate-800 placeholder:text-slate-400 rounded-xl py-2 px-3 text-xs outline-none focus:border-blue-500"
                 />
                 <input 
                   type="date"
                   value={newTaskDueDate}
                   onChange={(e) => setNewTaskDueDate(e.target.value)}
-                  className="bg-white border border-border text-slate-800 rounded-xl py-2 px-3 text-xs outline-none focus:border-blue-500"
+                  className="bg-white border border-slate-200 text-slate-800 rounded-xl py-2 px-3 text-xs outline-none focus:border-blue-500"
                 />
                 <button 
                   onClick={handleAddTask}
-                  className="px-4 py-2 bg-surface border border-border hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                  className="px-4 py-2 bg-slate-100 border border-slate-200 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs"
                 >
                   Schedule Actions
                 </button>
@@ -2342,24 +2534,24 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
               {/* Tasks Checklist Grid */}
               <div className="space-y-2">
                 {dealTasks.length === 0 ? (
-                  <p className="text-[10px] italic text-text text-center font-mono">No scheduling tasks recorded. Keep track of customer SLAs.</p>
+                  <p className="text-[10px] italic text-slate-400 text-center font-mono">No scheduling tasks recorded. Keep track of customer SLAs.</p>
                 ) : (
                   dealTasks.map((task) => (
-                    <div key={task.id} className="flex items-center justify-between p-3 bg-white border border-border rounded-xl">
+                    <div key={task.id} className="flex items-center justify-between p-3 bg-white border border-slate-200 shadow-xs rounded-xl">
                       <div className="flex items-center gap-2.5">
                         <input 
                           type="checkbox"
                           checked={task.completed}
                           onChange={() => handleToggleTask(task)}
-                          className="w-4 h-4 text-blue-600 border-border rounded-xl focus:ring-blue-500"
+                          className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
                         />
-                        <span className={`text-xs${task.completed ? "line-through text-slate-400" : "text-slate-700 font-medium"}`}>
+                        <span className={`text-xs ${task.completed ? "line-through text-slate-400" : "text-slate-700 font-medium"}`}>
                           {task.title}
                         </span>
                       </div>
                       
                       <div className="flex items-center gap-2 font-mono text-[9px] text-slate-500">
-                        <Calendar className="w-3.5 h-3.5 text-text" />
+                        <Calendar className="w-3.5 h-3.5 text-slate-400" />
                         <span>SLA: {new Date(task.dueDate).toLocaleDateString()}</span>
                       </div>
                     </div>
@@ -2369,52 +2561,304 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
             </div>
 
             {/* 3. ACTIVITY TIMELINE CHRONOLOGY LOGS */}
-            <div className="space-y-4">
-              <h4 className="text-xs uppercase font-bold tracking-widest text-slate-500 flex items-center gap-2">
-                <Activity className="w-4 h-4 text-indigo-650" />
-                Chronological Journey Activity Logs
-              </h4>
-
-              {/* Add Note text element */}
-              <div className="space-y-2">
-                <textarea
-                  placeholder="Log manual notes, email triggers, or custom calls notes..."
-                  value={newNoteText}
-                  onChange={(e) => setNewNoteText(e.target.value)}
-                  className="w-full bg-white border border-border text-slate-800 placeholder:text-slate-400 rounded-xl p-3 text-xs outline-none focus:border-indigo-400 h-20 resize-none select-text focus:ring-1 focus:ring-indigo-400"
-                />
-                <div className="flex justify-end">
-                  <button 
-                    onClick={handleAddNote}
-                    className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-750 text-text rounded-xl text-xs font-bold transition-all cursor-pointer"
-                  >
-                    Log Negotiating Note
-                  </button>
+            <div className="space-y-6 pt-4 border-t border-slate-100">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs uppercase font-extrabold tracking-widest text-slate-600 flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-indigo-600 animate-pulse" />
+                  Chronological Journey & Outreach
+                </h4>
+                <div className="text-[10px] bg-slate-100 py-0.5 px-2 text-slate-500 rounded-full font-mono">
+                  {dealActivities.length} logs
                 </div>
               </div>
 
-              {/* Timeline Items */}
-              <div className="relative border-l border-border pl-4 space-y-6">
-                {dealActivities.length === 0 ? (
-                  <p className="text-[10px] italic text-text text-center select-none pt-2 font-mono">Timeline empty. Change stage or write notes above.</p>
-                ) : (
-                  dealActivities.map((act) => (
-                    <div key={act.id} className="relative space-y-1 text-left">
-                      {/* Anchor Timeline Ring */}
-                      <span className="absolute -left-[21px] top-1.5 w-2.5 h-2.5 rounded-full border border-white bg-indigo-500" />
+              {/* Omnichannel Compose logger */}
+              <div className="border border-slate-200 rounded-2xl bg-slate-50 overflow-hidden shadow-xs">
+                {/* Channel Selector Bar */}
+                <div className="flex border-b border-slate-200 bg-white">
+                  <button 
+                    onClick={() => { setLogType("note"); setAiCallAnalysisResult(null); setAiEmailAnalysisResult(null); }}
+                    className={`flex-1 py-2.5 text-xs font-bold transition-all flex items-center justify-center gap-1.5 border-b-2 ${
+                      logType === "note" 
+                        ? "border-blue-500 text-blue-600 bg-blue-50/20" 
+                        : "border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50"
+                    }`}
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    📝 Note
+                  </button>
+                  <button 
+                    onClick={() => { setLogType("call"); setAiCallAnalysisResult(null); setAiEmailAnalysisResult(null); }}
+                    className={`flex-1 py-2.5 text-xs font-bold transition-all flex items-center justify-center gap-1.5 border-b-2 ${
+                      logType === "call" 
+                        ? "border-emerald-500 text-emerald-600 bg-emerald-50/20" 
+                        : "border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50"
+                    }`}
+                  >
+                    <Phone className="w-3.5 h-3.5" />
+                    📞 Call Log
+                  </button>
+                  <button 
+                    onClick={() => { setLogType("email"); setAiCallAnalysisResult(null); setAiEmailAnalysisResult(null); }}
+                    className={`flex-1 py-2.5 text-xs font-bold transition-all flex items-center justify-center gap-1.5 border-b-2 ${
+                      logType === "email" 
+                        ? "border-amber-500 text-amber-600 bg-amber-50/20" 
+                        : "border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50"
+                    }`}
+                  >
+                    <Mail className="w-3.5 h-3.5" />
+                    ✉️ Email outreach
+                  </button>
+                </div>
+
+                <div className="p-4 space-y-4">
+                  {/* Email-specific fields */}
+                  {logType === "email" && (
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block text-left">Email Subject Header</label>
+                      <input 
+                        type="text"
+                        placeholder="e.g. Scaling GTM efficiency benchmarks at their company..."
+                        value={emailSubject}
+                        onChange={(e) => setEmailSubject(e.target.value)}
+                        className="w-full bg-white border border-slate-200 text-slate-800 placeholder:text-slate-400 rounded-xl py-2 px-3 text-xs outline-none focus:border-amber-400"
+                      />
+                    </div>
+                  )}
+
+                  {/* Main Inputs Area */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block text-left">
+                        {logType === "note" && "Add General Persistent Memo"}
+                        {logType === "call" && "Paste Call transcripts or raw verbal notes"}
+                        {logType === "email" && "Draft Outreach email body concept or prompt"}
+                      </label>
                       
-                      <div className="text-[11px] font-bold text-slate-800 flex items-center justify-between">
-                        <span>{act.title}</span>
-                        <span className="text-[8px] text-text font-mono">{new Date(act.timestamp).toLocaleTimeString()}</span>
-                      </div>
-                      <p className="text-[10px] text-slate-600 leading-relaxed select-text">{act.description}</p>
-                      <div className="text-[8px] text-text italic flex items-center gap-1 pt-0.5 select-none font-mono">
-                        <User className="w-2.5 h-2.5 opacity-60" />
-                        Logged by: {act.agentName}
+                      {/* AI Assisted Trigger buttons */}
+                      {logType === "call" && !isAnalyzingCrmHelp && (
+                        <button 
+                          onClick={handleAnalyzeCallNotes}
+                          className="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[9px] font-bold flex items-center gap-1 cursor-pointer transition-all shadow-xs"
+                        >
+                          <Sparkles className="w-2.5 h-2.5" />
+                          ✨ AI Call Analyst
+                        </button>
+                      )}
+                      {logType === "email" && !isAnalyzingCrmHelp && (
+                        <button 
+                          onClick={handleImproveEmailDraft}
+                          className="px-2 py-0.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-[9px] font-bold flex items-center gap-1 cursor-pointer transition-all shadow-xs"
+                        >
+                          <Sparkles className="w-2.5 h-2.5" />
+                          🪄 AI professional Drafter
+                        </button>
+                      )}
+                    </div>
+
+                    <textarea
+                      placeholder={
+                        logType === "note" 
+                          ? "Write a strategic persistent workspace memo..." 
+                          : logType === "call" 
+                            ? "e.g. Had structured review call with Marcus. Agreed pricing is right, but must deliver proof of concept next Tuesday. Sarah is assigned SLA..." 
+                            : "e.g. Hey Marcus, following up on our social chat regarding email warmups. Let me know if Tuesday is open..."
+                      }
+                      value={newNoteText}
+                      onChange={(e) => setNewNoteText(e.target.value)}
+                      className="w-full bg-white border border-slate-200 text-slate-800 placeholder:text-slate-400 rounded-xl p-3 text-xs outline-none focus:border-indigo-400 h-24 resize-none select-text focus:ring-1 focus:ring-indigo-400 shadow-xs text-left"
+                    />
+                  </div>
+
+                  {/* Loading states for AI processing */}
+                  {isAnalyzingCrmHelp && (
+                    <div className="p-3.5 bg-indigo-50 border border-indigo-100 rounded-xl flex items-center gap-3 animate-pulse text-left">
+                      <RefreshCw className="w-4 h-4 text-indigo-600 animate-spin shrink-0" />
+                      <div className="space-y-0.5">
+                        <span className="text-[11px] font-bold text-indigo-800 block">Gemini AI GTM Intelligence Copilot</span>
+                        <p className="text-[9px] text-indigo-600 leading-relaxed">Processing client interactions to enrich communications and extract SLA checklist actions...</p>
                       </div>
                     </div>
-                  ))
-                )}
+                  )}
+
+                  {/* AI Call Logs Assist Outputs */}
+                  {logType === "call" && aiCallAnalysisResult && (
+                    <div className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-4.5 space-y-3.5 text-left">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <Sparkles className="w-4 h-4 text-emerald-600" />
+                          <span className="text-xs font-bold text-emerald-800">Gemini Call Log Analysis Results</span>
+                        </div>
+                        {/* Sentiment Pill */}
+                        <div className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider ${
+                          aiCallAnalysisResult.sentiment === "Positive" ? "bg-emerald-100 text-emerald-800" :
+                          aiCallAnalysisResult.sentiment === "Neutral" ? "bg-slate-100 text-slate-800" :
+                          "bg-rose-100 text-rose-800 animate-pulse"
+                        }`}>
+                          Sentiment: {aiCallAnalysisResult.sentiment || 'Neutral'}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2.5">
+                        <div className="text-[11px] leading-relaxed text-slate-700 bg-white p-2.5 border border-slate-100 rounded-lg">
+                          <strong className="text-emerald-800 text-[10px] block mb-1 uppercase tracking-wider">Executive Conversation Summary:</strong>
+                          {aiCallAnalysisResult.summary}
+                        </div>
+
+                        {aiCallAnalysisResult.key_points && aiCallAnalysisResult.key_points.length > 0 && (
+                          <div className="space-y-1">
+                            <strong className="text-slate-500 text-[9px] uppercase tracking-wider font-mono">Discovered Focus Points:</strong>
+                            <ul className="space-y-1">
+                              {aiCallAnalysisResult.key_points.map((p: string, idx: number) => (
+                                <li key={idx} className="text-[10px] text-slate-600 flex items-start gap-1.5">
+                                  <span className="text-emerald-500 mt-0.5 select-none">•</span>
+                                  <span>{p}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        {aiCallAnalysisResult.risk_analysis && (
+                          <p className="text-[10px] text-slate-500 leading-relaxed italic bg-yellow-50/20 p-2 border border-yellow-105/30 rounded-lg">
+                            <span className="font-bold text-yellow-800 not-italic block uppercase text-[8px] tracking-wider mb-0.5">Identified Deal friction:</span>
+                            {aiCallAnalysisResult.risk_analysis}
+                          </p>
+                        )}
+
+                        {/* Extracted Auto action list */}
+                        {aiCallAnalysisResult.extracted_tasks && aiCallAnalysisResult.extracted_tasks.length > 0 && (
+                          <div className="space-y-1.5 pt-2 border-t border-emerald-100/50">
+                            <span className="text-[9px] text-emerald-800 font-extrabold uppercase tracking-wider block">⚡ Auto-Scheduled followups (Created on log publish)</span>
+                            <div className="space-y-1.5">
+                              {aiCallAnalysisResult.extracted_tasks.map((t: any, idx: number) => (
+                                <div key={idx} className="flex items-center justify-between bg-white border border-emerald-100 px-2.5 py-1.5 rounded-lg">
+                                  <div className="flex items-center gap-2">
+                                    <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
+                                    <span className="text-[11px] font-medium text-slate-700">{t.title}</span>
+                                  </div>
+                                  <span className="text-[9px] font-mono text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">SLA: {t.dueDate}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* AI Email Outreach Assist Outputs */}
+                  {logType === "email" && aiEmailAnalysisResult && (
+                    <div className="bg-amber-50/40 border border-amber-100 rounded-xl p-4.5 space-y-3.5 text-left animate-fade-in text-slate-800">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <Sparkles className="w-4 h-4 text-amber-600 animate-spin-pulse" />
+                          <span className="text-xs font-bold text-amber-800">Gemini B2B Outreach Rephrase</span>
+                        </div>
+                        <button 
+                          onClick={() => {
+                            if (aiEmailAnalysisResult.improved_body) {
+                              setNewNoteText(aiEmailAnalysisResult.improved_body);
+                            }
+                            if (aiEmailAnalysisResult.improved_subject) {
+                              setEmailSubject(aiEmailAnalysisResult.improved_subject);
+                            }
+                            showToast("Applied AI composition into raw log area.", "success");
+                          }}
+                          className="px-2 py-0.5 bg-amber-600 hover:bg-amber-700 text-white rounded text-[9px] font-bold cursor-pointer"
+                        >
+                          Apply Draft
+                        </button>
+                      </div>
+
+                      <div className="space-y-2 text-slate-700">
+                        <div className="bg-white p-2 border border-slate-150 rounded-lg text-[10px]">
+                          <span className="text-amber-750 text-[8px] uppercase tracking-wider font-extrabold block">Rephrased Subject Proposal:</span>
+                          <span className="font-semibold block mt-0.5 text-slate-800">{aiEmailAnalysisResult.improved_subject}</span>
+                        </div>
+
+                        <div className="bg-white p-3 border border-slate-150 rounded-lg text-[10px] leading-relaxed whitespace-pre-wrap font-mono">
+                          <span className="text-amber-750 text-[8px] uppercase tracking-wider font-extrabold block not-mono mb-2">Rephrased Email Body:</span>
+                          {aiEmailAnalysisResult.improved_body}
+                        </div>
+
+                        {aiEmailAnalysisResult.reasoning && (
+                          <div className="text-[9px] text-slate-400 italic">
+                            Tactical reasoning: {aiEmailAnalysisResult.reasoning}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Log Action Button Row */}
+                  <div className="flex justify-end pt-1 border-t border-slate-150">
+                    <button 
+                      onClick={handlePublishOmnichannelLog}
+                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-750 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs flex items-center gap-1"
+                    >
+                      <span>Publish {logType.toUpperCase()} Record</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Chronological Communication Journals */}
+              <div className="space-y-4">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block text-left">CHRONOLOGICAL COMMUNICATION TIMELINE</span>
+                
+                <div className="relative border-l-2 border-slate-100 pl-5 pr-1 space-y-6 text-left">
+                  {dealActivities.length === 0 ? (
+                    <div className="text-center py-6 select-none">
+                      <p className="text-[10px] italic text-slate-400 font-mono">Timeline empty. Publish communications logs or notes above to initiate history tracker.</p>
+                    </div>
+                  ) : (
+                    dealActivities.map((act) => {
+                      // Get custom icon styling based on log type!
+                      let iconNode = <FileText className="w-3.5 h-3.5 text-slate-500" />;
+                      let bulletBg = "bg-slate-100 border-slate-300";
+                      let headerLabel = act.title;
+
+                      if (act.type === "call_logged") {
+                        iconNode = <Phone className="w-3.5 h-3.5 text-emerald-600" />;
+                        bulletBg = "bg-emerald-50 border-emerald-200";
+                      } else if (act.type === "email_sent") {
+                        iconNode = <Mail className="w-3.5 h-3.5 text-amber-600" />;
+                        bulletBg = "bg-amber-55/30 border-amber-200";
+                      } else if (act.type === "stage_changed") {
+                        iconNode = <TrendingUp className="w-3.5 h-3.5 text-indigo-600" />;
+                        bulletBg = "bg-indigo-50 border-indigo-200";
+                      }
+
+                      return (
+                        <div key={act.id} className="relative space-y-1.5 group select-text">
+                          {/* Rich Floating Timeline Anchor Icon */}
+                          <div className={`absolute -left-[30px] top-0 w-8 h-8 rounded-full border-2 ${bulletBg} flex items-center justify-center shadow-xs bg-white group-hover:scale-105 transition-all`}>
+                            {iconNode}
+                          </div>
+                          
+                          <div className="pl-2 space-y-1">
+                            <div className="text-xs font-bold text-slate-800 flex items-center justify-between">
+                              <span className="truncate max-w-[280px]">{headerLabel}</span>
+                              <span className="text-[8px] text-slate-400 font-mono bg-slate-50 border border-slate-100 px-1.5 py-0.5 rounded">
+                                {new Date(act.timestamp).toLocaleDateString()} {new Date(act.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                              </span>
+                            </div>
+                            
+                            <p className="text-[11px] text-slate-600 leading-relaxed whitespace-pre-wrap select-text bg-slate-50/50 p-2.5 rounded-xl border border-slate-100 group-hover:bg-slate-50 transition-all font-sans">
+                              {act.description}
+                            </p>
+                            
+                            <div className="text-[8.5px] text-slate-400 italic flex items-center gap-1.5 pt-0.5 select-none font-mono pl-1">
+                              <User className="w-3 h-3 opacity-60 text-slate-400" />
+                              <span>Operator: <strong className="font-semibold text-slate-500">{act.agentName || "System Workspace"}</strong></span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
               </div>
             </div>
             </div>
@@ -2426,9 +2870,9 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
 
       {/* ADD CUSTOM PIPELINE COLUMN MODAL */}
       {showAddColumnModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-surface flex items-center justify-center p-4">
-          <div className="bg-white border border-border rounded-xl max-w-md w-full p-6 text-left space-y-6 animate-in fade-in-50 zoom-in-95 text-slate-800">
-            <div className="flex items-center justify-between border-b border-border pb-3">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/40 flex items-center justify-center p-4 backdrop-blur-xs">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-md w-full p-6 text-left space-y-6 animate-in fade-in-50 zoom-in-95 shadow-2xl text-slate-800">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="text-base font-bold text-slate-950 flex items-center gap-2">
                 <Plus className="w-5 h-5 text-emerald-600" />
                 Add Custom Pipeline Stage
@@ -2446,7 +2890,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                   placeholder="e.g. Beta tester, Qualified Lead..."
                   value={newColumnName}
                   onChange={(e) => setNewColumnName(e.target.value)}
-                  className="w-full bg-surface border border-border text-slate-850 rounded-xl py-2 px-3 text-xs outline-none focus:border-blue-500 select-text transition-all"
+                  className="w-full bg-slate-50 border border-slate-250 text-slate-850 rounded-xl py-2 px-3 text-xs outline-none focus:border-blue-500 select-text transition-all"
                 />
               </div>
 
@@ -2466,19 +2910,19 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                       key={colorObj.hex}
                       type="button"
                       onClick={() => setNewColumnColor(colorObj.hex)}
-                      className={`w-6 h-6 rounded-full relative transition-transform${newColumnColor === colorObj.hex ? "ring-2 ring-slate-800 scale-110" : "opacity-80 hover:opacity-100"}`}
+                      className={`w-6 h-6 rounded-full relative transition-transform ${newColumnColor === colorObj.hex ? "ring-2 ring-slate-800 scale-110" : "opacity-80 hover:opacity-100"}`}
                       style={{ backgroundColor: colorObj.hex }}
                       title={colorObj.label}
                     />
                   ))}
                 </div>
                 <div className="flex items-center gap-2 mt-2">
-                  <span className="text-[10px] text-text">Custom Hex:</span>
+                  <span className="text-[10px] text-slate-400">Custom Hex:</span>
                   <input
                     type="text"
                     value={newColumnColor}
                     onChange={(e) => setNewColumnColor(e.target.value)}
-                    className="bg-surface border border-border rounded-xl px-2 py-0.5 font-mono text-[11px]"
+                    className="bg-slate-50 border border-slate-200 rounded px-2 py-0.5 font-mono text-[11px]"
                   />
                 </div>
               </div>
@@ -2491,7 +2935,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                     min="1"
                     value={newColumnSlaDays}
                     onChange={(e) => setNewColumnSlaDays(Number(e.target.value))}
-                    className="w-full bg-surface border border-border text-slate-850 rounded-xl py-2 px-3 text-xs outline-none focus:border-blue-500 transition-all font-mono"
+                    className="w-full bg-slate-50 border border-slate-250 text-slate-850 rounded-xl py-2 px-3 text-xs outline-none focus:border-blue-500 transition-all font-mono"
                   />
                 </div>
                 
@@ -2503,22 +2947,22 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                     max="100"
                     value={newColumnProbability}
                     onChange={(e) => setNewColumnProbability(Number(e.target.value))}
-                    className="w-full bg-surface border border-border text-slate-850 rounded-xl py-2 px-3 text-xs outline-none focus:border-blue-500 transition-all font-mono"
+                    className="w-full bg-slate-50 border border-slate-250 text-slate-850 rounded-xl py-2 px-3 text-xs outline-none focus:border-blue-500 transition-all font-mono"
                   />
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-border">
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
               <button 
                 onClick={() => setShowAddColumnModal(false)}
-                className="bg-white border border-border text-slate-500 hover:bg-slate-50 py-2.5 px-4 rounded-xl text-xs font-bold transition-all"
+                className="bg-white border border-slate-250 text-slate-500 hover:bg-slate-50 py-2.5 px-4 rounded-xl text-xs font-bold transition-all"
               >
                 Cancel
               </button>
               <button 
                 onClick={handleAddPipelineColumn}
-                className="bg-emerald-600 hover:bg-emerald-700 text-text py-2.5 px-4 rounded-xl text-xs font-black transition-all flex items-center gap-1.5"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 px-4 rounded-xl text-xs font-black shadow-md transition-all flex items-center gap-1.5"
               >
                 <Plus className="w-4 h-4" />
                 Create Column
@@ -2530,9 +2974,9 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
 
       {/* CONFIRM NEW DEAL CREATION MODAL */}
       {showAddDealModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-surface flex items-center justify-center p-4">
-          <div className="bg-white border border-border rounded-xl max-w-md w-full p-6 text-left space-y-6 animate-in fade-in-50 zoom-in-95 text-slate-800">
-            <div className="flex items-center justify-between border-b border-border pb-3">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/40 flex items-center justify-center p-4 backdrop-blur-xs">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-md w-full p-6 text-left space-y-6 animate-in fade-in-50 zoom-in-95 shadow-2xl text-slate-800">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="text-base font-bold text-slate-950 flex items-center gap-2">
                 <Briefcase className="w-5 h-5 text-blue-600" />
                 Initialize Journey Deal
@@ -2550,17 +2994,29 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                   placeholder="e.g. Enterprise Outreach Expansion Bundle"
                   value={newDealTitle}
                   onChange={(e) => setNewDealTitle(e.target.value)}
-                  className="w-full bg-surface border border-border text-slate-850 rounded-xl py-2 px-3 text-xs outline-none focus:border-blue-500 select-text transition-all"
+                  className="w-full bg-slate-50 border border-slate-250 text-slate-850 rounded-xl py-2 px-3 text-xs outline-none focus:border-blue-500 select-text transition-all"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Associated Lead Target</label>
+                <div className="space-y-1.5 text-left">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Associated Lead Target</label>
+                    {newDealLeadId && (
+                      <button 
+                        onClick={handleEstimateDealValue}
+                        disabled={isEstimatingDeal}
+                        className="text-[9px] font-extrabold text-indigo-650 hover:text-indigo-800 flex items-center gap-1 cursor-pointer disabled:opacity-40"
+                      >
+                        <Sparkles className="w-2.5 h-2.5" />
+                        {isEstimatingDeal ? "AI..." : "AI Suggest?"}
+                      </button>
+                    )}
+                  </div>
                   <select 
                     value={newDealLeadId}
                     onChange={(e) => setNewDealLeadId(e.target.value)}
-                    className="w-full bg-surface border border-border text-slate-850 rounded-xl py-2 px-3 text-xs outline-none focus:border-blue-500 transition-all"
+                    className="w-full bg-slate-50 border border-slate-250 text-slate-850 rounded-xl py-2 px-3 text-xs outline-none focus:border-blue-500 transition-all text-left"
                   >
                     <option value="">Select Target...</option>
                     {initialLeads.map(l => (
@@ -2569,24 +3025,24 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                   </select>
                 </div>
 
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 text-left">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Deal Value Volume ($)</label>
                   <input 
                     type="number"
                     value={newDealValue}
                     onChange={(e) => setNewDealValue(Number(e.target.value))}
-                    className="w-full bg-surface border border-border text-slate-850 rounded-xl py-2 px-3 text-xs outline-none focus:border-blue-500"
+                    className="w-full bg-slate-50 border border-slate-255 text-slate-850 rounded-xl py-2 px-3 text-xs outline-none focus:border-blue-500 text-left"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 text-left">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Pipeline Stage Target</label>
                   <select 
                     value={newDealStage}
                     onChange={(e) => setNewDealStage(e.target.value)}
-                    className="w-full bg-surface border border-border text-slate-850 rounded-xl py-2 px-3 text-xs outline-none focus:border-blue-500"
+                    className="w-full bg-slate-50 border border-slate-250 text-slate-850 rounded-xl py-2 px-3 text-xs outline-none focus:border-blue-500 text-left"
                   >
                     {activePipeline?.stages.map(s => (
                       <option key={s.id} value={s.id}>{s.name}</option>
@@ -2594,12 +3050,12 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                   </select>
                 </div>
 
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 text-left">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Assigned Client Agent</label>
                   <select 
                     value={newDealAgent}
                     onChange={(e) => setNewDealAgent(e.target.value)}
-                    className="w-full bg-surface border border-border text-slate-850 rounded-xl py-2 px-3 text-xs outline-none focus:border-blue-500"
+                    className="w-full bg-slate-50 border border-slate-250 text-slate-850 rounded-xl py-2 px-3 text-xs outline-none focus:border-blue-500 text-left"
                   >
                     <option value="Sarah Mitchell">Sarah Mitchell</option>
                     <option value="James Ochieng">James Ochieng</option>
@@ -2608,28 +3064,44 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                 </div>
               </div>
 
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 text-left">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Tags Config (comma separated)</label>
                 <input 
                   type="text"
                   placeholder="e.g. Enterprise, High-Value, SaaS"
                   value={newDealTags}
                   onChange={(e) => setNewDealTags(e.target.value)}
-                  className="w-full bg-surface border border-border text-slate-850 rounded-xl py-2 px-3 text-xs outline-none select-text focus:border-blue-500 transition-all"
+                  className="w-full bg-slate-50 border border-slate-250 text-slate-850 rounded-xl py-2 px-3 text-xs outline-none select-text focus:border-blue-500 transition-all text-left"
                 />
               </div>
+
+              {/* Running AI Estimate Loading Sentry */}
+              {isEstimatingDeal && (
+                <div className="p-3 bg-indigo-50 border border-indigo-150 rounded-xl flex items-center gap-2 animate-pulse text-left">
+                  <RefreshCw className="w-3.5 h-3.5 text-indigo-600 animate-spin" />
+                  <span className="text-[10px] font-bold text-indigo-800">Scoring lead parameters and mapping segment value via Gemini...</span>
+                </div>
+              )}
+
+              {/* Strategy Output plan */}
+              {aiDealStrategyResult && (
+                <div className="bg-indigo-50/70 border border-indigo-100 rounded-2xl p-4 text-[10px] leading-relaxed text-slate-700 space-y-1 animate-fade-in text-left">
+                  <span className="font-extrabold text-indigo-800 uppercase text-[8px] tracking-wider block">🎯 Recommended Account Close Tactics & Plan</span>
+                  <p>{aiDealStrategyResult}</p>
+                </div>
+              )}
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
               <button 
-                onClick={() => setShowAddDealModal(false)}
-                className="px-4 py-2 bg-surface hover:bg-slate-200 border border-border text-text rounded-xl text-xs font-semibold cursor-pointer transition-colors"
+                onClick={() => { setShowAddDealModal(false); setAiDealStrategyResult(null); }}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-205 text-slate-700 rounded-xl text-xs font-semibold cursor-pointer shadow-xs transition-colors"
               >
                 Cancel
               </button>
               <button 
                 onClick={handleCreateDeal}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-text rounded-xl text-xs font-bold cursor-pointer transition-all"
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold cursor-pointer transition-all shadow-xs"
               >
                 Initialize Target Deal
               </button>
@@ -2640,14 +3112,14 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
 
       {/* CONFIRM DUPLICATE MERGING DEDUPLICATION TOOL DIALOG (TASK 4) */}
       {showMergeModal && duplicateConflicts && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-surface flex items-center justify-center p-4">
-          <div className="bg-white border border-border rounded-xl max-w-xl w-full p-6 text-left space-y-6 animate-in fade-in-50 zoom-in-95 text-slate-800">
-            <div className="flex items-center justify-between border-b border-border pb-3">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/40 flex items-center justify-center p-4 backdrop-blur-xs">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-xl w-full p-6 text-left space-y-6 animate-in fade-in-50 zoom-in-95 shadow-2xl text-slate-800">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="text-base font-bold text-rose-800 flex items-center gap-2">
                 <ShieldAlert className="w-5 h-5 text-rose-600" />
                 Deduplication Lead Resolution Gate
               </h3>
-              <button onClick={() => setShowMergeModal(false)} className="text-text hover:text-slate-700 cursor-pointer">
+              <button onClick={() => setShowMergeModal(false)} className="text-slate-400 hover:text-slate-700 cursor-pointer">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -2659,22 +3131,22 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
 
             {/* Side-by-Side Values */}
             <div className="grid grid-cols-2 gap-4 text-xs">
-              <div className="border border-border p-4 rounded-xl bg-surface text-left space-y-2">
-                <div className="font-bold text-blue-700 border-b border-border pb-1">Primary Duplicate Target</div>
-                <div><span className="text-text uppercase text-[9px] block">Full name</span> <span className="text-text font-medium">{duplicateConflicts.leadA.name}</span></div>
-                <div><span className="text-text uppercase text-[9px] block">Role Title</span> <span className="text-text font-medium">{duplicateConflicts.leadA.role}</span></div>
-                <div><span className="text-text uppercase text-[9px] block">Phone link</span> <span className="text-text font-medium">{duplicateConflicts.leadA.phone || "No phone link"}</span></div>
-                <div><span className="text-text uppercase text-[9px] block">LinkedIn</span> <span className="text-text font-medium">{duplicateConflicts.leadA.linkedin_url || "No link"}</span></div>
-                <div><span className="text-text uppercase text-[9px] block">Country</span> <span className="text-text font-medium">{duplicateConflicts.leadA.country || "N/A"}</span></div>
+              <div className="border border-slate-200 p-4 rounded-xl bg-slate-50 text-left space-y-2 shadow-xs">
+                <div className="font-bold text-blue-700 border-b border-slate-200 pb-1">Primary Duplicate Target</div>
+                <div><span className="text-slate-400 uppercase text-[9px] block">Full name</span> <span className="text-slate-700 font-medium">{duplicateConflicts.leadA.name}</span></div>
+                <div><span className="text-slate-400 uppercase text-[9px] block">Role Title</span> <span className="text-slate-700 font-medium">{duplicateConflicts.leadA.role}</span></div>
+                <div><span className="text-slate-400 uppercase text-[9px] block">Phone link</span> <span className="text-slate-700 font-medium">{duplicateConflicts.leadA.phone || "No phone link"}</span></div>
+                <div><span className="text-slate-400 uppercase text-[9px] block">LinkedIn</span> <span className="text-slate-700 font-medium">{duplicateConflicts.leadA.linkedin_url || "No link"}</span></div>
+                <div><span className="text-slate-400 uppercase text-[9px] block">Country</span> <span className="text-slate-700 font-medium">{duplicateConflicts.leadA.country || "N/A"}</span></div>
               </div>
 
-              <div className="border border-border p-4 rounded-xl bg-surface text-left space-y-2">
-                <div className="font-bold text-text border-b border-border pb-1">Conflicting Duplicate Target</div>
-                <div><span className="text-text uppercase text-[9px] block">Full name</span> <span className="text-text font-medium">{duplicateConflicts.leadB.name}</span></div>
-                <div><span className="text-text uppercase text-[9px] block">Role Title</span> <span className="text-text font-medium">{duplicateConflicts.leadB.role}</span></div>
-                <div><span className="text-text uppercase text-[9px] block">Phone link</span> <span className="text-text font-medium">{duplicateConflicts.leadB.phone || "No phone link"}</span></div>
-                <div><span className="text-text uppercase text-[9px] block">LinkedIn</span> <span className="text-text font-medium">{duplicateConflicts.leadB.linkedin_url || "No link"}</span></div>
-                <div><span className="text-text uppercase text-[9px] block">Country</span> <span className="text-text font-medium">{duplicateConflicts.leadB.country || "N/A"}</span></div>
+              <div className="border border-slate-200 p-4 rounded-xl bg-slate-50 text-left space-y-2 shadow-xs">
+                <div className="font-bold text-slate-700 border-b border-slate-200 pb-1">Conflicting Duplicate Target</div>
+                <div><span className="text-slate-400 uppercase text-[9px] block">Full name</span> <span className="text-slate-700 font-medium">{duplicateConflicts.leadB.name}</span></div>
+                <div><span className="text-slate-400 uppercase text-[9px] block">Role Title</span> <span className="text-slate-700 font-medium">{duplicateConflicts.leadB.role}</span></div>
+                <div><span className="text-slate-400 uppercase text-[9px] block">Phone link</span> <span className="text-slate-700 font-medium">{duplicateConflicts.leadB.phone || "No phone link"}</span></div>
+                <div><span className="text-slate-400 uppercase text-[9px] block">LinkedIn</span> <span className="text-slate-700 font-medium">{duplicateConflicts.leadB.linkedin_url || "No link"}</span></div>
+                <div><span className="text-slate-400 uppercase text-[9px] block">Country</span> <span className="text-slate-700 font-medium">{duplicateConflicts.leadB.country || "N/A"}</span></div>
               </div>
             </div>
 
@@ -2689,7 +3161,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                     linkedin_url: duplicateConflicts.leadA.linkedin_url || duplicateConflicts.leadB.linkedin_url,
                     country: duplicateConflicts.leadA.country || duplicateConflicts.leadB.country
                   })}
-                  className="p-3 bg-blue-50/70 hover:bg-blue-100/70 border border-blue-150 rounded-xl text-left transition-all"
+                  className="p-3 bg-blue-50/70 hover:bg-blue-100/70 border border-blue-150 rounded-xl text-left transition-all shadow-xs"
                 >
                   <span className="font-bold text-blue-800 block mb-1">Retain Target A Value</span>
                   <span className="text-[11px] text-slate-600 leading-normal block">Resolves and combines records, prioritizing Lead A metadata.</span>
@@ -2702,7 +3174,7 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
                     linkedin_url: duplicateConflicts.leadB.linkedin_url || duplicateConflicts.leadA.linkedin_url,
                     country: duplicateConflicts.leadB.country || duplicateConflicts.leadA.country
                   })}
-                  className="p-3 bg-surface hover:bg-slate-100 border border-border rounded-xl text-left transition-all"
+                  className="p-3 bg-slate-50 hover:bg-slate-100 border border-slate-250 rounded-xl text-left transition-all shadow-xs"
                 >
                   <span className="font-bold text-slate-850 block mb-1">Retain Target B Value</span>
                   <span className="text-[11px] text-slate-600 leading-normal block">Resolves and combines records, prioritizing Lead B metadata.</span>
@@ -2710,10 +3182,10 @@ export const CrmPipelineBoard: React.FC<CrmPipelineBoardProps> = ({
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-4 border-t border-border text-xs">
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 text-xs">
               <button 
                 onClick={() => setShowMergeModal(false)}
-                className="px-4 py-2 bg-surface hover:bg-slate-200 border border-border text-slate-600 rounded-xl font-semibold cursor-pointer transition-colors"
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-600 rounded-xl font-semibold cursor-pointer shadow-xs transition-colors"
               >
                 Keep Separately
               </button>

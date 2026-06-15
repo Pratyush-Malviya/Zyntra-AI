@@ -14,8 +14,6 @@ interface AnalyticsProps {
 export const LeadJourneyAnalytics: React.FC<AnalyticsProps> = ({ showToast, profile, user, db, campaigns }) => {
   const [allLeads, setAllLeads] = useState<any[]>([]);
   const [messagesCount, setMessagesCount] = useState<number>(0);
-  const [affiliates, setAffiliates] = useState<any[]>([]);
-  const [stageHistory, setStageHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Calculate score utility inside component
@@ -73,33 +71,9 @@ export const LeadJourneyAnalytics: React.FC<AnalyticsProps> = ({ showToast, prof
       console.error("Firestore messages error in Pipeline Health:", error);
     });
 
-    // Fetch affiliates
-    const qAffiliates = query(
-      collection(db, "affiliates"),
-      where("orgId", "==", profile.orgId)
-    );
-    const unsubscribeAffiliates = onSnapshot(qAffiliates, (snapshot) => {
-      setAffiliates(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    }, (error) => {
-      console.error("Firestore affiliates error in Analytics:", error);
-    });
-
-    // Fetch lead stage history
-    const qHistory = query(
-      collection(db, "lead_stage_history"),
-      where("orgId", "==", profile.orgId)
-    );
-    const unsubscribeHistory = onSnapshot(qHistory, (snapshot) => {
-      setStageHistory(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    }, (error) => {
-      console.error("Firestore stage history error in Analytics:", error);
-    });
-
     return () => {
       unsubscribeLeads();
       unsubscribeMsg();
-      unsubscribeAffiliates();
-      unsubscribeHistory();
     };
   }, [profile?.orgId, db]);
 
@@ -172,82 +146,6 @@ export const LeadJourneyAnalytics: React.FC<AnalyticsProps> = ({ showToast, prof
     return bins;
   }, [allLeads]);
 
-  // BANT score distribution calculation
-  const bantDistribution = useMemo(() => {
-    const counts: Record<string, number> = { A: 0, B: 0, C: 0, D: 0, Unknown: 0 };
-    allLeads.forEach(l => {
-      const score = l.bantScore || 'Unknown';
-      if (counts[score] !== undefined) {
-        counts[score]++;
-      } else {
-        counts.Unknown++;
-      }
-    });
-    return Object.entries(counts).map(([score, count]) => ({ score, count }));
-  }, [allLeads]);
-
-  // Pipeline velocity calculation
-  const stageVelocity = useMemo(() => {
-    // Group history entries by leadId
-    const historyByLead: Record<string, any[]> = {};
-    stageHistory.forEach(entry => {
-      if (!entry.leadId) return;
-      if (!historyByLead[entry.leadId]) {
-        historyByLead[entry.leadId] = [];
-      }
-      historyByLead[entry.leadId].push(entry);
-    });
-
-    const stageTimes: Record<string, number[]> = {};
-
-    Object.values(historyByLead).forEach(entries => {
-      // Sort entries chronologically
-      entries.sort((a, b) => {
-        const timeA = a.changedAt?.toDate ? a.changedAt.toDate().getTime() : new Date(a.changedAt).getTime();
-        const timeB = b.changedAt?.toDate ? b.changedAt.toDate().getTime() : new Date(b.changedAt).getTime();
-        return timeA - timeB;
-      });
-
-      for (let i = 0; i < entries.length; i++) {
-        const current = entries[i];
-        const next = entries[i + 1];
-        const startTime = current.changedAt?.toDate ? current.changedAt.toDate().getTime() : new Date(current.changedAt).getTime();
-        const endTime = next
-          ? (next.changedAt?.toDate ? next.changedAt.toDate().getTime() : new Date(next.changedAt).getTime())
-          : Date.now();
-
-        const diffDays = (endTime - startTime) / (1000 * 60 * 60 * 24);
-        const stage = current.toStage;
-
-        if (!stageTimes[stage]) {
-          stageTimes[stage] = [];
-        }
-        stageTimes[stage].push(diffDays);
-      }
-    });
-
-    const calculated = Object.entries(stageTimes).map(([stage, times]) => {
-      const total = times.reduce((sum, t) => sum + t, 0);
-      const avg = times.length > 0 ? Math.round((total / times.length) * 10) / 10 : 0;
-      return { stage: stage.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase()), days: avg };
-    });
-
-    if (calculated.length === 0) {
-      return [
-        { stage: 'Lead Identified', days: 2.1 },
-        { stage: 'Meeting Booked', days: 1.4 },
-        { stage: 'Discovery Completed', days: 4.2 },
-        { stage: 'Demo Scheduled', days: 2.8 },
-        { stage: 'Demo Completed', days: 4.8 },
-        { stage: 'Proposal / Pilot', days: 8.5 },
-        { stage: 'Closing', days: 5.2 },
-        { stage: 'Customer Handoff', days: 2.0 },
-      ];
-    }
-
-    return calculated;
-  }, [stageHistory]);
-
   // Team Static / Dynamic Activity Feed Generator
   const activities = useMemo(() => {
     const defaultActivities = [
@@ -304,8 +202,8 @@ export const LeadJourneyAnalytics: React.FC<AnalyticsProps> = ({ showToast, prof
   // Handle fully empty state
   if (allLeads.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center p-16 max-w-xl mx-auto text-center space-y-5 bg-surface border border-border rounded-xl my-8">
-        <div className="w-12 h-12 rounded-xl bg-brand/10 border border-border flex items-center justify-center text-brand">
+      <div className="flex flex-col items-center justify-center p-16 max-w-xl mx-auto text-center space-y-5 bg-surface border border-border rounded-3xl shadow-sm my-8">
+        <div className="w-12 h-12 rounded-2xl bg-brand/10 border border-brand/20 flex items-center justify-center text-brand">
           <Activity className="w-6 h-6" />
         </div>
         <div className="space-y-1.5">
@@ -323,29 +221,29 @@ export const LeadJourneyAnalytics: React.FC<AnalyticsProps> = ({ showToast, prof
       
       {/* SECTION 1: SNAPSHOT BAR */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-surface border border-border p-6 rounded-xl flex flex-col justify-between text-left transition-all hover:bg-surface-alt/40">
+        <div className="bg-surface border border-border p-6 rounded-2xl flex flex-col justify-between text-left shadow-xs transition-all hover:bg-surface-alt/40">
           <span className="text-[11px] md:text-xs font-medium text-text-muted font-sans antialiased">Total Active Leads</span>
           <div className="text-xl md:text-2xl font-semibold text-text leading-tight mt-1">{metrics.totalLeads}</div>
         </div>
 
-        <div className="bg-surface border border-border p-6 rounded-xl flex flex-col justify-between text-left transition-all hover:bg-surface-alt/40">
+        <div className="bg-surface border border-border p-6 rounded-2xl flex flex-col justify-between text-left shadow-xs transition-all hover:bg-surface-alt/40">
           <span className="text-[11px] md:text-xs font-medium text-text-muted font-sans antialiased">Avg Lead Score</span>
           <div className="text-xl md:text-2xl font-semibold text-text leading-tight mt-1">{metrics.avgScore} <span className="text-xs text-text-muted font-normal">/ 90</span></div>
         </div>
 
-        <div className="bg-surface border border-border p-6 rounded-xl flex flex-col justify-between text-left transition-all hover:bg-surface-alt/40">
+        <div className="bg-surface border border-border p-6 rounded-2xl flex flex-col justify-between text-left shadow-xs transition-all hover:bg-surface-alt/40">
           <span className="text-[11px] md:text-xs font-medium text-text-muted font-sans antialiased">Sent This Week</span>
           <div className="text-xl md:text-2xl font-semibold text-text leading-tight mt-1">{metrics.sentThisWeek}</div>
         </div>
 
-        <div className="bg-surface border border-border p-6 rounded-xl flex flex-col justify-between text-left transition-all hover:bg-surface-alt/40">
+        <div className="bg-surface border border-border p-6 rounded-2xl flex flex-col justify-between text-left shadow-xs transition-all hover:bg-surface-alt/40">
           <span className="text-[11px] md:text-xs font-medium text-text-muted font-sans antialiased">Conversion Rate</span>
           <div className="text-xl md:text-2xl font-semibold text-text leading-tight mt-1">{metrics.conversionRate}%</div>
         </div>
       </div>
 
       {/* SECTION 2: FUNNEL DROP-OFF */}
-      <div className="bg-surface border border-border p-6 rounded-xl space-y-6 text-left">
+      <div className="bg-surface border border-border p-6 rounded-2xl space-y-6 shadow-xs text-left">
         <div>
           <h3 className="text-sm md:text-base font-bold font-syne text-text tracking-tight uppercase">Funnel Drop-off</h3>
           <p className="text-xs text-text-muted mt-0.5">Progression rate and drop values between sequential customer stages.</p>
@@ -353,7 +251,7 @@ export const LeadJourneyAnalytics: React.FC<AnalyticsProps> = ({ showToast, prof
 
         <div className="grid grid-cols-1 md:grid-cols-9 items-center gap-2 pt-2">
           {/* Step 1: New */}
-          <div className="md:col-span-1 p-4 border border-border rounded-xl text-center hover:bg-surface-alt/80 transition-all">
+          <div className="md:col-span-1 p-4 border border-border rounded-xl text-center bg-surface-alt hover:bg-surface-alt/80 transition-all shadow-xs">
             <span className="text-[8px] font-mono text-text-muted font-bold uppercase tracking-widest block">Stage 1</span>
             <div className="text-[11px] font-bold text-text truncate mt-1">New</div>
             <div className="text-lg font-bold font-mono text-text mt-1 leading-none">{metrics.stagingCounts.new}</div>
@@ -362,7 +260,7 @@ export const LeadJourneyAnalytics: React.FC<AnalyticsProps> = ({ showToast, prof
           {/* Arrow 1 */}
           <div className="md:col-span-1 flex flex-col items-center justify-center text-center">
             <div className="flex items-center gap-1.5 md:flex-col py-1 md:py-0">
-              <span className="text-[9px] font-bold text-brand bg-brand/10 border border-border px-1.5 py-0.5 rounded-full font-mono md:mb-1">
+              <span className="text-[9px] font-bold text-brand bg-brand/10 border border-brand/20 px-1.5 py-0.5 rounded-full font-mono md:mb-1">
                 {getRate(metrics.stagingCounts.new, metrics.stagingCounts.todo)}%
               </span>
               <span className="text-[9px] font-medium text-text-muted md:mb-1 leading-none">moved</span>
@@ -371,7 +269,7 @@ export const LeadJourneyAnalytics: React.FC<AnalyticsProps> = ({ showToast, prof
           </div>
 
           {/* Step 2: To Do */}
-          <div className="md:col-span-1 p-4 border border-border rounded-xl text-center hover:bg-surface-alt/80 transition-all">
+          <div className="md:col-span-1 p-4 border border-border rounded-xl text-center bg-surface-alt hover:bg-surface-alt/80 transition-all shadow-xs">
             <span className="text-[8px] font-mono text-text-muted font-bold uppercase tracking-widest block">Stage 2</span>
             <div className="text-[11px] font-bold text-text truncate mt-1">To Do</div>
             <div className="text-lg font-bold font-mono text-text mt-1 leading-none">{metrics.stagingCounts.todo}</div>
@@ -380,7 +278,7 @@ export const LeadJourneyAnalytics: React.FC<AnalyticsProps> = ({ showToast, prof
           {/* Arrow 2 */}
           <div className="md:col-span-1 flex flex-col items-center justify-center text-center">
             <div className="flex items-center gap-1.5 md:flex-col py-1 md:py-0">
-              <span className="text-[9px] font-bold text-brand bg-brand/10 border border-border px-1.5 py-0.5 rounded-full font-mono md:mb-1">
+              <span className="text-[9px] font-bold text-brand bg-brand/10 border border-brand/20 px-1.5 py-0.5 rounded-full font-mono md:mb-1">
                 {getRate(metrics.stagingCounts.todo, metrics.stagingCounts.ready)}%
               </span>
               <span className="text-[9px] font-medium text-text-muted md:mb-1 leading-none">moved</span>
@@ -389,7 +287,7 @@ export const LeadJourneyAnalytics: React.FC<AnalyticsProps> = ({ showToast, prof
           </div>
 
           {/* Step 3: Message Ready */}
-          <div className="md:col-span-1 p-4 border border-border rounded-xl text-center hover:bg-surface-alt/80 transition-all">
+          <div className="md:col-span-1 p-4 border border-border rounded-xl text-center bg-surface-alt hover:bg-surface-alt/80 transition-all shadow-xs">
             <span className="text-[8px] font-mono text-text-muted font-bold uppercase tracking-widest block">Stage 3</span>
             <div className="text-[11px] font-bold text-text truncate mt-1">Message Ready</div>
             <div className="text-lg font-bold font-mono text-text mt-1 leading-none">{metrics.stagingCounts.ready}</div>
@@ -398,7 +296,7 @@ export const LeadJourneyAnalytics: React.FC<AnalyticsProps> = ({ showToast, prof
           {/* Arrow 3 */}
           <div className="md:col-span-1 flex flex-col items-center justify-center text-center">
             <div className="flex items-center gap-1.5 md:flex-col py-1 md:py-0">
-              <span className="text-[9px] font-bold text-brand bg-brand/10 border border-border px-1.5 py-0.5 rounded-full font-mono md:mb-1">
+              <span className="text-[9px] font-bold text-brand bg-brand/10 border border-brand/20 px-1.5 py-0.5 rounded-full font-mono md:mb-1">
                 {getRate(metrics.stagingCounts.ready, metrics.stagingCounts.sent)}%
               </span>
               <span className="text-[9px] font-medium text-text-muted md:mb-1 leading-none">moved</span>
@@ -407,7 +305,7 @@ export const LeadJourneyAnalytics: React.FC<AnalyticsProps> = ({ showToast, prof
           </div>
 
           {/* Step 4: Sent */}
-          <div className="md:col-span-1 p-4 border border-border rounded-xl text-center hover:bg-surface-alt/80 transition-all">
+          <div className="md:col-span-1 p-4 border border-border rounded-xl text-center bg-surface-alt hover:bg-surface-alt/80 transition-all shadow-xs">
             <span className="text-[8px] font-mono text-text-muted font-bold uppercase tracking-widest block">Stage 4</span>
             <div className="text-[11px] font-bold text-text truncate mt-1">Sent</div>
             <div className="text-lg font-bold font-mono text-text mt-1 leading-none">{metrics.stagingCounts.sent}</div>
@@ -416,7 +314,7 @@ export const LeadJourneyAnalytics: React.FC<AnalyticsProps> = ({ showToast, prof
           {/* Arrow 4 */}
           <div className="md:col-span-1 flex flex-col items-center justify-center text-center">
             <div className="flex items-center gap-1.5 md:flex-col py-1 md:py-0">
-              <span className="text-[9px] font-bold text-brand bg-brand/10 border border-border px-1.5 py-0.5 rounded-full font-mono md:mb-1">
+              <span className="text-[9px] font-bold text-brand bg-brand/10 border border-brand/20 px-1.5 py-0.5 rounded-full font-mono md:mb-1">
                 {getRate(metrics.stagingCounts.sent, metrics.stagingCounts.bounced)}%
               </span>
               <span className="text-[9px] font-medium text-text-muted md:mb-1 leading-none">bounced</span>
@@ -425,7 +323,7 @@ export const LeadJourneyAnalytics: React.FC<AnalyticsProps> = ({ showToast, prof
           </div>
 
           {/* Step 5: Bounced */}
-          <div className="md:col-span-1 p-4 border border-border rounded-xl text-center hover:bg-surface-alt/80 transition-all">
+          <div className="md:col-span-1 p-4 border border-border rounded-xl text-center bg-surface-alt hover:bg-surface-alt/80 transition-all shadow-xs">
             <span className="text-[8px] font-mono text-text-muted font-bold uppercase tracking-widest block">Stage 5</span>
             <div className="text-[11px] font-bold text-text truncate mt-1">Bounced</div>
             <div className="text-lg font-bold font-mono text-text mt-1 leading-none">{metrics.stagingCounts.bounced}</div>
@@ -434,7 +332,7 @@ export const LeadJourneyAnalytics: React.FC<AnalyticsProps> = ({ showToast, prof
       </div>
 
       {/* SECTION 3: SCORE DISTRIBUTION */}
-      <div className="bg-surface border border-border p-6 rounded-xl text-left">
+      <div className="bg-surface border border-border p-6 rounded-2xl shadow-xs text-left">
         <div className="mb-4">
           <h3 className="text-sm md:text-base font-bold font-syne text-text uppercase tracking-tight">Score Distribution</h3>
           <p className="text-xs text-text-muted mt-0.5">Distribution of lead scores across active campaigns</p>
@@ -463,83 +361,8 @@ export const LeadJourneyAnalytics: React.FC<AnalyticsProps> = ({ showToast, prof
         </div>
       </div>
 
-      {/* SECTION 4: BANT SCORE & PIPELINE VELOCITY */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* BANT distribution */}
-        <div className="bg-surface border border-border p-6 rounded-xl text-left">
-          <div className="mb-4">
-            <h3 className="text-sm md:text-base font-bold font-syne text-text uppercase tracking-tight">BANT Score Distribution</h3>
-            <p className="text-xs text-text-muted mt-0.5">Distribution of leads across qualification status levels</p>
-          </div>
-          <div className="h-60 mt-4">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={bantDistribution} margin={{ top: 10, right: 30, left: 0, bottom: 20 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.4} />
-                <XAxis dataKey="score" stroke="var(--text-muted)" fontSize={10} />
-                <YAxis stroke="var(--text-muted)" fontSize={10} />
-                <Tooltip contentStyle={{ backgroundColor: "var(--surface)", borderColor: "var(--border)", color: "var(--text)", fontSize: 11, borderRadius: 12 }} />
-                <Bar dataKey="count" fill="#8b5cf6" radius={[4, 4, 0, 0]} name="Leads Count" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Stage velocity */}
-        <div className="bg-surface border border-border p-6 rounded-xl text-left">
-          <div className="mb-4">
-            <h3 className="text-sm md:text-base font-bold font-syne text-text uppercase tracking-tight">Stage Velocity</h3>
-            <p className="text-xs text-text-muted mt-0.5">Average days spent in each pipeline stage</p>
-          </div>
-          <div className="h-60 mt-4">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={stageVelocity} margin={{ top: 10, right: 30, left: 0, bottom: 20 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.4} />
-                <XAxis dataKey="stage" stroke="var(--text-muted)" fontSize={9} interval={0} angle={-15} textAnchor="end" />
-                <YAxis stroke="var(--text-muted)" fontSize={10} />
-                <Tooltip contentStyle={{ backgroundColor: "var(--surface)", borderColor: "var(--border)", color: "var(--text)", fontSize: 11, borderRadius: 12 }} />
-                <Bar dataKey="days" fill="#3b82f6" radius={[4, 4, 0, 0]} name="Avg Days" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
-
-      {/* SECTION 5: AFFILIATE PERFORMANCE */}
-      <div className="bg-surface border border-border p-6 rounded-xl text-left">
-        <div className="mb-4">
-          <h3 className="text-sm md:text-base font-bold font-syne text-text uppercase tracking-tight">Affiliate Performance</h3>
-          <p className="text-xs text-text-muted mt-0.5">Partner contributions to pipeline generation</p>
-        </div>
-        {affiliates.length === 0 ? (
-          <div className="text-xs text-text-muted italic text-center py-6">No affiliate performance data recorded yet.</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs text-left border-collapse">
-              <thead>
-                <tr className="border-b border-border text-text-secondary">
-                  <th className="py-2.5 font-semibold">Partner Name</th>
-                  <th className="py-2.5 font-semibold">Referral Code</th>
-                  <th className="py-2.5 font-semibold text-right">Referrals</th>
-                  <th className="py-2.5 font-semibold text-right">Total Earned</th>
-                </tr>
-              </thead>
-              <tbody>
-                {affiliates.map((aff, idx) => (
-                  <tr key={aff.id || idx} className="border-b border-border/40 hover:bg-surface-alt/40">
-                    <td className="py-2.5 font-semibold text-text">{aff.fullName}</td>
-                    <td className="py-2.5 font-mono text-primary">{aff.referralCode}</td>
-                    <td className="py-2.5 text-right font-semibold text-text">{aff.totalReferrals}</td>
-                    <td className="py-2.5 text-right font-semibold text-emerald-400">${aff.totalEarned.toLocaleString()}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      {/* SECTION 6: ACTIVITY FEED */}
-      <div className="bg-surface border border-border p-6 rounded-xl text-left">
+      {/* SECTION 4: ACTIVITY FEED */}
+      <div className="bg-surface border border-border p-6 rounded-2xl shadow-xs text-left">
         <div className="flex items-center justify-between border-b border-border/80 pb-4 mb-4">
           <div>
             <h3 className="text-sm md:text-base font-bold font-syne text-text uppercase tracking-tight">Team Activity</h3>
@@ -557,7 +380,7 @@ export const LeadJourneyAnalytics: React.FC<AnalyticsProps> = ({ showToast, prof
           {activities.map((act) => (
             <div key={act.id} className="py-3 flex items-center justify-between gap-4">
               <div className="flex items-center gap-3">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black uppercase${act.avatarBg}`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black uppercase ${act.avatarBg}`}>
                   {act.user.substring(0, 2)}
                 </div>
                 <div className="text-xs">

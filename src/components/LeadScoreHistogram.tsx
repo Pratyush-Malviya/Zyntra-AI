@@ -38,7 +38,7 @@ import {
   Copy,
   Database
 } from 'lucide-react';
-import { analyzeBenchmarkDrift, BenchmarkDriftAnalysis } from '../services/aiService';
+import { analyzeBenchmarkDrift, BenchmarkDriftAnalysis } from '../services/geminiService';
 
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -88,11 +88,11 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload }) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     return (
-      <div className="bg-surface border border-border p-4 rounded-xl space-y-1">
+      <div className="bg-slate-900/95 backdrop-blur-md border border-white/10 p-4 rounded-2xl shadow-xl space-y-1">
         <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">{data.range} Score Space</p>
         <div className="flex items-center gap-2">
           <div className="w-2.5 h-2.5 rounded-full bg-brand" />
-          <p className="text-sm font-extrabold text-text font-syne">
+          <p className="text-sm font-extrabold text-white font-syne">
             {data.count} {data.count === 1 ? 'Lead Profile' : 'Lead Profiles'}
           </p>
         </div>
@@ -108,12 +108,12 @@ const TrendTooltip: React.FC<CustomTooltipProps> = ({ active, payload }) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     return (
-      <div className="bg-surface border border-border p-4 rounded-xl space-y-2">
+      <div className="bg-slate-900/95 backdrop-blur-md border border-white/10 p-4 rounded-2xl shadow-xl space-y-2">
         <p className="text-[10px] font-extrabold text-white/50 uppercase tracking-widest">{data.date}</p>
         <div className="space-y-1">
           <div className="flex items-center justify-between gap-4 text-xs">
             <span className="text-white/60 font-medium">Cumulative Base:</span>
-            <span className="text-text font-bold font-mono">{data["Total Volume"]}</span>
+            <span className="text-white font-bold font-mono">{data["Total Volume"]}</span>
           </div>
           <div className="flex items-center justify-between gap-4 text-xs">
             <span className="text-brand font-medium">Average Quality Score:</span>
@@ -1009,15 +1009,15 @@ export default function LeadScoreHistogram({
 
   return (
     <div 
-      className="bg-surface border border-border rounded-xl p-6 md:p-8 space-y-6 relative overflow-hidden transition-all duration-300" 
+      className="bg-surface border border-border rounded-3xl p-6 md:p-8 space-y-6 glow-brand/5 relative overflow-hidden transition-all duration-300" 
       id="lead-scoring-insights"
     >
-      <div className="absolute top-0 right-0 -mr-6 -mt-6 w-32 h-32 bg-brand/10 rounded-full pointer-events-none" />
+      <div className="absolute top-0 right-0 -mr-6 -mt-6 w-32 h-32 bg-brand/10 rounded-full blur-3xl pointer-events-none" />
       
       {/* Top Controls Section - Navigation and Options */}
       <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 border-b border-border/60 pb-5">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-brand/10 flex items-center justify-center text-brand shrink-0">
+          <div className="w-10 h-10 rounded-2xl bg-brand/10 flex items-center justify-center text-brand shrink-0">
             <Target className="w-5 h-5 animate-pulse" />
           </div>
           <div>
@@ -1052,7 +1052,7 @@ export default function LeadScoreHistogram({
           </button>
 
           {/* Tab controllers with Shared Slide indicator using layoutId */}
-          <div className="border border-border p-1 rounded-xl flex items-center gap-1 relative overflow-hidden">
+          <div className="bg-surface-alt border border-border p-1 rounded-xl flex items-center gap-1 relative overflow-hidden">
             <button
               onClick={() => setActiveTab('distribution')}
               className={`relative z-15 px-3.5 py-1.5 rounded-lg text-[10px] md:text-xs font-extrabold tracking-tight transition-colors duration-200 flex items-center gap-1.5 cursor-pointer ${
@@ -1064,7 +1064,7 @@ export default function LeadScoreHistogram({
               {activeTab === 'distribution' && (
                 <motion.div
                   layoutId="activeTabIndicator"
-                  className="absolute inset-0 bg-brand rounded-xl -z-10"
+                  className="absolute inset-0 bg-brand rounded-lg -z-10"
                   transition={{ type: "spring", stiffness: 350, damping: 26 }}
                 />
               )}
@@ -1080,7 +1080,7 @@ export default function LeadScoreHistogram({
                {activeTab === 'trend' && (
                  <motion.div
                    layoutId="activeTabIndicator"
-                   className="absolute inset-0 bg-brand rounded-xl -z-10"
+                   className="absolute inset-0 bg-brand rounded-lg -z-10"
                    transition={{ type: "spring", stiffness: 350, damping: 26 }}
                  />
                )}
@@ -1096,7 +1096,7 @@ export default function LeadScoreHistogram({
                {activeTab === 'segment' && (
                  <motion.div
                    layoutId="activeTabIndicator"
-                   className="absolute inset-0 bg-brand rounded-xl -z-10"
+                   className="absolute inset-0 bg-brand rounded-lg -z-10"
                    transition={{ type: "spring", stiffness: 350, damping: 26 }}
                  />
                )}
@@ -1112,7 +1112,7 @@ export default function LeadScoreHistogram({
                {activeTab === 'forecast' && (
                  <motion.div
                    layoutId="activeTabIndicator"
-                   className="absolute inset-0 bg-brand rounded-xl -z-10"
+                   className="absolute inset-0 bg-brand rounded-lg -z-10"
                    transition={{ type: "spring", stiffness: 350, damping: 26 }}
                  />
                )}
@@ -1120,24 +1120,24 @@ export default function LeadScoreHistogram({
           </div>
 
           {/* Export Functions Row */}
-          <div className="flex items-center gap-1.5 border border-border p-1 rounded-xl">
+          <div className="flex items-center gap-1.5 bg-surface-alt border border-border p-1 rounded-xl">
             <button
               onClick={handleExportPDFSummary}
               disabled={isPDFExporting || isExporting}
-              className="px-3.5 py-1.5 rounded-xl text-[10px] md:text-xs font-extrabold tracking-tight transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 hover:bg-brand/10 text-brand"
+              className="px-3.5 py-1.5 rounded-lg text-[10px] md:text-xs font-extrabold tracking-tight transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 hover:bg-brand/10 text-brand"
               title="Download comprehensive multi-page summary PDF report"
             >
-              <FileText className={`w-3.5 h-3.5${isPDFExporting ? 'animate-pulse' : ''}`} />
+              <FileText className={`w-3.5 h-3.5 ${isPDFExporting ? 'animate-pulse' : ''}`} />
               <span>{isPDFExporting ? 'Compiling PDF...' : 'Export Intel PDF'}</span>
             </button>
 
             <button
               onClick={handleExportPNG}
               disabled={isExporting || isPDFExporting}
-              className="px-3.5 py-1.5 rounded-xl text-[10px] md:text-xs font-extrabold tracking-tight transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 hover:bg-white/5 text-text-muted hover:text-foreground"
+              className="px-3.5 py-1.5 rounded-lg text-[10px] md:text-xs font-extrabold tracking-tight transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 hover:bg-white/5 text-text-muted hover:text-foreground"
               title="Download active visualization view as HTML5 image PNG"
             >
-              <Download className={`w-3.5 h-3.5${isExporting ? 'animate-spin' : ''}`} />
+              <Download className={`w-3.5 h-3.5 ${isExporting ? 'animate-spin' : ''}`} />
               <span>{isExporting ? 'Slipping PNG...' : 'PNG'}</span>
             </button>
           </div>
@@ -1146,26 +1146,26 @@ export default function LeadScoreHistogram({
 
       {/* Dynamic Summary Badges Grid reflecting overall data weight */}
       <div className="flex items-center gap-2 flex-wrap">
-        <div className="px-3 py-1.5 rounded-xl bg-brand/10 border border-border text-[10px] font-bold text-brand flex items-center gap-1.5">
+        <div className="px-3 py-1.5 rounded-xl bg-brand/10 border border-brand/20 text-[10px] font-bold text-brand flex items-center gap-1.5 shadow-sm">
           <Sparkle className="w-3.5 h-3.5" />
           <span>Average Score: <b>{stats.averageScore}/90</b></span>
         </div>
         
         {/* Glowing Interactive Conversion Speed Predictive Badge - overlay display element */}
-        <div className={`px-3 py-1.5 rounded-xl border text-[10px] font-bold flex items-center gap-1.5 transition-all duration-300 animate-pulse${prediction.speedColor}`}>
+        <div className={`px-3 py-1.5 rounded-xl border text-[10px] font-bold flex items-center gap-1.5 shadow-sm transition-all duration-300 animate-pulse ${prediction.speedColor}`}>
           <Zap className="w-3.5 h-3.5" />
           <span>Est. Conversion: <b>{prediction.avgDays} Days ({prediction.speedCategory})</b></span>
         </div>
 
-        <div className="px-3 py-1.5 rounded-xl bg-brand-alt/10 border border-brand-alt/20 text-[10px] font-bold text-brand-alt flex items-center gap-1.5">
+        <div className="px-3 py-1.5 rounded-xl bg-brand-alt/10 border border-brand-alt/20 text-[10px] font-bold text-brand-alt flex items-center gap-1.5 shadow-sm">
           <TrendingUp className="w-3.5 h-3.5" />
           <span>High Intent Quotient: <b>{stats.highIntentCount} ({stats.percentHighIntent}%)</b></span>
         </div>
-        <div className="px-3 py-1.5 rounded-xl bg-pink-500/10 border border-pink-500/20 text-[10px] font-bold text-pink-500 flex items-center gap-1.5">
+        <div className="px-3 py-1.5 rounded-xl bg-pink-500/10 border border-pink-500/20 text-[10px] font-bold text-pink-500 flex items-center gap-1.5 shadow-sm">
           <Award className="w-3.5 h-3.5" />
           <span>Elite Target Limit: <b>{stats.maxScore} Peak</b></span>
         </div>
-        <div className="px-3 py-1.5 rounded-xl bg-white/5 border border-border text-[10px] font-bold text-text-muted flex items-center gap-1.5">
+        <div className="px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-[10px] font-bold text-text-muted flex items-center gap-1.5 shadow-sm">
           <Calendar className="w-3.5 h-3.5" />
           <span>Sequence Scope: <b>{trendData.length} Day(s) Analyzed</b></span>
         </div>
@@ -1177,7 +1177,7 @@ export default function LeadScoreHistogram({
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="w-full bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+            className="w-full bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg shadow-emerald-500/5"
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
@@ -1200,7 +1200,7 @@ export default function LeadScoreHistogram({
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="w-full bg-red-500/15 border border-red-500/40 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+            className="w-full bg-red-500/15 border border-red-500/40 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg shadow-red-500/5"
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-red-500/20 text-red-400 flex items-center justify-center shrink-0">
@@ -1214,7 +1214,7 @@ export default function LeadScoreHistogram({
             <div className="flex items-center gap-3 shrink-0">
               <button
                 onClick={handleResolveDrift}
-                className="px-3.5 py-2 bg-red-500 hover:bg-red-600 text-text font-extrabold text-xs rounded-xl tracking-tight transition-all cursor-pointer flex items-center gap-1.5 shrink-0"
+                className="px-3.5 py-2 bg-red-500 hover:bg-red-600 text-white font-extrabold text-xs rounded-xl shadow-lg shadow-red-500/20 tracking-tight transition-all cursor-pointer flex items-center gap-1.5 shrink-0"
               >
                 <Sparkles className="w-3.5 h-3.5 animate-pulse" />
                 <span>Resolve Benchmark Alert</span>
@@ -1225,9 +1225,9 @@ export default function LeadScoreHistogram({
             </div>
           </motion.div>
         ) : (
-          <div className="w-full bg-emerald-500/5 border border-emerald-500/15 rounded-xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="w-full bg-emerald-500/5 border border-emerald-500/15 rounded-2xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0">
+              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0">
                 <CheckCircle2 className="w-4 h-4" />
               </div>
               <div>
@@ -1249,7 +1249,7 @@ export default function LeadScoreHistogram({
       <div className="grid md:grid-cols-12 gap-6 items-center">
         {/* Render selected view tab with Framer motion AnimatePresence morphing switches container */}
         <div 
-          className="md:col-span-8 bg-surface-alt/40 border border-border/60 p-4 rounded-xl h-[300px] w-full relative overflow-hidden" 
+          className="md:col-span-8 bg-surface-alt/40 border border-border/60 p-4 rounded-2xl h-[300px] w-full relative overflow-hidden" 
           id="lead-chart-container"
         >
           <AnimatePresence mode="wait">
@@ -1493,8 +1493,8 @@ export default function LeadScoreHistogram({
                               if (active && payload && payload.length) {
                                 const data = payload[0].payload;
                                 return (
-                                  <div className="bg-surface border border-border px-3 py-1.5 rounded-xl text-[10px] space-y-0.5">
-                                    <p className="font-extrabold text-text">{data.name}</p>
+                                  <div className="bg-slate-900/95 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-xl text-[10px] space-y-0.5 shadow-lg">
+                                    <p className="font-extrabold text-white">{data.name}</p>
                                     <p className="text-emerald-400 font-bold font-mono">{data.value} Prospect(s)</p>
                                   </div>
                                 );
@@ -1543,8 +1543,8 @@ export default function LeadScoreHistogram({
                               if (active && payload && payload.length) {
                                 const data = payload[0].payload;
                                 return (
-                                  <div className="bg-surface border border-border px-3 py-1.5 rounded-xl text-[10px] space-y-0.5">
-                                    <p className="font-extrabold text-text">{data.name}</p>
+                                  <div className="bg-slate-900/95 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-xl text-[10px] space-y-0.5 shadow-lg">
+                                    <p className="font-extrabold text-white">{data.name}</p>
                                     <p className="text-brand font-bold font-mono">{data.value} Prospect(s)</p>
                                   </div>
                                 );
@@ -1575,7 +1575,7 @@ export default function LeadScoreHistogram({
                 animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
                 exit={{ opacity: 0, scale: 0.96, filter: 'blur(4px)' }}
                 transition={{ duration: 0.28, ease: "easeOut" }}
-                className="w-full h-full flex flex-col md:flex-row gap-4 justify-between overflow-y-auto scrollbar-thin text-text"
+                className="w-full h-full flex flex-col md:flex-row gap-4 justify-between overflow-y-auto scrollbar-thin text-white"
               >
                 {/* Column 1: Config Sliders */}
                 <div className="w-full md:w-[45%] flex flex-col gap-3 justify-center pr-2 md:border-r border-border/40">
@@ -1597,7 +1597,7 @@ export default function LeadScoreHistogram({
                       step="0.5"
                       value={baseConvRate}
                       onChange={(e) => setBaseConvRate(parseFloat(e.target.value))}
-                      className="w-full h-1 bg-white/10 rounded-xl appearance-none cursor-pointer accent-brand"
+                      className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-brand"
                     />
                   </div>
 
@@ -1614,7 +1614,7 @@ export default function LeadScoreHistogram({
                       step="1000"
                       value={avgDealValue}
                       onChange={(e) => setAvgDealValue(parseInt(e.target.value))}
-                      className="w-full h-1 bg-white/10 rounded-xl appearance-none cursor-pointer accent-brand"
+                      className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-brand"
                     />
                   </div>
 
@@ -1631,7 +1631,7 @@ export default function LeadScoreHistogram({
                       step="500"
                       value={campaignCost}
                       onChange={(e) => setCampaignCost(parseInt(e.target.value))}
-                      className="w-full h-1 bg-white/10 rounded-xl appearance-none cursor-pointer accent-brand"
+                      className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-brand"
                     />
                   </div>
                 </div>
@@ -1646,21 +1646,21 @@ export default function LeadScoreHistogram({
                   {/* Bento Grid Metrics */}
                   <div className="grid grid-cols-2 gap-2 my-1">
                     {/* KPI 1: Estimated Closed Deals */}
-                    <div className="p-2 rounded-xl bg-white/[0.02] border border-border">
+                    <div className="p-2 rounded-xl bg-white/[0.02] border border-white/[0.04]">
                       <span className="text-[8px] font-bold text-text-muted uppercase tracking-wider block">Estimated Closures</span>
-                      <span className="text-xs font-extrabold text-text font-syne block">{estimatedDeals.toFixed(1)} Deals</span>
+                      <span className="text-xs font-extrabold text-white font-syne block">{estimatedDeals.toFixed(1)} Deals</span>
                       <span className="text-[8px] text-text-muted font-mono leading-none">of {leads.length} active leads</span>
                     </div>
 
                     {/* KPI 2: Projected Revenue */}
-                    <div className="p-2 rounded-xl bg-white/[0.02] border border-border">
+                    <div className="p-2 rounded-xl bg-white/[0.02] border border-white/[0.04]">
                       <span className="text-[8px] font-bold text-text-muted uppercase tracking-wider block">Est. Revenue</span>
                       <span className="text-xs font-extrabold text-emerald-400 font-syne block">${Math.round(estimatedDeals * avgDealValue).toLocaleString()}</span>
                       <span className="text-[8px] text-text-muted font-mono leading-none">pipeline yield</span>
                     </div>
 
                     {/* KPI 3: Predicted ROI */}
-                    <div className="p-2 rounded-xl bg-white/[0.02] border border-border">
+                    <div className="p-2 rounded-xl bg-white/[0.02] border border-white/[0.04]">
                       <span className="text-[8px] font-bold text-text-muted uppercase tracking-wider block">Projected ROI</span>
                       <span className={`text-xs font-extrabold font-syne block ${
                         ((estimatedDeals * avgDealValue - campaignCost) / campaignCost * 100) >= 0 ? 'text-emerald-400' : 'text-rose-400'
@@ -1671,16 +1671,16 @@ export default function LeadScoreHistogram({
                     </div>
 
                     {/* KPI 4: Target Cost per Acquisition */}
-                    <div className="p-2 rounded-xl bg-white/[0.02] border border-border">
+                    <div className="p-2 rounded-xl bg-white/[0.02] border border-white/[0.04]">
                       <span className="text-[8px] font-bold text-text-muted uppercase tracking-wider block">Est. CPA</span>
-                      <span className="text-xs font-extrabold text-text font-syne block">
+                      <span className="text-xs font-extrabold text-white font-syne block">
                         ${estimatedDeals > 0 ? Math.round(campaignCost / estimatedDeals).toLocaleString() : campaignCost.toLocaleString()}
                       </span>
                       <span className="text-[8px] text-text-muted font-mono leading-none">per acquired deal</span>
                     </div>
                   </div>
 
-                  <div className="p-1 px-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-[8px] text-emerald-400/95 leading-tight flex items-center gap-1.5 shrink-0">
+                  <div className="p-1 px-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[8px] text-emerald-400/95 leading-tight flex items-center gap-1.5 shrink-0">
                     <Sparkles className="w-3 h-3 animate-pulse shrink-0 text-emerald-400" />
                     <span>Calculated based on custom seniority role and industrial credentials multipliers.</span>
                   </div>
@@ -1692,7 +1692,7 @@ export default function LeadScoreHistogram({
 
         {/* Narrative / Contextual analysis side panel with details on Est. Conversion */}
         <div className="md:col-span-4 space-y-4">
-          <div className="p-4 rounded-xl border border-border/80 flex flex-col gap-2">
+          <div className="p-4 rounded-xl bg-surface-alt border border-border/80 flex flex-col gap-2">
             <h4 className="text-[11px] font-bold uppercase tracking-wider text-brand flex items-center gap-1.5">
               <Zap className="w-3.5 h-3.5 animate-pulse" />
               <span>Conversion Prediction</span>
@@ -1730,14 +1730,14 @@ export default function LeadScoreHistogram({
           </div>
 
           {/* Interactive Pipeline Model Visual Graphic */}
-          <div className="relative rounded-xl overflow-hidden border border-border/60 bg-surface flex flex-col group h-[72px]">
+          <div className="relative rounded-xl overflow-hidden border border-border/60 bg-slate-950 flex flex-col group h-[72px]">
             <img 
               src="https://picsum.photos/seed/cyber-network/400/180?blur=1" 
               alt="AI Outreach Pipeline Intelligence" 
               className="w-full h-full object-cover opacity-50 transition-all duration-500 group-hover:scale-105 group-hover:opacity-75"
               referrerPolicy="no-referrer"
             />
-            <div className="absolute inset-0 p-3 flex flex-col justify-end">
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent p-3 flex flex-col justify-end">
               <span className="text-[8px] font-extrabold text-brand uppercase tracking-wider">Pipeline Model</span>
               <p className="text-[10px] text-white/95 font-bold">Multi-Agent Omnichannel Engine</p>
             </div>
@@ -1755,7 +1755,7 @@ export default function LeadScoreHistogram({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => !isAnalyzing && setIsModalOpen(false)}
-              className="absolute inset-0 bg-surface"
+              className="absolute inset-0 bg-slate-950/70 backdrop-blur-md"
             />
 
             {/* Modal Body */}
@@ -1764,7 +1764,7 @@ export default function LeadScoreHistogram({
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 16 }}
               transition={{ type: "spring", duration: 0.5 }}
-              className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-surface border border-border rounded-xl p-6 md:p-8 shrink-0 flex flex-col space-y-6 text-foreground text-left"
+              className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-slate-900 border border-white/10 rounded-3xl p-6 md:p-8 shrink-0 flex flex-col shadow-2xl space-y-6 text-foreground text-left"
             >
               {/* Close Button */}
               {!isAnalyzing && (
@@ -1778,11 +1778,11 @@ export default function LeadScoreHistogram({
 
               {/* Modal Header */}
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-brand/10 flex items-center justify-center text-brand">
+                <div className="w-10 h-10 rounded-2xl bg-brand/10 flex items-center justify-center text-brand">
                   <Sparkles className="w-5 h-5 animate-pulse text-brand" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-syne font-extrabold tracking-tight text-text flex items-center gap-2">
+                  <h3 className="text-xl font-syne font-extrabold tracking-tight text-white flex items-center gap-2">
                     Benchmark Offset Remediation Blueprint
                   </h3>
                   <p className="text-xs text-text-muted">Precision GTM diagnostics & personalized outreach templates to restore ideal target intent thresholds.</p>
@@ -1793,12 +1793,12 @@ export default function LeadScoreHistogram({
                 /* Dynamic Cinematic Stepper Panel */
                 <div className="flex flex-col items-center justify-center py-16 space-y-6">
                   <div className="relative">
-                    <div className="w-16 h-16 border-4 border-border border-t-brand rounded-full animate-spin" />
+                    <div className="w-16 h-16 border-4 border-brand/20 border-t-brand rounded-full animate-spin" />
                     <Sparkles className="w-6 h-6 text-brand absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
                   </div>
 
                   <div className="space-y-3 w-full max-w-md text-center">
-                    <h4 className="text-sm font-bold text-text tracking-wide">Conducting Intelligent Lead Optimization...</h4>
+                    <h4 className="text-sm font-bold text-white tracking-wide">Conducting Intelligent Lead Optimization...</h4>
                     <p className="text-xs text-text-muted h-5 animate-pulse">
                       {loadingStep === 0 && "⏳ Stage 1/4: Analyzing lead-specific company metrics..."}
                       {loadingStep === 1 && "⚙️ Stage 2/4: Mapping individual decision-maker personas..."}
@@ -1821,8 +1821,8 @@ export default function LeadScoreHistogram({
                   /* Formatted McKinsey-grade playbook details */
                   <div className="space-y-6 flex-1">
                     {/* Executive Diagnosis */}
-                    <div className="bg-surface-alt/75 border border-border p-5 rounded-xl space-y-2">
-                      <h4 className="text-xs font-bold text-brand uppercase tracking-wider flex items-center gap-1.5">
+                    <div className="bg-surface-alt/75 border border-white/5 p-5 rounded-2xl space-y-2">
+                      <h4 className="text-xs font-bold text-brand uppercase tracking-wider flex items-center gap-1.5 text-brand">
                         <Activity className="w-4 h-4 text-brand" />
                         Executive Diagnosis
                       </h4>
@@ -1859,25 +1859,25 @@ export default function LeadScoreHistogram({
                       </h4>
                       <div className="grid md:grid-cols-3 gap-6">
                         {analysisResult.actionableImprovements.map((improvement, idx) => (
-                          <div key={idx} className="border border-border p-5 rounded-xl flex flex-col justify-between space-y-4">
+                          <div key={idx} className="bg-surface-alt border border-white/5 p-5 rounded-2xl flex flex-col justify-between space-y-4">
                             <div className="space-y-3">
                               <div className="flex items-center justify-between gap-1">
                                 <span className="text-[10px] font-bold text-brand font-mono tracking-wider">PLAYBOOK 0{idx+1}</span>
                                 <div className="flex gap-1 flex-wrap">
                                   {improvement.channels.map((chan, chIdx) => (
-                                    <span key={chIdx} className="px-1.5 py-0.5 rounded-xl bg-brand/10 border border-border text-[9px] font-bold text-brand uppercase">
+                                    <span key={chIdx} className="px-1.5 py-0.5 rounded bg-brand/10 border border-brand/20 text-[9px] font-bold text-brand uppercase">
                                       {chan}
                                     </span>
                                   ))}
                                 </div>
                               </div>
-                              <h5 className="text-sm font-bold text-text">{improvement.title}</h5>
+                              <h5 className="text-sm font-bold text-white">{improvement.title}</h5>
                               <p className="text-xs text-text-muted leading-relaxed">{improvement.proposedStrategy}</p>
                             </div>
 
                             {/* Optional Copyable Template Codeblock */}
                             {(improvement.exampleOutreachSubject || improvement.exampleOutreachBody) && (
-                              <div className="mt-2 border-t border-border pt-3 space-y-2">
+                              <div className="mt-2 border-t border-white/5 pt-3 space-y-2">
                                 <div className="flex items-center justify-between">
                                   <span className="text-[9px] font-bold text-brand/85 uppercase tracking-wide">Communication Copy</span>
                                   <button
@@ -1888,7 +1888,7 @@ export default function LeadScoreHistogram({
                                       if (showToast) showToast('Playbook outreach copy saved to clipboard!', 'success');
                                       setTimeout(() => setCopiedIndex(null), 2500);
                                     }}
-                                    className="text-[9px] font-extrabold text-brand flex items-center gap-1 hover:text-brand-alt transition-colors bg-brand/5 border border-border hover:border-brand-alt/20 px-2 py-0.5 rounded-xl cursor-pointer"
+                                    className="text-[9px] font-extrabold text-brand flex items-center gap-1 hover:text-brand-alt transition-colors bg-brand/5 border border-brand/10 hover:border-brand-alt/20 px-2 py-0.5 rounded cursor-pointer"
                                   >
                                     {copiedIndex === idx ? (
                                       <>
@@ -1903,7 +1903,7 @@ export default function LeadScoreHistogram({
                                     )}
                                   </button>
                                 </div>
-                                <div className="bg-black/40 border border-border p-3 rounded-xl space-y-1.5 max-h-[160px] overflow-y-auto font-mono text-[10px] text-white/90">
+                                <div className="bg-black/40 border border-white/5 p-3 rounded-xl space-y-1.5 max-h-[160px] overflow-y-auto font-mono text-[10px] text-white/90">
                                   {improvement.exampleOutreachSubject && (
                                     <div>
                                       <span className="text-text-muted">Subject:</span> {improvement.exampleOutreachSubject}
@@ -1923,12 +1923,12 @@ export default function LeadScoreHistogram({
                     </div>
 
                     {/* ICP Shift Reallocation Advice */}
-                    <div className="p-5 rounded-xl bg-brand/5 border border-border flex items-start gap-3.5">
-                      <div className="w-8 h-8 rounded-xl bg-brand/10 flex items-center justify-center text-brand shrink-0">
+                    <div className="p-5 rounded-2xl bg-brand/5 border border-brand/20 flex items-start gap-3.5 shadow-md">
+                      <div className="w-8 h-8 rounded-lg bg-brand/10 flex items-center justify-center text-brand shrink-0">
                         <TrendingUp className="w-4 h-4 animate-pulse text-brand" />
                       </div>
                       <div className="space-y-1.5">
-                        <h4 className="text-xs font-bold text-text uppercase tracking-wider">Strategic Reallocation Directive</h4>
+                        <h4 className="text-xs font-bold text-white uppercase tracking-wider">Strategic Reallocation Directive</h4>
                         <p className="text-xs text-text-muted leading-relaxed">
                           {analysisResult.reallocationAdvice}
                         </p>
@@ -1936,10 +1936,10 @@ export default function LeadScoreHistogram({
                     </div>
 
                     {/* Alignment Buttons in Footer */}
-                    <div className="flex items-center justify-end gap-3 border-t border-border pt-5">
+                    <div className="flex items-center justify-end gap-3 border-t border-white/5 pt-5">
                       <button
                         onClick={() => setIsModalOpen(false)}
-                        className="px-4 py-2 bg-white/5 hover:bg-white/10 text-text font-extrabold text-xs rounded-xl tracking-tight transition-all cursor-pointer border border-border"
+                        className="px-4 py-2 bg-white/5 hover:bg-white/10 text-white font-extrabold text-xs rounded-xl tracking-tight transition-all cursor-pointer border border-white/10"
                       >
                         Close Blueprint View
                       </button>
@@ -1949,9 +1949,9 @@ export default function LeadScoreHistogram({
                           setIsModalOpen(false);
                           if (showToast) showToast('AI GTM Correction applied! Drift alert cleared.', 'success');
                         }}
-                        className="px-5 py-2.5 bg-brand hover:bg-brand-alt text-text font-extrabold text-xs rounded-xl tracking-tight transition-all cursor-pointer flex items-center gap-1.5"
+                        className="px-5 py-2.5 bg-brand hover:bg-brand-alt text-white font-extrabold text-xs rounded-xl tracking-tight transition-all cursor-pointer shadow-lg shadow-brand/20 flex items-center gap-1.5"
                       >
-                        <CheckCircle2 className="w-4 h-4 text-text" />
+                        <CheckCircle2 className="w-4 h-4 text-white" />
                         <span>Apply optimization playbook & Clear Drift</span>
                       </button>
                     </div>

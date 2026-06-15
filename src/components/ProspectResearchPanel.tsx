@@ -37,7 +37,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
-import { generateProspectResearch, ProspectResearchReport } from '../services/aiService';
+import { generateProspectResearch, ProspectResearchReport } from '../services/geminiService';
 import { db, Timestamp } from '../firebase';
 import { collection, addDoc, getDocs, query, where, deleteDoc, doc, updateDoc, writeBatch } from 'firebase/firestore';
 import { jsPDF } from 'jspdf';
@@ -242,8 +242,8 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
   };
 
   const startResearch = async (company: string, linkedin: string = '') => {
-    if (!company.trim()) {
-      showToast('Please enter a company website or name.', 'error');
+    if (!company.trim() && !linkedin.trim()) {
+      showToast('Please enter either a Company Website/Name or a Prospect LinkedIn URL.', 'error');
       return;
     }
     setLoading(true);
@@ -268,7 +268,7 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
     }, 100);
 
     try {
-      const payloadString = JSON.stringify({ website: company, linkedin: linkedin.trim() });
+      const payloadString = JSON.stringify({ website: company.trim(), linkedin: linkedin.trim() });
       const report = await generateProspectResearch(payloadString);
       clearInterval(intervalTime);
       setSprintTime(80);
@@ -278,7 +278,7 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
 
       // Save to Firebase
       const payload = {
-        companyName: sanitized.companyInfo.name || company,
+        companyName: sanitized.companyInfo?.name || company || 'Target Profile Research',
         userId: user.uid,
         orgId: profile.orgId,
         reportJSON: JSON.stringify(sanitized),
@@ -570,7 +570,7 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
               <span className="text-[10px] text-text-muted font-bold uppercase tracking-widest mr-1">Demo Presets:</span>
               <button
                 onClick={randomizePresets}
-                className="p-1.5 rounded-xl hover:bg-brand/10 hover:text-brand border border-border text-xs transition-colors cursor-pointer mr-1 relative group"
+                className="p-1.5 rounded-xl bg-surface-alt hover:bg-brand/10 hover:text-brand border border-border text-xs transition-colors cursor-pointer mr-1 relative group"
                 title="Shuffle Presets Now"
               >
                 <RefreshCw className="w-3.5 h-3.5 transition-transform duration-500 group-hover:rotate-180" />
@@ -589,7 +589,7 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
                       setInputVal(p.url);
                       showToast(`Loaded ${p.name} URL`, 'success');
                     }}
-                    className="px-3 py-1.5 rounded-xl hover:bg-brand/10 hover:text-brand border border-border text-xs transition-colors font-medium cursor-pointer"
+                    className="px-3 py-1.5 rounded-xl bg-surface-alt hover:bg-brand/10 hover:text-brand border border-border text-xs transition-colors font-medium cursor-pointer"
                   >
                     {p.name}
                   </motion.button>
@@ -616,59 +616,63 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
 
       <div className="grid lg:grid-cols-12 gap-8 items-start">
         {/* Left Control Room / History Column */}
-        <div className={`space-y-6 transition-all duration-300${isFullWidth && activeResearch ? 'hidden lg:hidden' : 'lg:col-span-4 block'}`}>
+        <div className={`space-y-6 transition-all duration-300 ${isFullWidth && activeResearch ? 'hidden lg:hidden' : 'lg:col-span-4 block'}`}>
           {/* Research Engine Launcher Card */}
-          <div className="border border-border/80 rounded-xl p-6 md:p-8 space-y-6 relative overflow-hidden group hover:border-primary/30 transition-all duration-300">
-            <div className="absolute top-0 right-0 -mr-6 -mt-6 w-32 h-32 bg-primary/10 rounded-full pointer-events-none group-hover:bg-primary/20 transition-all duration-500" />
+          <div className="bg-surface border border-border rounded-[24px] md:rounded-[32px] p-5 md:p-8 space-y-6 glow-brand/5 relative overflow-hidden">
+            <div className="absolute top-0 right-0 -mr-6 -mt-6 w-32 h-32 bg-brand/10 rounded-full blur-3xl pointer-events-none" />
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center text-primary border border-primary/20">
+              <div className="w-10 h-10 rounded-2xl bg-brand/10 flex items-center justify-center text-brand">
                 <Search className="w-5 h-5" />
               </div>
-              <div>
-                <h2 className="text-lg font-syne font-bold tracking-tight text-text">Research Launcher</h2>
-                <span className="text-[9px] text-primary font-bold uppercase tracking-wider block -mt-0.5">Deep Intelligence Engine</span>
-              </div>
+              <h2 className="text-lg font-syne font-bold">Research Sprint Launcher</h2>
             </div>
             
-            <p className="text-xs text-text-secondary leading-relaxed">
-              Execute a deep intelligence sprint across public data, corporate filings, and professional profiles to customize absolute pain alignment.
+            <p className="text-xs text-text-muted leading-relaxed">
+              Zyntra can execute a deep intelligence sprint from <strong>either parameter</strong> or <strong>both combined</strong>. 
+              Fill in what you have and the system will auto-enrich, cross-verify, and format a professional consulting report.
             </p>
 
-            <div className="space-y-5">
-              <div className="space-y-1.5">
-                <label className="text-[10px] text-text-secondary font-bold uppercase tracking-widest block">Company Info / Website URL</label>
-                <div className="relative group/input">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <label className="text-[10px] text-text-muted font-bold uppercase tracking-widest">Company Info / Website URL</label>
+                  <span className="text-[9px] text-emerald-500 font-mono font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded">Optional</span>
+                </div>
+                <div className="relative">
                   <input
-                    className="w-full border border-border/80 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl p-4 pl-12 text-sm outline-none transition-all duration-300 placeholder:text-text-tertiary text-text hover:border-primary/40"
-                    placeholder="e.g. https://birlatyre.com"
+                    className="w-full bg-surface-alt border border-border focus:border-brand rounded-2xl p-4 pl-12 text-sm outline-none transition-all placeholder:text-text-muted"
+                    placeholder="e.g. tesla.com or Tesla Motors"
                     value={inputVal}
                     onChange={e => setInputVal(e.target.value)}
                     disabled={loading}
                     onKeyDown={e => { if (e.key === 'Enter') startResearch(inputVal, linkedinVal); }}
                   />
-                  <Globe className="w-4.5 h-4.5 text-text-secondary group-focus-within/input:text-primary transition-colors absolute left-4 top-1/2 -translate-y-1/2" />
+                  <Globe className="w-4 h-4 text-text-muted/60 absolute left-4 top-1/2 -translate-y-1/2" />
                 </div>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-[10px] text-text-secondary font-bold uppercase tracking-widest block">Prospect LinkedIn URL</label>
-                <div className="relative group/input">
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <label className="text-[10px] text-text-muted font-bold uppercase tracking-widest">Prospect LinkedIn URL</label>
+                  <span className="text-[9px] text-emerald-500 font-mono font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded">Optional</span>
+                </div>
+                <div className="relative">
                   <input
-                    className="w-full border border-border/80 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl p-4 pl-12 text-sm outline-none transition-all duration-300 placeholder:text-text-tertiary text-text hover:border-primary/40"
-                    placeholder="e.g. https://linkedin.com/in/prospect-profile"
+                    className="w-full bg-surface-alt border border-border focus:border-brand rounded-2xl p-4 pl-12 text-sm outline-none transition-all placeholder:text-text-muted"
+                    placeholder="e.g. linkedin.com/in/elonmusk"
                     value={linkedinVal}
                     onChange={e => setLinkedinVal(e.target.value)}
                     disabled={loading}
                     onKeyDown={e => { if (e.key === 'Enter') startResearch(inputVal, linkedinVal); }}
                   />
-                  <Linkedin className="w-4.5 h-4.5 text-text-secondary group-focus-within/input:text-primary transition-colors absolute left-4 top-1/2 -translate-y-1/2" />
+                  <Linkedin className="w-4 h-4 text-text-muted/60 absolute left-4 top-1/2 -translate-y-1/2" />
                 </div>
               </div>
 
               <button
                 onClick={() => startResearch(inputVal, linkedinVal)}
                 disabled={loading}
-                className="w-full hover:from-primary-dark hover:to-primary text-text font-bold py-4 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 text-sm disabled:opacity-50 hover:shadow-primary/30 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
+                className="w-full bg-brand hover:bg-brand/90 text-white font-bold py-4 rounded-2xl transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50 shadow-lg shadow-brand/20 cursor-pointer"
               >
                 {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
                 Launch Research Sprint
@@ -676,8 +680,8 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
             </div>
           </div>
 
-          {/* Past Researches History Card */}
-          <div className="bg-surface border border-border rounded-xl md:rounded-[28px] p-5 md:p-6 space-y-5">
+          {/* Past Researches History Column */}
+          <div className="bg-surface border border-border rounded-[24px] md:rounded-[32px] p-5 md:p-8 space-y-5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <History className="w-4 h-4 text-text-muted" />
@@ -693,7 +697,7 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
                 <Loader2 className="w-4 h-4 animate-spin" /> Loading reports...
               </div>
             ) : researches.length === 0 ? (
-              <div className="py-12 border border-dashed border-border/50 rounded-xl text-center opacity-40 text-xs">
+              <div className="py-12 border border-dashed border-border/50 rounded-2xl text-center opacity-40 text-xs">
                 <Database className="w-8 h-8 mx-auto mb-2 text-text-muted" />
                 No saved research runs yet. Build one above.
               </div>
@@ -727,7 +731,7 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
                             showToast('Failed to generate PDF for this report.', 'error');
                           }
                         }}
-                        className="p-1.5 hover:bg-brand/10 text-text-muted hover:text-brand rounded-xl transition-colors cursor-pointer"
+                        className="p-1.5 hover:bg-brand/10 text-text-muted hover:text-brand rounded-lg transition-colors cursor-pointer"
                         title="Download PDF report directly"
                       >
                         <Download className="w-3.5 h-3.5" />
@@ -755,7 +759,7 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
         </div>
 
         {/* Right Action / Visualization Dashboard Area */}
-        <div className={`lg:col-span-8${isFullWidth && activeResearch ? 'lg:col-span-12' : 'lg:col-span-8'}`}>
+        <div className={`lg:col-span-8 ${isFullWidth && activeResearch ? 'lg:col-span-12' : 'lg:col-span-8'}`}>
           <AnimatePresence mode="wait">
             {/* 1. Loading Sprint Simulation screen */}
             {loading && (
@@ -763,13 +767,13 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                className="bg-surface border border-border rounded-xl md:rounded-[32px] p-6 md:p-12 text-center space-y-8 min-h-[500px] flex flex-col justify-center items-center"
+                className="bg-surface border border-border rounded-[24px] md:rounded-[32px] p-6 md:p-12 text-center space-y-8 min-h-[500px] flex flex-col justify-center items-center"
               >
                 <div className="relative">
-                  <div className="w-24 h-24 rounded-xl bg-brand/10 flex items-center justify-center text-brand animate-pulse">
+                  <div className="w-24 h-24 rounded-[32px] bg-brand/10 flex items-center justify-center text-brand animate-pulse">
                     <Cpu className="w-12 h-12" />
                   </div>
-                  <div className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full bg-brand-alt flex items-center justify-center text-text text-[10px] font-bold">
+                  <div className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full bg-brand-alt flex items-center justify-center text-white text-[10px] font-bold">
                     80m
                   </div>
                 </div>
@@ -782,7 +786,7 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
                 </div>
 
                 {/* Simulated sprint progress details */}
-                <div className="w-full max-w-lg border border-border rounded-xl p-6 space-y-4">
+                <div className="w-full max-w-lg bg-surface-alt border border-border rounded-2xl p-6 space-y-4">
                   <div className="flex justify-between items-center text-xs font-mono font-bold">
                     <span className="text-brand">PHASE {sprintPhase + 1}/4: {
                       sprintPhase === 0 ? 'Scale & Asset Review' :
@@ -790,73 +794,30 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
                       sprintPhase === 2 ? 'Tech Adoption Auditing' :
                       'B2B Solutions Customization'
                     }</span>
-                    <span className="text-text-muted">Elapsed Sprint: {sprintTime} / 80 Mins ({Math.min(100, Math.round((sprintTime / 80) * 100))}%)</span>
+                    <span className="text-text-muted">Elapsed Sprint: {sprintTime} / 80 Mins</span>
                   </div>
 
                   {/* Horizontal visual bar */}
                   <div className="w-full bg-bg h-2.5 rounded-full overflow-hidden">
                     <div 
-                      className="h-full transition-all duration-100 rounded-full"
-                      style={{ width: `${Math.min(100, (sprintTime / 80) * 100)}%` }}
+                      className="bg-gradient-to-r from-brand to-brand-alt h-full transition-all duration-100 rounded-full"
+                      style={{ width: `${(sprintTime / 80) * 100}%` }}
                     />
                   </div>
 
                   {/* Live updates ticker */}
-                  <div className="pt-2 border-t border-border/60 text-[10px] font-mono text-left bg-bg/50 p-3 rounded-xl h-[90px] overflow-hidden flex flex-col justify-end relative">
-                    <div className="space-y-1.5 flex flex-col justify-end w-full">
-                      <AnimatePresence mode="popLayout">
-                        {sprintTime >= 1 && (
-                          <motion.div 
-                            key="phase1"
-                            initial={{ opacity: 0, y: 10 }} 
-                            animate={{ opacity: 1, y: 0 }} 
-                            className="text-brand-alt shrink-0"
-                          >
-                            ✓ [Phase 1] Harvested web profile scale, revenue estimates, and core market verticals
-                          </motion.div>
-                        )}
-                        {sprintTime >= 16 && (
-                          <motion.div 
-                            key="phase2"
-                            initial={{ opacity: 0, y: 10 }} 
-                            animate={{ opacity: 1, y: 0 }} 
-                            className="text-brand-alt shrink-0"
-                          >
-                            ✓ [Phase 2] HARVESTING pain citations from SEBI filings, earnings transcripts, transcripts
-                          </motion.div>
-                        )}
-                        {sprintTime >= 36 && (
-                          <motion.div 
-                            key="phase3"
-                            initial={{ opacity: 0, y: 10 }} 
-                            animate={{ opacity: 1, y: 0 }} 
-                            className="text-brand-alt shrink-0"
-                          >
-                            ✓ [Phase 3] AUDITING enterprise indicators matching ERP (SAP/Oracle), CRM databases, and hiring scopes
-                          </motion.div>
-                        )}
-                        {sprintTime >= 61 && (
-                          <motion.div 
-                            key="phase4"
-                            initial={{ opacity: 0, y: 10 }} 
-                            animate={{ opacity: 1, y: 0 }} 
-                            className="text-brand-alt shrink-0"
-                          >
-                            ✓ [Phase 4] COMPILING 5 custom AI products with ROI contract values and pipeline briefs
-                          </motion.div>
-                        )}
-                        {sprintTime < 80 && (
-                          <motion.div 
-                            key="processing"
-                            initial={{ opacity: 0 }} 
-                            animate={{ opacity: 1 }} 
-                            className="text-text-muted flex items-center gap-1.5 pt-1 animate-pulse shrink-0"
-                          >
-                            <Loader2 className="w-3 h-3 animate-spin" />
-                            Processing next objective...
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
+                  <div className="pt-2 border-t border-border/60 text-[10px] font-mono text-left space-y-1 bg-bg/50 p-3 rounded-xl max-h-[80px] overflow-hidden">
+                    <div className={sprintTime >= 1 ? "text-brand-alt" : "text-text-muted/40"}>
+                      ✓ [Phase 1] Harvested web profile scale, revenue estimates, and core market verticals
+                    </div>
+                    <div className={sprintTime >= 16 ? "text-brand-alt" : "text-text-muted/40"}>
+                      {sprintTime >= 16 ? "✓" : "→"} [Phase 2] HARVESTING pain citations from SEBI filings, earnings transcripts, transcripts
+                    </div>
+                    <div className={sprintTime >= 36 ? "text-brand-alt" : "text-text-muted/40"}>
+                      {sprintTime >= 36 ? "✓" : "→"} [Phase 3] AUDITING enterprise indicators matching ERP (SAP/Oracle), CRM databases, and hiring scopes
+                    </div>
+                    <div className={sprintTime >= 61 ? "text-brand-alt" : "text-text-muted/40"}>
+                      {sprintTime >= 61 ? "✓" : "→"} [Phase 4] COMPILING 5 custom AI products with ROI contract values and pipeline briefs
                     </div>
                   </div>
                 </div>
@@ -870,8 +831,24 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
                 animate={{ opacity: 1, y: 0 }}
                 className="space-y-6"
               >
+                {/* Sandbox Fallback Mode Banner */}
+                {(activeResearch as any).isMocked && (
+                  <div className="p-5 rounded-3xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-4 text-xs text-amber-200">
+                    <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="font-syne font-extrabold text-amber-300 text-sm">Sandbox Simulation Mode Active (Live Gemini Key Exhausted)</h4>
+                      <p className="mt-1 leading-relaxed text-amber-300/80 text-[11px]">
+                        The production Gemini API free-tier limit has been reached (<code className="bg-black/40 px-1 py-0.5 rounded font-mono text-amber-200">RESOURCE_EXHAUSTED 429</code>). To maintain absolute service readiness, Zyntra has loaded high-fidelity local GTM target mapping.
+                      </p>
+                      <p className="mt-2.5 font-bold text-amber-300 hover:underline">
+                        💡 To resume Live operations on Vercel: upgrade your Google AI Studio plan or verify your GEMINI_API_KEY environment variables of your Vercel deployment.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 {/* Visual Header Overview Card */}
-                <div className="border border-border rounded-xl md:rounded-[32px] p-5 md:p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative overflow-hidden">
+                <div className="bg-gradient-to-br from-surface to-surface-alt border border-border rounded-[24px] md:rounded-[32px] p-5 md:p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative overflow-hidden">
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                        <div className="w-2.5 h-2.5 rounded-full bg-brand-alt animate-pulse" />
@@ -882,14 +859,14 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
                   </div>
 
                   <div className="flex flex-col gap-3 min-w-[200px]">
-                    <div className="bg-bg/40 p-3.5 rounded-xl border border-border text-center">
+                    <div className="bg-bg/40 p-3.5 rounded-2xl border border-border text-center">
                       <div className="text-[9px] text-text-muted font-bold uppercase tracking-wider">Estimated LTV Forecast</div>
                       <div className="text-xl font-syne font-extrabold text-brand mt-0.5">{activeResearch?.dealSizeForecast?.totalRevenueLtv || 'N/A'}</div>
                     </div>
 
                     <button
                       onClick={() => downloadPDFReport(activeResearch)}
-                      className="w-full bg-surface border border-border text-text text-xs font-bold p-3.5 rounded-xl transition-all flex items-center justify-center gap-2"
+                      className="w-full bg-surface border border-border hover:border-brand/40 text-text text-xs font-bold p-3.5 rounded-xl transition-all flex items-center justify-center gap-2"
                     >
                       <Download className="w-4 h-4 text-brand-alt" />
                       Save Intelligence (PDF)
@@ -898,7 +875,7 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
                 </div>
 
                 {/* Sub-tabs Selection Row with layout toggler */}
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-surface p-1.5 border border-border rounded-xl">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-surface p-1.5 border border-border rounded-2xl">
                   <div className="flex items-center gap-1 overflow-x-auto seq-strip pb-1 lg:pb-0">
                     {[
                       { id: 'overview', label: 'Company Scale', icon: Building2 },
@@ -929,7 +906,7 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
 
                   <button
                     onClick={toggleFullWidth}
-                    className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer hover:bg-bg-subtle border border-border text-text hover:border-brand-alt/30"
+                    className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer bg-surface-alt hover:bg-bg-subtle border border-border text-text hover:border-brand-alt/30 shadow-sm"
                     title={isFullWidth ? "Collapse back to standard Split View (Show Sidebar)" : "Expand to Full Width Report (Hide Sidebar)"}
                   >
                     {isFullWidth ? (
@@ -947,7 +924,7 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
                 </div>
 
                 {/* Sub-tab Panels */}
-                <div className="bg-surface border border-border rounded-xl md:rounded-[32px] p-5 md:p-8">
+                <div className="bg-surface border border-border rounded-[24px] md:rounded-[32px] p-5 md:p-8">
                   {/* Panel A: Overview */}
                   {activeSubTab === 'overview' && (
                     <div className="space-y-6">
@@ -960,7 +937,7 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
                           { label: 'Annual Revenue', val: activeResearch?.companyInfo?.revenue || 'N/A', icon: CreditCard },
                           { label: 'Employees', val: activeResearch?.companyInfo?.employees || 'N/A', icon: Building2 }
                         ].map((m, i) => (
-                          <div key={i} className="border border-border p-5 rounded-xl space-y-2">
+                          <div key={i} className="bg-surface-alt border border-border p-5 rounded-2xl space-y-2">
                             <div className="flex items-center justify-between text-text-muted">
                               <span className="text-[10px] font-bold uppercase tracking-wider">{m.label}</span>
                               <m.icon className="w-4 h-4" />
@@ -970,7 +947,7 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
                         ))}
                       </div>
 
-                      <div className="border border-border p-6 rounded-xl space-y-2">
+                      <div className="bg-surface-alt border border-border p-6 rounded-2xl space-y-2">
                         <div className="text-[10px] text-text-muted font-bold uppercase tracking-widest">Business Model Description</div>
                         <p className="text-sm text-text-muted leading-relaxed font-sans">{activeResearch?.companyInfo?.description || 'No description available.'}</p>
                       </div>
@@ -978,7 +955,7 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
                       {/* Funding & Recent Products Sections */}
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         {/* Funding Card */}
-                        <div className="border border-border p-6 rounded-xl space-y-4">
+                        <div className="bg-surface-alt border border-border p-6 rounded-2xl space-y-4">
                           <div className="flex items-center justify-between border-b border-border/60 pb-3">
                             <div className="space-y-1">
                               <span className="text-[10px] text-text-muted font-bold uppercase tracking-widest block">Funding & Capitalization</span>
@@ -1025,7 +1002,7 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
                         </div>
 
                         {/* Recent Products Card */}
-                        <div className="border border-border p-6 rounded-xl space-y-4">
+                        <div className="bg-surface-alt border border-border p-6 rounded-2xl space-y-4">
                           <div className="flex items-center justify-between border-b border-border/60 pb-3">
                             <div className="space-y-1">
                               <span className="text-[10px] text-text-muted font-bold uppercase tracking-widest block">Innovation Tracker</span>
@@ -1049,11 +1026,11 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
                               <div className="text-[9px] text-text-muted font-bold uppercase tracking-widest">Recent Launches & Pipeline</div>
                               <div className="space-y-2.5 mt-1">
                                 {activeResearch.companyInfo.recentProducts.productsList.slice(0, 3).map((prod: any, idx: number) => (
-                                  <div key={idx} className="bg-bg/40 border border-border/60 p-2.5 rounded-xl space-y-1 border-border transition-colors">
+                                  <div key={idx} className="bg-bg/40 border border-border/60 p-2.5 rounded-xl space-y-1 hover:border-brand/30 transition-colors">
                                     <div className="flex justify-between items-center text-xs">
                                       <span className="font-bold text-text font-syne">{prod.name}</span>
                                       {prod.launchDate && (
-                                        <span className="text-[9px] font-mono text-text-muted bg-border/40 px-1.5 py-0.5 rounded-xl">{prod.launchDate}</span>
+                                        <span className="text-[9px] font-mono text-text-muted bg-border/40 px-1.5 py-0.5 rounded-md">{prod.launchDate}</span>
                                       )}
                                     </div>
                                     <p className="text-[10px] text-text-muted leading-relaxed font-sans">{prod.description}</p>
@@ -1066,7 +1043,7 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
                       </div>
 
                       {/* Social Media & Digital Footprint Section */}
-                      <div className="border border-border p-6 rounded-xl space-y-4">
+                      <div className="bg-surface-alt border border-border p-6 rounded-2xl space-y-4">
                         <div className="text-[10px] text-text-muted font-bold uppercase tracking-widest">Digital Footprint & Social Media Channels</div>
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                           {[
@@ -1105,7 +1082,7 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
                                 href={validUrl}
                                 target="_blank"
                                 rel="noreferrer"
-                                className={`flex items-center gap-2.5 px-4 py-3 rounded-xl border text-xs font-semibold transition-all duration-200${social.color}`}
+                                className={`flex items-center gap-2.5 px-4 py-3 rounded-xl border text-xs font-semibold transition-all duration-200 ${social.color}`}
                               >
                                 <social.icon className="w-4 h-4 shrink-0" />
                                 <span className="truncate">{social.name}</span>
@@ -1130,7 +1107,7 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
                       
                       <div className="space-y-4">
                         {activeResearch.painPoints.map((p, i) => (
-                          <div key={i} className="border border-border rounded-xl p-6 space-y-4 transition-all">
+                          <div key={i} className="bg-surface-alt border border-border rounded-2xl p-6 space-y-4 hover:border-brand/40 transition-all">
                             <div className="flex justify-between items-start gap-3">
                               <div className="space-y-1">
                                 <h4 className="text-sm font-bold text-text">{p.title}</h4>
@@ -1147,7 +1124,7 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
 
                             {/* Citations/Evidence block */}
                             {p.evidence && p.evidence.length > 0 && (
-                              <div className="border-l-2 border-border pl-4 space-y-1 bg-bg/30 p-3 rounded-xl">
+                              <div className="border-l-2 border-brand/40 pl-4 space-y-1 bg-bg/30 p-3 rounded-r-xl">
                                 <div className="text-xs text-text italic font-medium leading-relaxed">
                                   "{p.evidence[0].quote}"
                                 </div>
@@ -1190,7 +1167,7 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
                             { category: 'BI / Dashboards', data: activeResearch.techStack.bi },
                             { category: 'Logistics/SCM Stack', data: activeResearch.techStack.supplyChain }
                           ].map((sys, idx) => (
-                            <div key={idx} className="border border-border rounded-xl p-4 flex justify-between items-center text-xs">
+                            <div key={idx} className="bg-surface-alt border border-border rounded-xl p-4 flex justify-between items-center text-xs">
                               <div className="space-y-0.5">
                                 <div className="text-[10px] text-text-muted font-bold uppercase tracking-wider">{sys.category}</div>
                                 <div className="font-bold text-text">{sys.data.name || 'Not Found'}</div>
@@ -1212,9 +1189,9 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
                         {/* AI & Competitors column */}
                         <div className="space-y-5">
                           {/* Maturity Score */}
-                          <div className="bg-brand/10 border border-border p-5 rounded-xl relative overflow-hidden">
+                          <div className="bg-brand/10 border border-brand/20 p-5 rounded-2xl relative overflow-hidden">
                             <div className="text-xs text-brand font-bold uppercase tracking-widest">AI Maturity Assessment</div>
-                            <div className="text-4xl font-syne font-extrabold tracking-tight text-text mt-1">
+                            <div className="text-4xl font-syne font-extrabold tracking-tight text-white mt-1">
                               {activeResearch.aiAdoption.maturityLevel}
                             </div>
                             <p className="text-[10px] text-text-muted mt-2">
@@ -1227,7 +1204,7 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
                             <h4 className="text-xs text-text-muted font-bold uppercase tracking-widest">Detected Website Technologies</h4>
                             <div className="flex gap-2 flex-wrap">
                               {activeResearch.techStack.websiteTech?.map((tag, idx) => (
-                                <span key={idx} className="px-2.5 py-1 rounded-xl border border-border text-[10px] text-text-muted font-mono">
+                                <span key={idx} className="px-2.5 py-1 rounded-lg bg-surface-alt border border-border text-[10px] text-text-muted py-1 font-mono">
                                   {tag}
                                 </span>
                               ))}
@@ -1238,12 +1215,12 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
                           <div className="space-y-2">
                             <h4 className="text-xs text-text-muted font-bold uppercase tracking-widest">Competitive Dynamic</h4>
                             {activeResearch.aiAdoption.competitors?.map((comp, idx) => (
-                              <div key={idx} className="border border-border p-3.5 rounded-xl flex justify-between items-center text-xs">
+                              <div key={idx} className="bg-surface-alt border border-border p-3.5 rounded-xl flex justify-between items-center text-xs">
                                 <div>
                                   <div className="font-bold">{comp.name}</div>
                                   <div className="text-[10px] text-text-muted">AI Scope: {comp.tools}</div>
                                 </div>
-                                <span className="text-[9px] font-mono font-bold text-brand-alt uppercase tracking-widest bg-brand-alt/5 px-2 py-0.5 rounded-xl border border-brand-alt/10">
+                                <span className="text-[9px] font-mono font-bold text-brand-alt uppercase tracking-widest bg-brand-alt/5 px-2 py-0.5 rounded border border-brand-alt/10">
                                   {comp.aiMaturity}
                                 </span>
                               </div>
@@ -1261,7 +1238,7 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
                       
                       <div className="grid md:grid-cols-2 gap-6">
                         {activeResearch.aiSolutions.map((sol, index) => (
-                          <div key={index} className="border border-border rounded-xl p-6 space-y-4 hover:border-brand-alt/40 transition-all flex flex-col justify-between">
+                          <div key={index} className="bg-surface-alt border border-border rounded-2xl p-6 space-y-4 hover:border-brand-alt/40 transition-all flex flex-col justify-between">
                             <div className="space-y-3">
                               <div className="flex items-center gap-2">
                                 <div className="w-8 h-8 rounded-xl bg-brand-alt/10 flex items-center justify-center text-brand-alt">
@@ -1312,21 +1289,21 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
                         
                         {/* Expand Leads Injector menu dropdown */}
                         <div className="flex items-center gap-2">
-                          <span className="text-xs text-text-secondary font-semibold font-sans">Select Campaign:</span>
+                          <span className="text-xs text-text-muted font-semibold">Select Campaign:</span>
                           <select
-                            className="border border-border text-xs rounded-xl px-4 py-2.5 font-medium focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none hover:border-primary/40 transition-all text-text cursor-pointer"
+                            className="bg-surface-alt border border-border text-xs rounded-xl px-4 py-2 font-medium focus:border-brand outline-none"
                             value={targetCampaignId}
                             onChange={(e) => setTargetCampaignId(e.target.value)}
                           >
                             <option value="">-- Choose Campaign --</option>
                             {campaigns.map(c => (
-                              <option key={c.id} value={c.id} className="text-text">{c.name.toUpperCase()}</option>
+                              <option key={c.id} value={c.id}>{c.name.toUpperCase()}</option>
                             ))}
                           </select>
                           <button
                             onClick={exportAsLead}
                             disabled={exportingLead}
-                            className="hover:from-primary-dark hover:to-primary text-text font-bold px-5 py-2.5 rounded-xl text-xs flex items-center gap-1.5 transition-all hover:shadow-primary/30 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
+                            className="bg-brand hover:bg-brand/90 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-md shadow-brand/20 cursor-pointer"
                           >
                             <PlusCircle className="w-4 h-4" />
                             {exportingLead ? 'Injecting...' : 'Inject as Lead'}
@@ -1336,7 +1313,7 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
 
                       <div className="grid md:grid-cols-2 gap-6">
                         {/* Target Stakeholder Profile Card */}
-                        <div className="border border-border p-6 rounded-xl space-y-4">
+                        <div className="bg-surface-alt border border-border p-6 rounded-2xl space-y-4">
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 rounded-xl bg-brand/10 flex items-center justify-center text-brand">
                               <UserCheck className="w-4 h-4" />
@@ -1348,7 +1325,7 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
                             <div className="bg-bg/40 p-4 rounded-xl border border-border space-y-3">
                               <div>
                                 <span className="text-[8px] text-text-muted font-extrabold uppercase tracking-widest block">Current Named Decision Maker</span>
-                                <div className="font-extrabold text-sm text-text">{activeResearch.gtmStrategy.decisionMaker.name || 'N/A'}</div>
+                                <div className="font-extrabold text-sm text-white">{activeResearch.gtmStrategy.decisionMaker.name || 'N/A'}</div>
                               </div>
                               <div className="grid grid-cols-2 gap-3 pt-2 border-t border-border/60">
                                 <div>
@@ -1362,9 +1339,9 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
                                       href={activeResearch.gtmStrategy.decisionMaker.linkedinUrl.startsWith('http') ? activeResearch.gtmStrategy.decisionMaker.linkedinUrl : `https://${activeResearch.gtmStrategy.decisionMaker.linkedinUrl}`} 
                                       target="_blank" 
                                       rel="noreferrer" 
-                                      className="text-text hover:text-brand-alt font-medium text-xs flex items-center gap-1 transition-colors"
+                                      className="text-white hover:text-brand-alt font-medium text-xs flex items-center gap-1 transition-colors"
                                     >
-                                      <Linkedin className="w-3.5 h-3.5" /> Profile <ExternalLink className="w-2.5 h-2.5" />
+                                      <Linkedin className="w-3.5 h-3.5 text-[#0a66c2]" /> Profile <ExternalLink className="w-2.5 h-2.5" />
                                     </a>
                                   ) : (
                                     <span className="text-text-muted font-medium text-xs">N/A</span>
@@ -1375,7 +1352,7 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
                                 <div>
                                   <span className="text-[8px] text-text-muted font-bold uppercase tracking-widest block">Verified Business Email</span>
                                   {activeResearch.gtmStrategy.decisionMaker.email ? (
-                                    <a href={`mailto:${activeResearch.gtmStrategy.decisionMaker.email}`} className="text-text hover:text-brand font-medium text-xs flex items-center gap-1 transition-colors truncate">
+                                    <a href={`mailto:${activeResearch.gtmStrategy.decisionMaker.email}`} className="text-white hover:text-brand font-medium text-xs flex items-center gap-1 transition-colors truncate">
                                       <Mail className="w-3.5 h-3.5 text-brand shrink-0" /> {activeResearch.gtmStrategy.decisionMaker.email}
                                     </a>
                                   ) : (
@@ -1385,7 +1362,7 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
                                 <div>
                                   <span className="text-[8px] text-text-muted font-bold uppercase tracking-widest block">Verified Telephone</span>
                                   {activeResearch.gtmStrategy.decisionMaker.phone ? (
-                                    <span className="text-text font-medium text-xs flex items-center gap-1 truncate">
+                                    <span className="text-white font-medium text-xs flex items-center gap-1 truncate">
                                       <Phone className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> {activeResearch.gtmStrategy.decisionMaker.phone}
                                     </span>
                                   ) : (
@@ -1413,7 +1390,7 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
                         </div>
 
                         {/* Interactive Pitch Builder Card */}
-                        <div className="border border-border p-6 rounded-xl space-y-4">
+                        <div className="bg-surface-alt border border-border p-6 rounded-2xl space-y-4">
                           <div className="flex items-center gap-3 justify-between">
                             <div className="flex items-center gap-3">
                               <div className="w-8 h-8 rounded-xl bg-brand-alt/10 flex items-center justify-center text-brand-alt">
@@ -1426,7 +1403,7 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
                                 `${activeResearch.gtmStrategy.openingHook}\n\n${activeResearch.gtmStrategy.coreMessage}\n\n${activeResearch.gtmStrategy.cta}`,
                                 99
                               )}
-                              className="p-1.5 hover:bg-brand/10 text-brand rounded-xl transition-colors"
+                              className="p-1.5 hover:bg-brand/10 text-brand rounded-lg transition-colors"
                             >
                               {copiedIndex === 99 ? <Check className="w-4 h-4 text-brand-alt animate-pulse" /> : <Clipboard className="w-4 h-4" />}
                             </button>
@@ -1448,7 +1425,7 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
                         <h4 className="text-xs text-text-muted font-bold uppercase tracking-widest">Expected Sales Objections & Safe Handling Responses</h4>
                         <div className="grid md:grid-cols-2 gap-4">
                           {activeResearch.gtmStrategy.expectedObjections?.map((obj, i) => (
-                            <div key={i} className="border border-border rounded-xl p-5 space-y-3">
+                            <div key={i} className="bg-surface-alt border border-border rounded-xl p-5 space-y-3">
                               <div className="flex items-start gap-2 text-xs">
                                 <ShieldAlert className="w-4.5 h-4.5 text-orange-400 shrink-0 mt-0.5" />
                                 <div>
@@ -1457,7 +1434,7 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
                                 </div>
                               </div>
                               <div className="border-t border-border pt-3 flex items-start gap-2 text-xs text-text-muted">
-                                <div className="p-1 bg-brand-alt/15 text-brand-alt rounded-xl uppercase tracking-widest text-[8px] font-mono font-bold mt-0.5">REPLY</div>
+                                <div className="p-1 bg-brand-alt/15 text-brand-alt rounded-lg uppercase tracking-widest text-[8px] font-mono font-bold mt-0.5">REPLY</div>
                                 <div className="leading-relaxed font-sans text-xs italic">
                                   "{obj.response}"
                                 </div>
@@ -1480,7 +1457,7 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
                           { title: 'Phase 2: Product Expansion', timeline: '2-3 Months scale', desc: activeResearch.dealSizeForecast.phase2Expansion, color: 'border-brand-alt/30 hover:border-brand-alt' },
                           { title: 'Phase 3: Full Platform SaaS', timeline: '6-12 Months contract', desc: activeResearch.dealSizeForecast.phase3FullPlatform, color: 'border-[#ff9f1c]/30 hover:border-[#ff9f1c]' }
                         ].map((p, i) => (
-                          <div key={i} className={`border rounded-xl p-6 space-y-4 transition-all flex flex-col justify-between${p.color}`}>
+                          <div key={i} className={`bg-surface-alt border rounded-[22px] p-6 space-y-4 transition-all flex flex-col justify-between ${p.color}`}>
                             <div className="space-y-2">
                               <div className="text-[10px] text-text-muted font-bold font-mono uppercase tracking-wider">{p.timeline}</div>
                               <h4 className="text-base font-syne font-bold text-text leading-tight">{p.title}</h4>
@@ -1493,7 +1470,7 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
                         ))}
                       </div>
 
-                      <div className="bg-brand/15 border border-border p-6 rounded-xl flex flex-col md:flex-row justify-between items-center gap-4 text-center md:text-left">
+                      <div className="bg-brand/15 border border-brand/20 p-6 rounded-[22px] flex flex-col md:flex-row justify-between items-center gap-4 text-center md:text-left">
                         <div className="space-y-1">
                           <h4 className="text-sm font-bold">18-Month Combined Customer Life-Time Value (LTV)</h4>
                           <p className="text-xs text-text-muted leading-relaxed">
@@ -1514,7 +1491,7 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
                         <h3 className="text-lg font-syne font-bold">Consulting Intelligence Report</h3>
                         <button
                           onClick={() => handleCopyClipboard(activeResearch.markdownReport, 999)}
-                          className="px-4 py-2 border border-border rounded-xl text-xs font-bold transition-all flex items-center gap-1.5"
+                          className="px-4 py-2 bg-surface-alt border border-border hover:border-brand/40 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5"
                         >
                           {copiedIndex === 999 ? <Check className="w-4 h-4 text-brand-alt" /> : <Clipboard className="w-4 h-4" />}
                           Copy Markdown
@@ -1522,11 +1499,11 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
                       </div>
 
                       {/* Display Markdown view with premium consulting styling */}
-                      <div className="border border-border rounded-xl p-6 md:p-8 font-sans text-xs text-text-muted leading-relaxed select-all max-h-[600px] overflow-y-auto markdown-body">
+                      <div className="bg-surface-alt border border-border rounded-2xl p-6 md:p-8 font-sans text-xs text-text-muted leading-relaxed select-all max-h-[600px] overflow-y-auto markdown-body">
                         <ReactMarkdown
                           components={{
-                            h1: ({node, ...props}) => <h1 id={props.id} className="text-xl font-syne font-extrabold text-brand mt-6 mb-3 border-b border-border pb-1 tracking-tight text-text uppercase" {...props} />,
-                            h2: ({node, ...props}) => <h2 id={props.id} className="text-base font-syne font-bold text-text mt-5 mb-2 border-l-2 border-border pl-2 tracking-tight" {...props} />,
+                            h1: ({node, ...props}) => <h1 id={props.id} className="text-xl font-syne font-extrabold text-brand mt-6 mb-3 border-b border-border pb-1 tracking-tight text-white uppercase" {...props} />,
+                            h2: ({node, ...props}) => <h2 id={props.id} className="text-base font-syne font-bold text-white mt-5 mb-2 border-l-2 border-brand/60 pl-2 tracking-tight" {...props} />,
                             h3: ({node, ...props}) => <h3 id={props.id} className="text-sm font-syne font-semibold text-white/90 mt-4 mb-1.5" {...props} />,
                             h4: ({node, ...props}) => <h4 id={props.id} className="text-xs font-syne font-semibold text-white/80 mt-3 mb-1" {...props} />,
                             p: ({node, ...props}) => <p className="text-xs text-text-muted mb-3.5 leading-relaxed font-sans" {...props} />,
@@ -1539,11 +1516,11 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
                               const match = /language-(\w+)/.exec(className || '');
                               const inline = !match;
                               return inline ? (
-                                <code className="bg-surface/80 border border-border px-1.5 py-0.5 rounded-xl font-mono text-[11px] text-brand-alt" {...props}>
+                                <code className="bg-surface/80 border border-border px-1.5 py-0.5 rounded font-mono text-[11px] text-brand-alt" {...props}>
                                   {children}
                                 </code>
                               ) : (
-                                <pre className="border border-border/50 p-4 rounded-xl font-mono text-[11px] text-text-muted overflow-x-auto my-4 whitespace-pre-wrap block">
+                                <pre className="bg-[#090a0f] border border-border/50 p-4 rounded-xl font-mono text-[11px] text-text-muted overflow-x-auto my-4 whitespace-pre-wrap block">
                                   <code className={className} {...props}>
                                     {children}
                                   </code>
@@ -1551,16 +1528,16 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
                               );
                             },
                             blockquote: ({node, ...props}) => (
-                              <blockquote className="border-l-4 border-brand pl-4 italic text-xs text-text-muted bg-brand/5 py-2.5 my-4 rounded-xl font-sans" {...props} />
+                              <blockquote className="border-l-4 border-brand pl-4 italic text-xs text-text-muted bg-brand/5 py-2.5 my-4 rounded-r-xl font-sans" {...props} />
                             ),
                             table: ({node, ...props}) => (
                               <div className="overflow-x-auto my-4 border border-border rounded-xl">
                                 <table className="min-w-full divide-y divide-border" {...props} />
                               </div>
                             ),
-                            thead: ({node, ...props}) => <thead className="" {...props} />,
-                            tbody: ({node, ...props}) => <tbody className="divide-y divide-border/60" {...props} />,
-                            th: ({node, ...props}) => <th className="px-3.5 py-2 text-left text-[10px] font-bold uppercase tracking-widest border-b border-border/60" {...props} />,
+                            thead: ({node, ...props}) => <thead className="bg-[#12131a]" {...props} />,
+                            tbody: ({node, ...props}) => <tbody className="divide-y divide-border/60 bg-[#171822]/40" {...props} />,
+                            th: ({node, ...props}) => <th className="px-3.5 py-2 text-left text-[10px] font-bold uppercase tracking-widest text-[#9ca3af] border-b border-border/60" {...props} />,
                             td: ({node, ...props}) => <td className="px-3.5 py-2 text-xs text-text-muted font-sans" {...props} />,
                             hr: ({node, ...props}) => <hr className="border-border/60 my-6" {...props} />
                           }}
@@ -1579,9 +1556,9 @@ export default function ProspectResearchPanel({ user, profile, campaigns, showTo
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="bg-surface border border-border rounded-xl md:rounded-[32px] p-6 md:p-12 text-center space-y-6 min-h-[500px] flex flex-col justify-center items-center opacity-70"
+                className="bg-surface border border-border rounded-[24px] md:rounded-[32px] p-6 md:p-12 text-center space-y-6 min-h-[500px] flex flex-col justify-center items-center opacity-70"
               >
-                <div className="w-16 h-16 rounded-xl bg-brand/10 border border-border flex items-center justify-center text-brand">
+                <div className="w-16 h-16 rounded-[22px] bg-brand/10 border border-brand/20 flex items-center justify-center text-brand">
                   <Database className="w-8 h-8" />
                 </div>
                 

@@ -1,3 +1,11 @@
-import app from '../server.js';
+import { app, startServer } from "../server";
 
-export default app;
+let isInitialized = false;
+
+export default async function handler(req: any, res: any) {
+  if (!isInitialized) {
+    await startServer();
+    isInitialized = true;
+  }
+  return app(req, res);
+}

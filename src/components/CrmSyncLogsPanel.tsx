@@ -179,7 +179,7 @@ export const CrmSyncLogsPanel: React.FC<CrmSyncLogsPanelProps> = ({
   };
 
   return (
-    <div className="crm-push-logs-panel bg-surface border border-border rounded-xl p-6 space-y-6 relative mt-6">
+    <div className="crm-push-logs-panel bg-surface border border-border rounded-3xl p-6 space-y-6 glow-brand/5 relative mt-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h3 className="text-base font-bold flex items-center gap-2">
@@ -195,9 +195,9 @@ export const CrmSyncLogsPanel: React.FC<CrmSyncLogsPanelProps> = ({
           <button
             onClick={handleBulkSyncAll}
             disabled={loading}
-            className="px-4 py-2 border hover:bg-[#00d4aa] hover:text-[#090a0f] rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-40"
+            className="px-4 py-2 bg-[#00d4aa]/10 border border-[#00d4aa]/30 hover:bg-[#00d4aa] hover:text-[#090a0f] text-[#00d4aa] rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-40"
           >
-            <RefreshCw className={`w-3.5 h-3.5${loading ? "animate-spin" : ""}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
             Force Global CRM Sync
           </button>
         )}
@@ -220,7 +220,7 @@ export const CrmSyncLogsPanel: React.FC<CrmSyncLogsPanelProps> = ({
         return (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Success KPI Card */}
-            <div className="bg-surface-alt/40 border border-border/60 rounded-xl p-4 flex flex-col justify-between relative overflow-hidden group">
+            <div className="bg-surface-alt/40 border border-border/60 rounded-2xl p-4 flex flex-col justify-between relative overflow-hidden group">
               <div className="absolute top-0 right-0 p-3 opacity-10 pointer-events-none">
                 <CheckCircle className="w-12 h-12 text-emerald-400" />
               </div>
@@ -245,7 +245,7 @@ export const CrmSyncLogsPanel: React.FC<CrmSyncLogsPanelProps> = ({
             </div>
 
             {/* Failure KPI Card */}
-            <div className="bg-surface-alt/40 border border-border/60 rounded-xl p-4 flex flex-col justify-between relative overflow-hidden group">
+            <div className="bg-surface-alt/40 border border-border/60 rounded-2xl p-4 flex flex-col justify-between relative overflow-hidden group">
               <div className="absolute top-0 right-0 p-3 opacity-10 pointer-events-none">
                 <AlertCircle className="w-12 h-12 text-rose-400" />
               </div>
@@ -270,7 +270,7 @@ export const CrmSyncLogsPanel: React.FC<CrmSyncLogsPanelProps> = ({
             </div>
 
             {/* NEW Summary Card: Mapping Efficiency (Successful Mappings vs Failed Attempts) */}
-            <div className="bg-surface-alt/40 border border-border/60 rounded-xl p-4 flex flex-col justify-between relative overflow-hidden group">
+            <div className="bg-surface-alt/40 border border-border/60 rounded-2xl p-4 flex flex-col justify-between relative overflow-hidden group">
               <div className="absolute top-0 right-0 p-3 opacity-10 pointer-events-none">
                 <RefreshCw className="w-12 h-12 text-amber-400" />
               </div>
@@ -297,7 +297,7 @@ export const CrmSyncLogsPanel: React.FC<CrmSyncLogsPanelProps> = ({
             </div>
 
             {/* Active Sync Pipeline Status */}
-            <div className="bg-surface-alt/40 border border-border/60 rounded-xl p-4 flex flex-col justify-between relative overflow-hidden group">
+            <div className="bg-surface-alt/40 border border-border/60 rounded-2xl p-4 flex flex-col justify-between relative overflow-hidden group">
               <div className="absolute top-0 right-0 p-3 opacity-10 pointer-events-none animate-pulse">
                 <Database className="w-12 h-12 text-cyan-400" />
               </div>
@@ -312,8 +312,8 @@ export const CrmSyncLogsPanel: React.FC<CrmSyncLogsPanelProps> = ({
               </div>
               <div className="mt-4 flex items-center justify-between border-t border-border/20 pt-2.5">
                 <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full animate-ping" />
-                  <span className="text-[10px] font-bold">Pipeline Online</span>
+                  <span className="w-2 h-2 rounded-full bg-[#00d4aa] animate-ping" />
+                  <span className="text-[10px] text-[#00d4aa] font-bold">Pipeline Online</span>
                 </div>
                 <div className="text-[10px] text-text-muted font-mono">
                   Volume: <b className="text-text">{total} Hits</b>
@@ -326,7 +326,7 @@ export const CrmSyncLogsPanel: React.FC<CrmSyncLogsPanelProps> = ({
 
       <div className="overflow-x-auto min-h-32">
         {leads.length === 0 ? (
-          <div className="flex flex-col items-center justify-center p-8 border border-border/50 rounded-xl text-center">
+          <div className="flex flex-col items-center justify-center p-8 bg-[#090a0f]/40 border border-border/50 rounded-2xl text-center">
             <Database className="w-8 h-8 text-text-muted/40 mb-2" />
             <p className="text-xs font-bold text-text-muted">No Pipeline Leads Present</p>
             <p className="text-[10px] text-text-muted/60 mt-1 max-w-sm">
@@ -390,7 +390,7 @@ export const CrmSyncLogsPanel: React.FC<CrmSyncLogsPanelProps> = ({
 
                             {/* Error payload tooltip (Task 1 requirement) */}
                             {hoveredError === lead.id && (
-                              <div className="absolute z-50 bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-56 p-3 border border-rose-500/30 rounded-xl text-rose-300 text-[10px] leading-relaxed font-mono text-center">
+                              <div className="absolute z-50 bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-56 p-3 bg-[#0a0c14] border border-rose-500/30 rounded-xl shadow-2xl text-rose-300 text-[10px] leading-relaxed font-mono text-center">
                                 <div className="font-bold text-rose-400 mb-1">CRM Sync Error:</div>
                                 {errorMsg}
                                 <div className="text-[8px] text-text-muted mt-1.5 border-t border-border/40 pt-1">
@@ -410,7 +410,7 @@ export const CrmSyncLogsPanel: React.FC<CrmSyncLogsPanelProps> = ({
                       {status === "Failed" && (
                         <button
                           onClick={() => handleTriggerSync(lead.id)}
-                          className="px-2.5 py-1 bg-rose-500/15 hover:bg-rose-500 text-rose-400 hover:text-white rounded-xl text-[10px] font-bold transition-all cursor-pointer border border-rose-500/25"
+                          className="px-2.5 py-1 bg-rose-500/15 hover:bg-rose-500 text-rose-400 hover:text-white rounded-lg text-[10px] font-bold transition-all cursor-pointer border border-rose-500/25"
                         >
                           Retry Sync
                         </button>
@@ -418,7 +418,7 @@ export const CrmSyncLogsPanel: React.FC<CrmSyncLogsPanelProps> = ({
                       {status === "Mapped" && (
                         <button
                           onClick={() => handleTriggerSync(lead.id)}
-                          className="px-2.5 py-1 hover:bg-border text-text-muted hover:text-text rounded-xl text-[10px] font-bold transition-all cursor-pointer border border-border"
+                          className="px-2.5 py-1 bg-surface-alt hover:bg-border text-text-muted hover:text-text rounded-lg text-[10px] font-bold transition-all cursor-pointer border border-border"
                         >
                           Re-Sync Address
                         </button>

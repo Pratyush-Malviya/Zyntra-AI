@@ -65,16 +65,16 @@ export default function LandingPage({ onLaunchApp, isAuthenticated, theme, setTh
   ];
 
   return (
-    <div className={`min-h-screen${theme === 'dark' ? 'bg-[#040508] text-slate-100' : 'bg-slate-50 text-slate-900'}transition-all duration-300 font-sans antialiased overflow-x-hidden relative`}>
+    <div className={`min-h-screen ${theme === 'dark' ? 'bg-[#040508] text-slate-100' : 'bg-slate-50 text-slate-900'} transition-all duration-300 font-sans antialiased overflow-x-hidden relative`}>
       {/* Structural Metadata for SEO Bots */}
       <h1 className="sr-only">Zyntra AI - Next Generation Omnichannel Sales Prospecting &amp; High-Conversion Outreach Platform</h1>
       
       {/* 1. Header/Navigation Bar */}
-      <header className={`sticky top-0 z-50 border-b${theme === 'dark' ? 'border-white/[0.04] bg-[#040508]/80' : 'border-slate-200/60 bg-white/80'}transition-all`}>
+      <header className={`sticky top-0 z-50 backdrop-blur-xl border-b ${theme === 'dark' ? 'border-white/[0.04] bg-[#040508]/80' : 'border-slate-200/60 bg-white/80'} transition-all`}>
         <div className="max-w-7xl mx-auto px-8 sm:px-12 h-20 flex items-center justify-between">
           <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center hover:scale-105 transition-transform duration-350">
-              <Zap className="w-5.5 h-5.5 text-text" />
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-600 via-indigo-500 to-emerald-500 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/10 hover:scale-105 transition-transform duration-350">
+              <Zap className="w-5.5 h-5.5 text-white" />
             </div>
             <span className="font-extrabold tracking-tight text-xl font-mono">
               ZYNTRA<span className="text-blue-550 font-bold">.AI</span>
@@ -83,10 +83,10 @@ export default function LandingPage({ onLaunchApp, isAuthenticated, theme, setTh
 
           {/* Nav Items */}
           <nav className="hidden md:flex items-center gap-10 text-[10.5px] uppercase tracking-widest font-extrabold">
-            <a href="#features" className={`hover:text-blue-500 transition-colors${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>Features</a>
-            <a href="#prospecting-demo" className={`hover:text-blue-500 transition-colors${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>Intelligence Hub</a>
-            <a href="#yield-calculator" className={`hover:text-blue-500 transition-colors${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>ROI Simulator</a>
-            <a href="#faq" className={`hover:text-blue-500 transition-colors${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>Faq</a>
+            <a href="#features" className={`hover:text-blue-500 transition-colors ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>Features</a>
+            <a href="#prospecting-demo" className={`hover:text-blue-500 transition-colors ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>Intelligence Hub</a>
+            <a href="#yield-calculator" className={`hover:text-blue-500 transition-colors ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>ROI Simulator</a>
+            <a href="#faq" className={`hover:text-blue-500 transition-colors ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>Faq</a>
           </nav>
 
           <div className="flex items-center gap-4.5">
@@ -110,7 +110,7 @@ export default function LandingPage({ onLaunchApp, isAuthenticated, theme, setTh
 
             <button 
               onClick={onLaunchApp}
-              className="px-5 py-2.5 text-xs font-bold rounded-xl bg-primary hover:bg-primary/90 text-white cursor-pointer flex items-center gap-2 transition-all hover:scale-[1.02]"
+              className="px-5 py-2.5 text-xs font-bold rounded-xl bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-blue-500 hover:to-emerald-500 text-white shadow-xl shadow-blue-500/10 cursor-pointer flex items-center gap-2 transition-all hover:scale-[1.02]"
             >
               <span>{isAuthenticated ? 'Go to Console' : 'Launch Console'}</span>
               <ArrowRight className="w-4 h-4" />
@@ -122,7 +122,7 @@ export default function LandingPage({ onLaunchApp, isAuthenticated, theme, setTh
       {/* 2. Hero Section */}
       <section className="relative py-28 md:py-36 px-6 max-w-7xl mx-auto flex flex-col items-center">
         {/* Subtle background mesh */}
-        <div className="absolute top-10 left-1/2 -translate-x-1/2 w-[90%] md:w-[70%] h-[400px] rounded-full pointer-events-none" />
+        <div className="absolute top-10 left-1/2 -translate-x-1/2 w-[90%] md:w-[70%] h-[400px] bg-gradient-to-r from-blue-600/10 via-indigo-500/10 to-emerald-500/10 rounded-full blur-[110px] pointer-events-none" />
 
         <div className="text-center max-w-4xl space-y-8 z-10 relative">
           <div className={`inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full text-[10px] uppercase font-mono tracking-widest font-extrabold border ${
@@ -130,25 +130,25 @@ export default function LandingPage({ onLaunchApp, isAuthenticated, theme, setTh
               ? 'bg-slate-950/80 border-white/[0.06] text-emerald-400' 
               : 'bg-emerald-50 border-emerald-100 text-emerald-700'
           }`}>
-            <span className="px-1.5 py-0.5 rounded-xl bg-emerald-500 text-text font-mono text-[9px] animate-pulse">LIVE NODE</span>
+            <span className="px-1.5 py-0.5 rounded-md bg-emerald-500 text-white font-mono text-[9px] animate-pulse">LIVE NODE</span>
             <span className="tracking-wide text-xs flex items-center gap-1 font-bold">Omnichannel Pipeline intelligence with Gemini Models</span>
           </div>
 
-          <h2 className={`text-4xl md:text-6xl lg:text-7xl font-extrabold tracking-tight leading-[1.05]${theme === 'dark' ? 'text-white' : 'text-slate-955'}`}>
+          <h2 className={`text-4xl md:text-6xl lg:text-7xl font-extrabold tracking-tight leading-[1.05] ${theme === 'dark' ? 'text-white' : 'text-slate-955'}`}>
             Supercharge sales outreach with <br />
-            <span className="bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-blue-400 via-indigo-400 via-teal-400 to-emerald-400 bg-clip-text text-transparent">
               Interactive LLM Intel.
             </span>
           </h2>
 
-          <p className={`text-sm sm:text-base md:text-lg max-w-3xl mx-auto leading-relaxed${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>
+          <p className={`text-sm sm:text-base md:text-lg max-w-3xl mx-auto leading-relaxed ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>
             Zyntra AI brings deep programmatic prospecting, live research indexing, multi-variable lead scoring, and automated omnichannel personalization triggers into a single integrated sales environment.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4 max-w-md mx-auto">
             <button 
               onClick={onLaunchApp}
-              className="w-full sm:w-auto px-8 py-4 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-xs uppercase tracking-widest transition-all cursor-pointer flex items-center justify-center gap-2"
+              className="w-full sm:w-auto px-8 py-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs uppercase tracking-widest shadow-2.5xl shadow-blue-600/20 transition-all cursor-pointer flex items-center justify-center gap-2"
             >
               <span>Get Started Now</span>
               <ArrowRight className="w-4 h-4" />
@@ -171,15 +171,15 @@ export default function LandingPage({ onLaunchApp, isAuthenticated, theme, setTh
           theme === 'dark' ? 'bg-[#0f1016]/90 border-white/[0.05]' : 'bg-white border-slate-200/80 shadow-2xl'
         } shadow-2xl p-5 md:p-8 relative overflow-hidden group hover:border-[#3b82f6]/20 transition-all duration-500`}>
           {/* Accent decoration line */}
-          <div className="absolute top-0 left-0 right-0 h-[3px]" />
+          <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-blue-600 via-indigo-500 via-teal-400 to-emerald-400" />
           
           {/* Header tabs mimic */}
-          <div className="flex items-center justify-between pb-4.5 mb-4.5 border-b border-border">
+          <div className="flex items-center justify-between pb-4.5 mb-4.5 border-b border-slate-500/10">
             <div className="flex items-center gap-2.5">
               <span className="w-3.5 h-3.5 rounded-full bg-rose-500/80 hover:scale-110 transition-transform" />
               <span className="w-3.5 h-3.5 rounded-full bg-amber-500/80 hover:scale-110 transition-transform" />
               <span className="w-3.5 h-3.5 rounded-full bg-emerald-500/80 hover:scale-110 transition-transform" />
-              <span className={`text-[11px] ml-2.5 font-mono${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>https://zyntra.ai/console-preview</span>
+              <span className={`text-[11px] ml-2.5 font-mono ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>https://zyntra.ai/console-preview</span>
             </div>
             <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-extrabold border uppercase tracking-wider ${
               theme === 'dark' ? 'bg-slate-900 border-white/[0.05] text-blue-400' : 'bg-slate-50 border-slate-200 text-blue-600'
@@ -196,21 +196,21 @@ export default function LandingPage({ onLaunchApp, isAuthenticated, theme, setTh
               theme === 'dark' ? 'bg-black/30 border-white/[0.03]' : 'bg-slate-50/60 border-slate-200/60'
             } space-y-3.5 text-left`}>
               <div className="flex items-center justify-between">
-                <span className="text-[9px] uppercase font-mono tracking-widest font-extrabold">Prospect intelligence</span>
+                <span className="text-[9px] uppercase font-mono tracking-widest font-extrabold text-[#059669]">Prospect intelligence</span>
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
               </div>
-              <div className={`p-3.5 rounded-xl border text-left${theme === 'dark' ? 'bg-[#08090d] border-white/[0.04]' : 'bg-white border-slate-200 shadow-xs'}`}>
+              <div className={`p-3.5 rounded-xl border text-left ${theme === 'dark' ? 'bg-[#08090d] border-white/[0.04]' : 'bg-white border-slate-200 shadow-xs'}`}>
                 <div className="flex items-center gap-2.5 mb-2">
-                  <div className="w-8 h-8 rounded-full bg-blue-500/25 text-blue-400 flex items-center justify-center font-bold text-xs">SP</div>
+                  <div className="w-8 h-8 rounded-full bg-blue-500/25 text-blue-400 flex items-center justify-center font-bold text-xs shadow-inner">SP</div>
                   <div>
                     <h4 className="text-xs font-bold leading-tight">Sarah Mitchell</h4>
                     <p className="text-[10px] text-slate-500 font-medium">Head of Talent • SaaS Platform</p>
                   </div>
                 </div>
-                <div className="pt-2 border-t border-border space-y-1.5">
+                <div className="pt-2 border-t border-slate-700/10 space-y-1.5">
                   <div className="flex justify-between text-[10px] text-slate-500">
                     <span>Corporate Size</span>
-                    <span className="font-bold text-text">140 employees</span>
+                    <span className="font-bold text-slate-400">140 employees</span>
                   </div>
                   <div className="flex justify-between text-[10px] text-slate-500">
                     <span>Index Status</span>
@@ -224,8 +224,8 @@ export default function LandingPage({ onLaunchApp, isAuthenticated, theme, setTh
                   <span className="text-slate-500">Validation Speed/Rate</span>
                   <span className="text-blue-400 font-mono font-bold">99.4% accuracy</span>
                 </div>
-                <div className="h-1.5 w-full bg-surface rounded-full overflow-hidden">
-                  <div className="h-full rounded-full w-[94%]" />
+                <div className="h-1.5 w-full bg-slate-500/10 rounded-full overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-blue-500 to-emerald-400 rounded-full w-[94%]" />
                 </div>
               </div>
             </div>
@@ -239,33 +239,33 @@ export default function LandingPage({ onLaunchApp, isAuthenticated, theme, setTh
                 <span className="text-[10px] text-slate-500 font-mono font-bold">Active Channel: WhatsApp & SMTP</span>
               </div>
               
-              <div className={`p-3.5 rounded-xl border text-left${theme === 'dark' ? 'bg-[#08090d] border-white/[0.04]' : 'bg-white border-slate-200 shadow-xs'}space-y-2.5`}>
-                <div className="flex gap-4 text-[10px] uppercase font-bold tracking-widest border-b border-border pb-2">
+              <div className={`p-3.5 rounded-xl border text-left ${theme === 'dark' ? 'bg-[#08090d] border-white/[0.04]' : 'bg-white border-slate-200 shadow-xs'} space-y-2.5`}>
+                <div className="flex gap-4 text-[10px] uppercase font-bold tracking-widest border-b border-white/[0.05] pb-2">
                   <span className="text-emerald-400 border-b border-emerald-400 pb-1.5">WhatsApp Broadcast</span>
                   <span className="text-slate-500 pb-1.5">LinkedIn InMail</span>
                   <span className="text-slate-500 pb-1.5">SMTP Pro</span>
                 </div>
                 
-                <p className="text-xs leading-relaxed text-text font-mono">
+                <p className="text-xs leading-relaxed text-slate-300 font-mono">
                   &quot;Hello <span className="text-purple-400 font-medium">Sarah</span>, analyzed your corporate recruitment index at <span className="text-blue-400 font-medium">GrowthCo UK</span>. Given your SaaS growth metrics, we compiled a tailored roadmap focusing on AI agency automation. Let&apos;s sync.&quot;
                 </p>
 
-                <div className="flex items-center justify-between pt-2 border-t border-border text-[10px] text-slate-500">
+                <div className="flex items-center justify-between pt-2 border-t border-white/[0.04] text-[10px] text-slate-500">
                   <span className="flex items-center gap-1 text-emerald-400 font-bold">
                     <Sparkles className="w-3.5 h-3.5 text-emerald-400 animate-pulse" /> Personalized with corporate dossier metadata.
                   </span>
-                  <span className="text-blue-400 rounded-xl px-2 py-0.5 font-bold uppercase text-[9px]">100% Custom</span>
+                  <span className="bg-[#2563eb]/20 text-blue-400 rounded-lg px-2 py-0.5 font-bold uppercase text-[9px]">100% Custom</span>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3 text-center text-[10px]">
-                <div className="p-3 rounded-xl bg-white/[0.012] border border-border">
+                <div className="p-3 rounded-xl bg-white/[0.012] border border-slate-500/10">
                   <span className="text-slate-500 block text-[9px] uppercase tracking-widest font-extrabold pb-0.5">AVERAGE OPEN RATE</span>
-                  <span className="font-extrabold text-sm md:text-base">84.2%</span>
+                  <span className="font-extrabold text-[#059669] text-sm md:text-base">84.2%</span>
                 </div>
-                <div className="p-3 rounded-xl bg-white/[0.012] border border-border">
+                <div className="p-3 rounded-xl bg-white/[0.012] border border-slate-500/10">
                   <span className="text-slate-500 block text-[9px] uppercase tracking-widest font-extrabold pb-0.5">RESPONSE MULTIPLIER</span>
-                  <span className="font-extrabold text-sm md:text-base">4.8x higher</span>
+                  <span className="font-extrabold text-[#2563eb] text-sm md:text-base">4.8x higher</span>
                 </div>
               </div>
             </div>
@@ -274,18 +274,18 @@ export default function LandingPage({ onLaunchApp, isAuthenticated, theme, setTh
       </section>
 
       {/* 3. ROI Yield Simulator Section */}
-      <section id="yield-calculator" className={`py-28 md:py-36 border-t${theme === 'dark' ? 'border-[#ffffff06] bg-[#06070a]' : 'border-slate-200/80 bg-slate-100/40'}`}>
+      <section id="yield-calculator" className={`py-28 md:py-36 border-t ${theme === 'dark' ? 'border-[#ffffff06] bg-[#06070a]' : 'border-slate-200/80 bg-slate-100/40'}`}>
         <div className="max-w-7xl mx-auto px-8 sm:px-12 grid grid-cols-1 md:grid-cols-2 gap-16 md:gap-24 items-center">
           <div className="space-y-8 text-left">
             <span className="text-xs uppercase font-extrabold tracking-widest text-emerald-400 font-mono">ROI Calculator Simulator</span>
-            <h3 className={`text-4xl sm:text-5xl font-extrabold tracking-tight leading-tight${theme === 'dark' ? 'text-white' : 'text-slate-955'}`}>
+            <h3 className={`text-4xl sm:text-5xl font-extrabold tracking-tight leading-tight ${theme === 'dark' ? 'text-white' : 'text-slate-955'}`}>
               Model your pipeline yield.<br />Stop guessing outreach outcomes.
             </h3>
-            <p className={`text-sm sm:text-base leading-relaxed${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
+            <p className={`text-sm sm:text-base leading-relaxed ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
               Adjust lead prospecting volumes, standard conversions and deals value constraints to simulate and contrast standard generic lists versus Zyntra&apos;s hyper-targeted hyper-personalized enterprise outreach yield.
             </p>
 
-            <div className="p-5 rounded-xl border bg-emerald-500/5 border-emerald-500/10 text-xs md:text-sm text-emerald-400 leading-relaxed flex items-center gap-4.5">
+            <div className="p-5 rounded-2xl border bg-emerald-500/5 border-emerald-500/10 text-xs md:text-sm text-emerald-400 leading-relaxed flex items-center gap-4.5">
               <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0">
                 <Award className="w-5.5 h-5.5" />
               </div>
@@ -300,7 +300,7 @@ export default function LandingPage({ onLaunchApp, isAuthenticated, theme, setTh
             
             {/* Input Slider 1 */}
             <div className="space-y-3">
-              <div className="flex justify-between items-center text-xs font-extrabold uppercase tracking-widest text-text">
+              <div className="flex justify-between items-center text-xs font-extrabold uppercase tracking-widest text-slate-400">
                 <span>Leads Target Volume</span>
                 <span className="text-blue-400 font-mono text-xs">{leadVolume} Qualified Leads</span>
               </div>
@@ -311,13 +311,13 @@ export default function LandingPage({ onLaunchApp, isAuthenticated, theme, setTh
                 step="50"
                 value={leadVolume}
                 onChange={(e) => setLeadVolume(parseInt(e.target.value))}
-                className="w-full h-1.5 bg-surface rounded-xl appearance-none cursor-pointer accent-blue-600"
+                className="w-full h-1.5 bg-slate-500/15 rounded-lg appearance-none cursor-pointer accent-blue-600"
               />
             </div>
 
             {/* Input Slider 2 */}
             <div className="space-y-3">
-              <div className="flex justify-between items-center text-xs font-extrabold uppercase tracking-widest text-text">
+              <div className="flex justify-between items-center text-xs font-extrabold uppercase tracking-widest text-slate-400">
                 <span>Custom Hyper-Personalized Reply %</span>
                 <span className="text-emerald-400 font-mono text-xs">{conversionRate.toFixed(1)}% Base Target</span>
               </div>
@@ -328,15 +328,15 @@ export default function LandingPage({ onLaunchApp, isAuthenticated, theme, setTh
                 step="0.5"
                 value={conversionRate}
                 onChange={(e) => setConversionRate(parseFloat(e.target.value))}
-                className="w-full h-1.5 bg-surface rounded-xl appearance-none cursor-pointer accent-emerald-500"
+                className="w-full h-1.5 bg-slate-500/15 rounded-lg appearance-none cursor-pointer accent-emerald-500"
               />
             </div>
 
             {/* Input Slider 3 */}
             <div className="space-y-3">
-              <div className="flex justify-between items-center text-xs font-extrabold uppercase tracking-widest text-text">
+              <div className="flex justify-between items-center text-xs font-extrabold uppercase tracking-widest text-slate-400">
                 <span>Average Value of ACV Deal</span>
-                <span className="text-text font-mono text-xs">${dealValue.toLocaleString()}</span>
+                <span className="text-slate-100 font-mono text-xs">${dealValue.toLocaleString()}</span>
               </div>
               <input 
                 type="range"
@@ -345,27 +345,27 @@ export default function LandingPage({ onLaunchApp, isAuthenticated, theme, setTh
                 step="1000"
                 value={dealValue}
                 onChange={(e) => setDealValue(parseInt(e.target.value))}
-                className="w-full h-1.5 bg-surface rounded-xl appearance-none cursor-pointer accent-blue-600"
+                className="w-full h-1.5 bg-slate-500/15 rounded-lg appearance-none cursor-pointer accent-blue-600"
               />
             </div>
 
             {/* Simulated Comparison Board */}
-            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border">
-              <div className="p-4 rounded-xl bg-white/[0.012] border border-border text-left">
+            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-500/10">
+              <div className="p-4 rounded-xl bg-white/[0.012] border border-slate-500/10 text-left">
                 <span className="text-[10px] text-slate-500 block uppercase font-extrabold font-mono tracking-wider pb-0.5">Standard Replies (5%)</span>
-                <span className="text-lg font-bold text-text">{traditionalReplies} replies</span>
+                <span className="text-lg font-bold text-slate-400">{traditionalReplies} replies</span>
               </div>
 
               <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20 text-left">
                 <span className="text-[10px] text-emerald-500 block uppercase font-extrabold font-mono tracking-wider pb-0.5 font-bold">Zyntra Replies (~{Math.round(conversionRate * 12)}%)</span>
-                <span className="text-lg font-bold">{zyntraReplies} replies</span>
+                <span className="text-lg font-bold text-[#10b981]">{zyntraReplies} replies</span>
               </div>
             </div>
 
             <div className={`p-5 rounded-2xl text-center flex flex-col items-center justify-center ${
               theme === 'dark' ? 'bg-[#06070a]' : 'bg-slate-50 shadow-inner'
             }`}>
-              <span className="text-[10px] text-text uppercase font-extrabold tracking-widest font-mono">Estimated Revenue Added</span>
+              <span className="text-[10px] text-slate-400 uppercase font-extrabold tracking-widest font-mono">Estimated Revenue Added</span>
               <span className="text-2xl md:text-3xl lg:text-4xl font-extrabold text-blue-500 font-mono mt-1 select-none">
                 +${estimatedRevenue.toLocaleString()}
               </span>
@@ -379,10 +379,10 @@ export default function LandingPage({ onLaunchApp, isAuthenticated, theme, setTh
       <section id="features" className="py-28 md:py-36 px-6 max-w-7xl mx-auto space-y-20">
         <div className="text-center space-y-4 max-w-3xl mx-auto">
           <span className="text-xs uppercase font-extrabold tracking-widest text-blue-500 font-mono">ENGINEERED SPECS</span>
-          <h3 className={`text-4xl sm:text-5xl font-extrabold tracking-tight${theme === 'dark' ? 'text-white' : 'text-slate-950'}`}>
+          <h3 className={`text-4xl sm:text-5xl font-extrabold tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-950'}`}>
             Built for enterprise pipeline stability &amp; volume control.
           </h3>
-          <p className={`text-sm sm:text-base leading-relaxed${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
+          <p className={`text-sm sm:text-base leading-relaxed ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
             No tricks or gimmicks. Just a real-world B2B engine that researches target clients, validates signals, and runs reliable multi-channel campaigns.
           </p>
         </div>
@@ -396,7 +396,7 @@ export default function LandingPage({ onLaunchApp, isAuthenticated, theme, setTh
               <Bot className="w-6 h-6" />
             </div>
             <h4 className="text-lg font-extrabold">Deep Gemini Profiling</h4>
-            <p className={`text-xs md:text-sm leading-relaxed${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>
+            <p className={`text-xs md:text-sm leading-relaxed ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>
               Analyzes specific decision-makers. Scrape LinkedIn footprints, corporate roles, and custom industry tags to craft dynamic relevance vectors.
             </p>
           </div>
@@ -409,7 +409,7 @@ export default function LandingPage({ onLaunchApp, isAuthenticated, theme, setTh
               <Network className="w-6 h-6" />
             </div>
             <h4 className="text-lg font-extrabold">Omnichannel Sending</h4>
-            <p className={`text-xs md:text-sm leading-relaxed${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>
+            <p className={`text-xs md:text-sm leading-relaxed ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>
               Trigger highly tailored messages to WhatsApp, LinkedIn active feeds, or inbox. Keeps conversation loops synced across all systems.
             </p>
           </div>
@@ -422,7 +422,7 @@ export default function LandingPage({ onLaunchApp, isAuthenticated, theme, setTh
               <BarChart3 className="w-6 h-6" />
             </div>
             <h4 className="text-lg font-extrabold">Predictive Forecasting</h4>
-            <p className={`text-xs md:text-sm leading-relaxed${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>
+            <p className={`text-xs md:text-sm leading-relaxed ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>
               Interactive histogram views, segment breakdown analytics, and simulated cycle velocities let your team forecast yield precisely.
             </p>
           </div>
@@ -430,14 +430,14 @@ export default function LandingPage({ onLaunchApp, isAuthenticated, theme, setTh
       </section>
 
       {/* 5. Prospecting Demo Block */}
-      <section id="prospecting-demo" className={`py-28 md:py-36${theme === 'dark' ? 'bg-[#06070a]/40 border-y border-white/[0.04]' : 'bg-slate-100/40 border-y border-slate-200'}`}>
+      <section id="prospecting-demo" className={`py-28 md:py-36 ${theme === 'dark' ? 'bg-[#06070a]/40 border-y border-white/[0.04]' : 'bg-slate-100/40 border-y border-slate-200'}`}>
         <div className="max-w-7xl mx-auto px-8 sm:px-12 grid grid-cols-1 md:grid-cols-2 gap-16 md:gap-24 items-center">
-          <div className="relative group rounded-xl overflow-hidden border border-border">
+          <div className="relative group rounded-3xl overflow-hidden border border-slate-500/10 shadow-2xl">
             {/* Visual illustration of the research index */}
-            <div className={`p-6 space-y-4${theme === 'dark' ? 'bg-[#0f1015]' : 'bg-white'}`}>
-              <div className="flex items-center justify-between border-b border-border pb-4">
-                <span className="text-[11px] font-mono font-extrabold uppercase tracking-wider">LEAD DATABASE REAL-TIME LOG</span>
-                <span className="px-2.5 py-1 rounded-xl bg-blue-500/20 text-blue-400 text-[10px] font-extrabold tracking-wide uppercase">Sync Enabled</span>
+            <div className={`p-6 space-y-4 ${theme === 'dark' ? 'bg-[#0f1015]' : 'bg-white'}`}>
+              <div className="flex items-center justify-between border-b border-slate-500/10 pb-4">
+                <span className="text-[11px] font-mono font-extrabold text-[#94a3b8] uppercase tracking-wider">LEAD DATABASE REAL-TIME LOG</span>
+                <span className="px-2.5 py-1 rounded bg-blue-500/20 text-blue-400 text-[10px] font-extrabold tracking-wide uppercase">Sync Enabled</span>
               </div>
               
               <div className="space-y-3.5">
@@ -454,7 +454,7 @@ export default function LandingPage({ onLaunchApp, isAuthenticated, theme, setTh
                       <p className="text-[10px] md:text-xs text-slate-500 font-medium">{l.role} • {l.comp}</p>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="px-2.5 py-1 rounded-xl bg-blue-500/10 text-blue-400 text-[10px] font-extrabold uppercase tracking-wide">{l.badge}</span>
+                      <span className="px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-400 text-[10px] font-extrabold uppercase tracking-wide">{l.badge}</span>
                       <div className="text-right">
                         <span className="text-xs text-emerald-400 font-mono font-bold block">{l.score}/90</span>
                         <span className="text-[8px] text-slate-500 block uppercase font-bold tracking-wider">Match Ratio</span>
@@ -467,18 +467,18 @@ export default function LandingPage({ onLaunchApp, isAuthenticated, theme, setTh
           </div>
 
           <div className="space-y-8 text-left">
-            <span className="text-xs uppercase font-extrabold tracking-widest font-mono">Dynamic Prospecting Intelligence</span>
-            <h3 className={`text-4xl sm:text-5xl font-extrabold tracking-tight${theme === 'dark' ? 'text-white' : 'text-slate-950'}`}>
+            <span className="text-xs uppercase font-extrabold tracking-widest text-[#2563eb] font-mono">Dynamic Prospecting Intelligence</span>
+            <h3 className={`text-4xl sm:text-5xl font-extrabold tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-950'}`}>
               Qualify before reaching out. Always.
             </h3>
-            <p className={`text-sm sm:text-base leading-relaxed${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
+            <p className={`text-sm sm:text-base leading-relaxed ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
               Standard campaigns spam everyone. Zyntra calculates a multi-factor score instantly based on job titles, active corporate domains, and verified social media links. Only spend resources on target accounts that warrant premium attention.
             </p>
             
             <div className="flex gap-4">
               <button 
                 onClick={onLaunchApp}
-                className="px-8 py-4 rounded-xl bg-primary hover:bg-primary/90 text-white font-extrabold text-xs uppercase tracking-wider cursor-pointer flex items-center gap-2 transition-all hover:scale-[1.02]"
+                className="px-8 py-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs uppercase tracking-wider shadow-md cursor-pointer flex items-center gap-2 transition-all hover:scale-[1.02]"
               >
                 <span>Process Your First List</span>
                 <ChevronRight className="w-4 h-4" />
@@ -491,8 +491,8 @@ export default function LandingPage({ onLaunchApp, isAuthenticated, theme, setTh
       {/* 6. FAQ Accordion Section */}
       <section id="faq" className="py-28 md:py-36 px-6 max-w-4xl mx-auto space-y-16">
         <div className="text-center space-y-4">
-          <span className="text-xs uppercase font-extrabold tracking-widest font-mono">FAQS ANSWERED</span>
-          <h3 className={`text-4xl font-extrabold tracking-tight${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+          <span className="text-xs uppercase font-extrabold tracking-widest text-[#10b981] font-mono">FAQS ANSWERED</span>
+          <h3 className={`text-4xl font-extrabold tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
             Frequently Asked Questions
           </h3>
         </div>
@@ -510,7 +510,7 @@ export default function LandingPage({ onLaunchApp, isAuthenticated, theme, setTh
                 className="w-full flex justify-between items-center text-left font-bold text-sm md:text-base cursor-pointer"
               >
                 <span>{f.q}</span>
-                <ChevronDown className={`w-5 h-5 text-slate-500 transition-transform duration-300${openFaq === i ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`w-5 h-5 text-slate-500 transition-transform duration-300 ${openFaq === i ? 'rotate-180' : ''}`} />
               </button>
               
               <AnimatePresence initial={false}>
@@ -522,7 +522,7 @@ export default function LandingPage({ onLaunchApp, isAuthenticated, theme, setTh
                      transition={{ duration: 0.2 }}
                      className="overflow-hidden"
                   >
-                    <p className={`text-xs md:text-sm leading-relaxed border-t border-border pt-4${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>
+                    <p className={`text-xs md:text-sm leading-relaxed border-t border-slate-500/10 pt-4 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>
                       {f.a}
                     </p>
                   </motion.div>
@@ -534,7 +534,7 @@ export default function LandingPage({ onLaunchApp, isAuthenticated, theme, setTh
       </section>
 
       {/* 7. Action Block & Footer */}
-      <footer className={`py-20 border-t${theme === 'dark' ? 'border-white/[0.04] bg-[#040508]' : 'border-slate-200 bg-slate-50'}`}>
+      <footer className={`py-20 border-t ${theme === 'dark' ? 'border-white/[0.04] bg-[#040508]' : 'border-slate-200 bg-slate-50'}`}>
         <div className="max-w-7xl mx-auto px-8 sm:px-12 text-center space-y-16">
           {/* Action Call */}
           <div className={`p-10 md:p-16 rounded-[40px] bg-gradient-to-br from-blue-950/40 via-slate-900 to-[#040508] border ${
@@ -542,10 +542,10 @@ export default function LandingPage({ onLaunchApp, isAuthenticated, theme, setTh
           } space-y-8 max-w-4xl mx-auto text-center relative overflow-hidden shadow-2xl`}>
             
             <div className="space-y-4 z-10 relative">
-              <h4 className="text-3xl md:text-5xl font-extrabold text-text tracking-tight">
+              <h4 className="text-3xl md:text-5xl font-extrabold text-white tracking-tight">
                 Ready to accelerate your B2B pipelines?
               </h4>
-              <p className="text-xs md:text-sm text-text max-w-xl mx-auto leading-relaxed font-medium">
+              <p className="text-xs md:text-sm text-slate-400 max-w-xl mx-auto leading-relaxed font-medium">
                 Connect your campaigns, configure target decision factors, and trigger beautiful personalization streams across three channels today.
               </p>
             </div>
@@ -553,7 +553,7 @@ export default function LandingPage({ onLaunchApp, isAuthenticated, theme, setTh
             <div className="flex justify-center z-10 relative pt-2">
               <button 
                 onClick={onLaunchApp}
-                className="px-10 py-4.5 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 hover:scale-[1.02]"
+                className="px-10 py-4.5 rounded-xl bg-gradient-to-r from-blue-600 via-teal-500 to-emerald-500 hover:opacity-90 text-white font-bold text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 shadow-xl shadow-blue-500/10 hover:scale-[1.02]"
               >
                 <span>Launch Enterprise Console</span>
                 <ArrowRight className="w-4 h-4" />
@@ -562,7 +562,7 @@ export default function LandingPage({ onLaunchApp, isAuthenticated, theme, setTh
           </div>
 
           {/* Core Footer Lines */}
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6 pt-12 border-t border-border text-[10.5px] uppercase tracking-wider font-extrabold text-slate-500">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6 pt-12 border-t border-slate-500/10 text-[10.5px] uppercase tracking-wider font-extrabold text-slate-500">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 bg-blue-600/10 rounded-xl flex items-center justify-center">
                 <Zap className="w-5 h-5 text-blue-500" />

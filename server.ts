@@ -1,5 +1,5 @@
 import express from "express";
-
+import { createServer as createViteServer } from "vite";
 import path from "path";
 import fs from "fs";
 import nodemailer from "nodemailer";
@@ -9,8 +9,9 @@ import { WebSocketServer, WebSocket } from "ws";
 import { 
   generateOutreachBackend, 
   generateProspectResearchBackend, 
-  analyzeBenchmarkDriftBackend 
-} from "./src/services/aiServiceBackend.js";
+  analyzeBenchmarkDriftBackend,
+  generateCrmHelpBackend
+} from "./src/services/geminiServiceBackend";
 
 dotenv.config();
 
@@ -315,7 +316,22 @@ async function processKbFileBackground(file: KbFile) {
       }
     }
     
-
+    if (!result) {
+      const geminiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
+      if (geminiKey) {
+        try {
+          const ai = new GoogleGenAI({ apiKey: geminiKey });
+          const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: `${sysPrompt}\n\n${prompt}`,
+            config: { responseMimeType: "application/json" }
+          });
+          result = JSON.parse(response.text || "{}");
+        } catch (gemError: any) {
+          console.error("Gemini extractor fallback failed:", gemError.message);
+        }
+      }
+    }
 
     if (!result) {
       const nvidiaKey = process.env.NVIDIA_API_KEY;
@@ -492,21 +508,6 @@ let deals: Deal[] = [
 
 let pipelines: Pipeline[] = [
   {
-    id: "pipe-playbook",
-    orgId: "org-default",
-    name: "8-Stage Playbook Pipeline",
-    stages: [
-      { id: "lead_identified", name: "Lead Identified", color: "#6366f1", probability: 10, slaDays: 3, statuses: ["Awaiting Contact", "Engaged"] },
-      { id: "meeting_booked", name: "Meeting Booked", color: "#8b5cf6", probability: 20, slaDays: 2, statuses: ["Calendar Invites Sent"] },
-      { id: "discovery_completed", name: "Discovery Completed", color: "#3b82f6", probability: 40, slaDays: 5, statuses: ["Pain Confirmed", "BANT Scored"] },
-      { id: "demo_scheduled", name: "Demo Scheduled", color: "#06b6d4", probability: 60, slaDays: 3, statuses: ["Preparation In Progress"] },
-      { id: "demo_completed", name: "Demo Completed", color: "#10b981", probability: 70, slaDays: 5, statuses: ["Objections Addressed", "Proposal Requested"] },
-      { id: "proposal_pilot", name: "Proposal / Pilot", color: "#f59e0b", probability: 85, slaDays: 10, statuses: ["Drafting Proposal", "Pilot Trial Active"] },
-      { id: "closing", name: "Closing", color: "#f97316", probability: 95, slaDays: 7, statuses: ["Legal Review", "Signatures Awaiting"] },
-      { id: "customer_handoff", name: "Customer Handoff", color: "#22c55e", probability: 100, slaDays: 3, statuses: ["Handoff Call Booked"] }
-    ]
-  },
-  {
     id: "pipe-default",
     orgId: "org-default",
     name: "Enterprise Sales Pipeline",
@@ -640,6 +641,7 @@ const hashApiKey = (key: string) => {
 };
 
 // Real B2B Sales intelligence background simulator and provider (Task 3 Close Analysis)
+import { GoogleGenAI, Type } from "@google/genai";
 
 async function runAiDealAnalysis(deal: Deal, lead: Lead | undefined, activities: ActivityLog[]): Promise<any> {
   const contextText = JSON.stringify({
@@ -687,6 +689,25 @@ async function runAiDealAnalysis(deal: Deal, lead: Lead | undefined, activities:
     }
   }
 
+  // 2. Fallback to Gemini Server-Side API
+  const geminiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
+  if (geminiKey) {
+    try {
+      console.log("[Claude Close Analyzer] Invoking Gemini-powered Fallback Engine...");
+      const ai = new GoogleGenAI({ apiKey: geminiKey });
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: `${sysPrompt}\n\n${prompt}`,
+        config: {
+          responseMimeType: "application/json"
+        }
+      });
+      const text = response.text || "";
+      return JSON.parse(text);
+    } catch (err: any) {
+      console.error("[Claude Close Analyzer] Gemini fallback failed:", err.message);
+    }
+  }
 
   // 2.5 Fallback to NVIDIA NIM Fallback
   const nvidiaKey = process.env.NVIDIA_API_KEY;
@@ -876,9 +897,11 @@ function getComposioApiKey() {
   return customComposioApiKey || process.env.COMPOSIO_API_KEY || "ak_p4BqouLPkWFbzB3EKi-1";
 }
 
-// Initialize Express app
 export const app = express();
-const PORT = Number(process.env.PORT) || 3000;
+
+// Start HTTP and WS server
+export async function startServer() {
+  const PORT = 3000;
 
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
@@ -1766,46 +1789,158 @@ const PORT = Number(process.env.PORT) || 3000;
     // Default heuristic result to merge/fallback
     const heuristicResult = cleanClutterHeuristically(headers, rows);
 
-    return res.json({
-      success: true,
-      method: "heuristics",
-      mapping: heuristicResult.mapping,
-      cleanedRows: heuristicResult.cleanedRows,
-      clutterReport: "Automatic heuristic column matching executed. Scanned and corrected any shuffled contact phone/email values."
-    });
+    const geminiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
+    if (!geminiKey) {
+      console.warn("[AI Align] No GEMINI_API_KEY configured. Falling back to high-fidelity heuristics.");
+      return res.json({
+        success: true,
+        method: "heuristics",
+        mapping: heuristicResult.mapping,
+        cleanedRows: heuristicResult.cleanedRows,
+        clutterReport: "Automatic heuristic column matching executed. Scanned and corrected any shuffled contact phone/email values."
+      });
+    }
+
+    try {
+      console.log(`[AI Align] Processing ${rows.length} rows using Gemini AI with smart self-healing alignment...`);
+      const ai = new GoogleGenAI({
+        apiKey: geminiKey,
+        httpOptions: {
+          headers: {
+            'User-Agent': 'aistudio-build',
+          }
+        }
+      });
+
+      const sysPrompt = `You are an intelligent data cleaner for a modern CRM.
+Analyze the user-uploaded spreadsheet column headers and data rows. Your job is to:
+1. Automatically map the Excel/CSV column headers to the correct standard CRM fields:
+   - "name" (Prospect's Full Name)
+   - "email" (Work email containing @)
+   - "phone" (Phone number containing numbers/dashes/pluses)
+   - "company" (Company Name)
+   - "role" (Job title/role)
+   - "score" (Numeric rating 0-100)
+
+2. Perform clutter cleaning of the values. Some cells might be swapped (e.g. Phone number in Email column and Email in Phone column, or name in company and vice-versa).
+   Your output MUST place the correctly classified value into its corresponding target field in the 'cleanedRows', self-healing any column mix-ups. There should never be an email in phone, or phone in email.
+
+Provide the response in the requested strictly valid JSON schema format.`;
+
+      const prompt = `Spreadsheet Column Headers: ${JSON.stringify(headers)}
+Raw Rows Data: ${JSON.stringify(rows.slice(0, 50))} (Analyze and clean up to the first 50 rows)`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: prompt,
+        config: {
+          systemInstruction: sysPrompt,
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              mapping: {
+                type: Type.OBJECT,
+                description: "Map of Spreadsheet Header -> Target CRM Field (name, email, phone, company, role, score)"
+              },
+              cleanedRows: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    name: { type: Type.STRING },
+                    email: { type: Type.STRING },
+                    phone: { type: Type.STRING },
+                    company: { type: Type.STRING },
+                    role: { type: Type.STRING },
+                    score: { type: Type.INTEGER }
+                  }
+                }
+              },
+              clutterReport: {
+                type: Type.STRING,
+                description: "Summary of errors/clutter solved (e.g. 'Swapped email and phone columns; corrected company column mix-up')"
+              }
+            },
+            required: ["mapping", "cleanedRows", "clutterReport"]
+          }
+        }
+      });
+
+      const text = response.text || "";
+      const resultObj = JSON.parse(text);
+
+      let finalCleanedRows: any[] = [];
+      const aiCleanedPart = resultObj.cleanedRows || [];
+
+      // Run healCleanedRow for safety on AI-returned results for first 50 lines
+      for (let i = 0; i < Math.min(50, rows.length); i++) {
+        const rawRow = rows[i];
+        const aiRow = aiCleanedPart[i] || {};
+        const healed = healCleanedRow({
+          name: aiRow.name,
+          email: aiRow.email,
+          phone: aiRow.phone,
+          company: aiRow.company,
+          role: aiRow.role,
+          score: aiRow.score
+        }, rawRow);
+        finalCleanedRows.push(healed);
+      }
+
+      if (rows.length > 50) {
+        console.log(`[AI Align] Extrapolating AI mapping for remaining ${rows.length - 50} rows...`);
+        const learnedMapping = resultObj.mapping || heuristicResult.mapping;
+        
+        const remainingRows = rows.slice(50);
+        const extrapolatedCleaned = remainingRows.map((row) => {
+          const mappedRow: any = {
+            name: "",
+            email: "",
+            phone: "",
+            company: "",
+            role: "Executive Target",
+            score: 60
+          };
+
+          // Apply mapping
+          headers.forEach(h => {
+            const field = learnedMapping[h];
+            if (field !== undefined && field !== "") {
+              mappedRow[field] = row[h] !== undefined ? String(row[h]).trim() : "";
+            }
+          });
+
+          return healCleanedRow(mappedRow, row);
+        });
+
+        finalCleanedRows = [...finalCleanedRows, ...extrapolatedCleaned];
+      }
+
+      return res.json({
+        success: true,
+        method: "gemini-2.5-flash",
+        mapping: resultObj.mapping || heuristicResult.mapping,
+        cleanedRows: finalCleanedRows,
+        clutterReport: resultObj.clutterReport || "Pristine alignment maps synchronized cleanly."
+      });
+
+    } catch (err: any) {
+      console.error("[AI Align] Gemini error: ", err.message);
+      return res.json({
+        success: true,
+        method: "heuristics-fallback",
+        mapping: heuristicResult.mapping,
+        cleanedRows: heuristicResult.cleanedRows,
+        clutterReport: `Heuristics fallback: Mapped headers and resolved cluttered cells. (AI temporary bypass error: ${err.message})`
+      });
+    }
   });
 
   // REST API: Named Mapping Templates (Task 2 Configuration templates)
   app.get("/api/import/templates", (req, res) => {
     res.json(importMappingTemplates);
   });
-
-
-// NVIDIA AI Proxy
-app.post("/api/ai/nvidia", express.json(), async (req, res) => {
-  const nvidiaKey = process.env.NVIDIA_API_KEY;
-  if (!nvidiaKey) return res.status(400).json({ error: "NVIDIA_API_KEY not configured" });
-  const { model, messages, systemPrompt, temperature, max_tokens, top_p, frequency_penalty, presence_penalty, response_format } = req.body;
-  try {
-    const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${nvidiaKey}` },
-      body: JSON.stringify({
-        model: model || "deepseek-ai/deepseek-v4-pro",
-        messages: [...(systemPrompt ? [{ role: "system", content: systemPrompt }] : []), ...(messages || [])],
-        ...(temperature !== undefined ? { temperature } : { temperature: 0.20 }),
-        ...(max_tokens !== undefined ? { max_tokens } : { max_tokens: 8000 }),
-        ...(top_p !== undefined ? { top_p } : {}),
-        ...(req.body.chat_template_kwargs !== undefined ? { chat_template_kwargs: req.body.chat_template_kwargs } : {}),
-        ...(frequency_penalty !== undefined ? { frequency_penalty } : {}),
-        ...(presence_penalty !== undefined ? { presence_penalty } : {}),
-        ...(response_format ? { response_format } : { response_format: { type: "json_object" } }),
-      }),
-    });
-    if (!response.ok) return res.status(response.status).json({ error: await response.text() });
-    res.json(await response.json());
-  } catch (err: any) { res.status(502).json({ error: err.message }); }
-});
 
   app.post("/api/import/templates", (req, res) => {
     const { name, mapping } = req.body;
@@ -1894,7 +2029,6 @@ app.post("/api/ai/nvidia", express.json(), async (req, res) => {
 
       // Trigger webhook for each lead created via importer
       triggerOutboundWebhook("lead.created", newLead, targetWorkspace);
-
     });
 
     // Save Named mapping template if name was passed
@@ -2346,6 +2480,7 @@ app.post("/api/ai/nvidia", express.json(), async (req, res) => {
       let generatedVia = "Heuristic AI Engine";
 
       const anthropicKey = process.env.ANTHROPIC_API_KEY;
+      const geminiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
 
       if (anthropicKey) {
         try {
@@ -2362,7 +2497,22 @@ app.post("/api/ai/nvidia", express.json(), async (req, res) => {
           outreachPayload = JSON.parse(cleanJson);
           generatedVia = "Anthropic Claude API";
         } catch (e: any) {
-          console.error("Claude client error:", e.message);
+          console.error("Claude client error, falling back to Gemini:", e.message);
+        }
+      }
+
+      if (!outreachPayload.body && geminiKey) {
+        try {
+          const ai = new GoogleGenAI({ apiKey: geminiKey });
+          const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: prompt,
+            config: { responseMimeType: "application/json" }
+          });
+          outreachPayload = JSON.parse(response.text || "{}");
+          generatedVia = "Gemini Flash Model";
+        } catch (e: any) {
+          console.error("Gemini model error:", e);
         }
       }
 
@@ -2490,7 +2640,7 @@ app.post("/api/ai/nvidia", express.json(), async (req, res) => {
   });
 
   // Secure server-side Gemini generation proxy endpoints
-  app.post("/api/ai/generate-outreach", async (req, res) => {
+  app.post("/api/gemini/generate-outreach", async (req, res) => {
     const { lead, config, customNvidia } = req.body;
     try {
       const messages = await generateOutreachBackend(lead, config, customNvidia);
@@ -2501,7 +2651,7 @@ app.post("/api/ai/nvidia", express.json(), async (req, res) => {
     }
   });
 
-  app.post("/api/ai/generate-prospect-research", async (req, res) => {
+  app.post("/api/gemini/generate-prospect-research", async (req, res) => {
     const { companyInput, customNvidia } = req.body;
     try {
       const research = await generateProspectResearchBackend(companyInput, customNvidia);
@@ -2512,7 +2662,19 @@ app.post("/api/ai/nvidia", express.json(), async (req, res) => {
     }
   });
 
-  app.post("/api/ai/analyze-benchmark-drift", async (req, res) => {
+  // Alias endpoint for compatibility with legacy compiled clients on external platforms
+  app.post("/api/ai/generate-prospect-research", async (req, res) => {
+    const { companyInput, customNvidia } = req.body;
+    try {
+      const research = await generateProspectResearchBackend(companyInput, customNvidia);
+      res.json(research);
+    } catch (err: any) {
+      console.error("[Server legacy prospect research proxy failure]:", err);
+      res.status(500).json({ error: err.message || "Failed to generate prospect research" });
+    }
+  });
+
+  app.post("/api/gemini/analyze-benchmark-drift", async (req, res) => {
     const { leads, customNvidia } = req.body;
     try {
       const analysis = await analyzeBenchmarkDriftBackend(leads, customNvidia);
@@ -2520,6 +2682,17 @@ app.post("/api/ai/nvidia", express.json(), async (req, res) => {
     } catch (err: any) {
       console.error("[Server drift analysis proxy failure]:", err);
       res.status(500).json({ error: err.message || "Failed to analyze benchmark drift" });
+    }
+  });
+
+  app.post("/api/gemini/crm-help", async (req, res) => {
+    const { actionType, payload } = req.body;
+    try {
+      const result = await generateCrmHelpBackend(actionType, payload);
+      res.json(result);
+    } catch (err: any) {
+      console.error("[Server CRM Help Failure]:", err);
+      res.status(500).json({ error: err.message || "Failed to execute CRM help operation" });
     }
   });
 
@@ -2579,9 +2752,7 @@ app.post("/api/ai/nvidia", express.json(), async (req, res) => {
   });
 
   // Vite development middleware or static production fallback
-async function startServer() {
   if (process.env.NODE_ENV !== "production") {
-    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
@@ -2646,13 +2817,13 @@ async function startServer() {
     });
   });
 
-  server.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://0.0.0.0:${PORT}`);
-  });
+  if (process.env.VERCEL !== "1") {
+    server.listen(PORT, "0.0.0.0", () => {
+      console.log(`Server running on http://0.0.0.0:${PORT}`);
+    });
+  }
 }
 
-if (!process.env.VERCEL) {
+if (process.env.VERCEL !== "1") {
   startServer();
 }
-
-export default app;
