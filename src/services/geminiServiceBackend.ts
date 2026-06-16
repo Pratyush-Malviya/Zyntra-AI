@@ -434,37 +434,93 @@ export async function generateProspectResearchBackend(companyInput: string, cust
   const mainTimeoutMs = isVercel ? 55000 : 90000;
 
   try {
-    const completion = await retryWithBackoff(async () => {
-      return await openai.chat.completions.create({
-        model: "nvidia/nemotron-3-ultra-550b-a55b",
-        messages: [
-          {
-            role: "user",
-            content: `${prompt}
+    const rawText = await retryWithBackoff(async () => {
+      try {
+        const abortController = new AbortController();
+        const timeout = setTimeout(() => abortController.abort(), 20000); // 20s timeout
+        
+        const groqApiKey = process.env.GROQ_API_KEY || "";
+        if (!groqApiKey) {
+           throw new Error("No Groq API key available.");
+        }
 
-Please return ONLY a valid, raw, and parsable JSON object conforming to the structured template we need. No preamble or conversational introduction, just the raw JSON structure.`
-          }
-        ],
-        temperature: 1,
-        top_p: 0.95,
-        max_tokens: 4096,
-        extra_body: {
-          "chat_template_kwargs": { "enable_thinking": true },
-          "reasoning_budget": 2048
-        },
-        stream: false
-      } as any, {
-        timeout: mainTimeoutMs
-      });
-    }, searchRetries, backoffBase, "NVIDIA Nemotron Research");
+        const groqResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${groqApiKey}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            model: "meta-llama/llama-4-scout-17b-16e-instruct",
+            messages: [
+              {
+                role: "system",
+                content: "You are a B2B prospect research analyst. Generate a structured research report for outreach personalization. Return ONLY a valid, raw, and parsable JSON object conforming to the structured template we need. No preamble or conversational introduction, just the raw JSON structure."
+              },
+              {
+                role: "user",
+                content: prompt
+              }
+            ],
+            response_format: { type: "json_object" },
+            max_tokens: 4096
+          }),
+          signal: abortController.signal
+        });
+        
+        clearTimeout(timeout);
 
-    const rawText = completion.choices[0]?.message?.content || '';
+        if (!groqResponse.ok) {
+          throw new Error(`Groq API Error: ${groqResponse.status}`);
+        }
+
+        const groqData = await groqResponse.json();
+        return groqData.choices[0]?.message?.content || '';
+      } catch (groqError) {
+        console.warn("Groq API failed, falling back to Gemini 3.5 flash...", groqError);
+        const geminiApiKey = process.env.GEMINI_API_KEY || "";
+        
+        if (!geminiApiKey) {
+           throw new Error("No Gemini API key available for fallback.");
+        }
+
+        const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            contents: [
+              {
+                role: "user",
+                parts: [
+                  {
+                    text: `You are a B2B prospect research analyst. Generate a structured research report for outreach personalization. Return ONLY a valid, raw, and parsable JSON object conforming to the structured template we need. No preamble.\n\n${prompt}`
+                  }
+                ]
+              }
+            ],
+            generationConfig: {
+              responseMimeType: "application/json"
+            }
+          })
+        });
+
+        if (!geminiResponse.ok) {
+           throw new Error(`Gemini API Error: ${geminiResponse.status}`);
+        }
+        
+        const geminiData = await geminiResponse.json();
+        return geminiData.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      }
+    }, searchRetries, backoffBase, "Groq / Gemini Research");
+
     if (rawText.trim()) {
       return cleanAndParseJSON(rawText);
     }
-    throw new Error("Empty response received from NVIDIA Nemotron API");
+    throw new Error("Empty response received from AI API");
   } catch (error) {
-    console.error("NVIDIA Prospect Research Generation Error on server:", error);
+    console.error("Prospect Research Generation Error on server:", error);
     throw error;
   }
 }
