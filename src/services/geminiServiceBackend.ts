@@ -484,7 +484,7 @@ export async function generateProspectResearchBackend(companyInput: string, cust
            throw new Error("No Gemini API key available for fallback.");
         }
 
-        const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`, {
+        const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${geminiApiKey}`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json"
